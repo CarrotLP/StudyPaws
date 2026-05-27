@@ -9,6 +9,8 @@ variables:
 # Shared Node setup
 .node_setup: &node_setup
   image: node:20
+  tags:
+    - edtech
   cache:
     key:
       files:
