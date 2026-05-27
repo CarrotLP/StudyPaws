@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 19.1.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development"
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "ios": { "simulator": false },
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production"
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": { "appleId": "justrenehartono1@gmail.com", "ascAppId": "TBD-from-app-store-connect" },
+      "android": { "serviceAccountKeyPath": "./google-service-account.json" }
+    }
+  }
+}
