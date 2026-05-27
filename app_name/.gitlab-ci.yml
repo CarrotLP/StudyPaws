@@ -1,0 +1,57 @@
+stages:
+  - test
+  - update
+  - build
+
+variables:
+  NODE_VERSION: "20"
+
+# Cache node_modules between jobs
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - node_modules/
+    - .npm/
+
+# Reusable setup
+.node_setup: &node_setup
+  image: node:20
+  before_script:
+    - npm ci --legacy-peer-deps --cache .npm --prefer-offline
+
+# CI: type-check on every push and MR
+typecheck:
+  <<: *node_setup
+  stage: test
+  script:
+    - npx tsc --noEmit
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+
+# OTA update on merge to main
+eas-update:
+  <<: *node_setup
+  stage: update
+  script:
+    - npm install -g eas-cli
+    - eas update --branch production --message "$CI_COMMIT_MESSAGE" --non-interactive
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Manual build trigger
+eas-build:
+  <<: *node_setup
+  stage: build
+  script:
+    - npm install -g eas-cli
+    - eas build --platform $PLATFORM --profile $PROFILE --non-interactive --no-wait
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+  variables:
+    PLATFORM: "all"
+    PROFILE: "preview"
