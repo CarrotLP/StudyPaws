@@ -1,5 +1,5 @@
-import * as Device from 'expo-device';
-import { Modal, Platform, ScrollView, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Points } from '@/components/points';
@@ -9,56 +9,27 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useState } from 'react';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
 
 export default function HomeScreen() {
-
   const [showReadyToStudyPopup, setShowReadyToStudyPopup] = useState(false);
   const [showWellDonePoints, setShowWellDonePoints] = useState(false);
 
   return (
-    <>
-      {/* Ready to Study Popup Overlay */}
+    <ThemedView type="background" style={{ flex: 1 }}>
+      
+      {/* OVERLAYS */}
       <Modal visible={showReadyToStudyPopup} transparent animationType="fade">
         <ThemedView style={styles.overlay}>
           <Popup
             title="Ready to Study?"
             buttons={[
-              {
-                label: 'Yes!',
-                onPress: () => setShowReadyToStudyPopup(false)
-              },
-              {
-                label: 'Snooze\nlose 25%',
-                onPress: () => setShowReadyToStudyPopup(false)
-              },
+              { label: 'Yes!', onPress: () => setShowReadyToStudyPopup(false) },
+              { label: 'Snooze\nlose 25%', onPress: () => setShowReadyToStudyPopup(false) },
             ]}
           />
         </ThemedView>
       </Modal>
 
-      {/* Well Done Points Overlay 
-          Press the overlay to dismiss for demo */}
       <Modal visible={showWellDonePoints} transparent animationType="fade">
         <ThemedView style={styles.overlay}>
           <Points
@@ -69,88 +40,71 @@ export default function HomeScreen() {
         </ThemedView>
       </Modal>
 
-      {/* MAIN SCROLL CONTENT */}
-      <ScrollView>
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedView style={styles.heroSection}>
-            <ThemedText type="title" style={styles.title}>
-              Break Time!
-            </ThemedText>
+      {/* MAIN CONTENT */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+  <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
 
-            <ThemedText type="code" style={styles.code}>
-              You have
-            </ThemedText>
+      {/* HERO SECTION */}
+      <View style={styles.section}>
+        <View style={styles.heroSection}>
+          <ThemedText type="title" style={styles.title}>
+            Break Time!
+          </ThemedText>
 
-            <ThemedText type="subtitle" style={styles.time}>
-              5:46
-            </ThemedText>
+          <ThemedText type="code" style={styles.code}>
+            You have
+          </ThemedText>
 
-            <ThemedText type="code" style={styles.code}>
-              left of break
-            </ThemedText>
-          </ThemedView>
+          <ThemedText type="subtitle" style={styles.time}>
+            5:46
+          </ThemedText>
 
-          {Platform.OS === 'web' && <WebBadge />}
-        </SafeAreaView>
-      </ThemedView>
+          <ThemedText type="code" style={styles.code}>
+            left of break
+          </ThemedText>
+        </View>
+      </View>
 
-      
-      {/* Temporary button to trigger ready to study popup for prototype */}
-      <ThemedText onPress={() => setShowReadyToStudyPopup(true)}>
-        Open Popup
-      </ThemedText>
-      <ThemedText onPress={() => setShowWellDonePoints(true)}>
-        Open Well Done Points
-      </ThemedText>
+      {Platform.OS === 'web' && <WebBadge />}
 
+      {/* ACTIONS SECTION */}
+      <View style={styles.subtleSection}>
+        <ThemedText
+          onPress={() => setShowReadyToStudyPopup(true)}
+          style={styles.actionText}
+        >
+          Open Popup
+        </ThemedText>
 
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedView style={styles.heroSection}>
-            {/* <AnimatedIcon /> */}
-            <ThemedText type="subtitle" style={styles.subtitle}>
-              Some recommended activities...
-            </ThemedText>
+        <ThemedText
+          onPress={() => setShowWellDonePoints(true)}
+          style={styles.actionText}
+        >
+          Open Well Done Points
+        </ThemedText>
+      </View>
 
-            <RecommendedActivities />
+      {/* ACTIVITIES SECTION */}
+      <View style={styles.section}>
+        <ThemedText type="subtitle" style={styles.subtitle}>
+          Some recommended activities...
+        </ThemedText>
 
-            {/* <HintRow
-              title="Try editing"
-              hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-            />
-            <HintRow title="Dev tools" hint={getDevMenuHint()} />
-            <HintRow
-              title="Fresh start"
-              hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-            /> */}
+        <RecommendedActivities />
+      </View>
 
-          </ThemedView>
+    </SafeAreaView>
+  </View>
+</ScrollView>
 
-          
-
-          {/* <ThemedView type="backgroundElement" style={styles.stepContainer}>
-            <HintRow
-              title="Try editing"
-              hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-            />
-            <HintRow title="Dev tools" hint={getDevMenuHint()} />
-            <HintRow
-              title="Fresh start"
-              hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-            />
-          </ThemedView> */}
-
-          {Platform.OS === 'web' && <WebBadge />}
-        </SafeAreaView>
-      </ThemedView>
-
-      </ScrollView>
-    </>
+    </ThemedView>
   );
 }
-
 const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -163,6 +117,10 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
+  },
+  section: {
+    width: '100%',
+    marginBottom: Spacing.six,
   },
   heroSection: {
     alignItems: 'center',
@@ -196,5 +154,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
     borderRadius: Spacing.four,
+  },
+  actionText: {
+    fontSize: 11,
+    marginBottom: Spacing.one,
+    textAlign: 'center',
+  },
+  subtleSection: {
+    width: '100%',
+    marginBottom: Spacing.four,   // smaller than other sections
+    opacity: 0.4,                // key: de-emphasis
+    alignItems: 'center',
   },
 });
