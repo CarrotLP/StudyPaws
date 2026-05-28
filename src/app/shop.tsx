@@ -1,9 +1,15 @@
+import { Popup } from '@/components/popup';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 
 export default function ShopScreen() {
+  const [showNewAccessoryPopup, setShowNewAccessoryPopup] = useState(false);
+  const [points, setPoints] = useState(100);
+  
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
 
@@ -20,19 +26,45 @@ export default function ShopScreen() {
       <View style={[styles.section, styles.tightSection]}>
         <View style={styles.center}>
           <ThemedText style={styles.points}>
-            Points: 100
+            Points: {points}
           </ThemedText>
         </View>
       </View>
 
+      {/* POPUP */}
+      <Modal visible={showNewAccessoryPopup} transparent animationType="fade">
+        <ThemedView style={styles.overlay}>
+          <Popup
+            title="New Accessory Unlocked!"
+            buttons={[
+              { label: 
+                <View style={styles.center}>
+                  <Image
+                  source={require('@/assets/images/collectibles/scarf.png')}
+                  style={styles.image}
+                  resizeMode="contain"
+                  />
+                  <Text>S Rank Wearable</Text>
+                </View>, onPress: () => {
+                  setShowNewAccessoryPopup(false);
+                  setPoints(points - 50);
+                }
+              },
+            ]}
+          />
+        </ThemedView>
+      </Modal>
+
       {/* IMAGE */}
       <View style={styles.section}>
         <View style={styles.center}>
-          <Image
-            source={require('@/assets/images/collectibles/fortune-wheel.png')}
-            style={styles.image}
-            resizeMode="contain"
-          />
+          <Pressable onPress={() => {setShowNewAccessoryPopup(true)}}>
+            <Image
+              source={require('@/assets/images/collectibles/treasure-chest.png')}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -108,6 +140,13 @@ const styles = StyleSheet.create({
   },
 
   tightSection: {
-  marginTop: -Spacing.three,  // pulls it closer to "Shop"
-},
+    marginTop: -Spacing.three,  // pulls it closer to "Shop"
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)', // dim background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
