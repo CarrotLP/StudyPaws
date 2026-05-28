@@ -1,12 +1,14 @@
 import * as Device from 'expo-device';
-import { Platform, ScrollView, StyleSheet } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Popup } from '@/components/popup';
 import { RecommendedActivities } from '@/components/recommended-activities';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useState } from 'react';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -27,9 +29,34 @@ function getDevMenuHint() {
   );
 }
 
+
 export default function HomeScreen() {
+
+  const [showReadyToStudyPopup, setShowReadyToStudyPopup] = useState(false);
+
   return (
-    <ScrollView>
+    <>
+      {/* POPUP OVERLAY */}
+      <Modal visible={showReadyToStudyPopup} transparent animationType="fade">
+        <ThemedView style={styles.overlay}>
+          <Popup
+            title="Ready to Study?"
+            buttons={[
+              {
+                label: 'Yes!',
+                onPress: () => setShowReadyToStudyPopup(false) // console.log('Start pressed'),
+              },
+              {
+                label: 'Snooze\nlose 25%',
+                onPress: () => setShowReadyToStudyPopup(false) // console.log('snooze pressed'),
+              },
+            ]}
+          />
+        </ThemedView>
+      </Modal>
+
+      {/* MAIN SCROLL CONTENT */}
+      <ScrollView>
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
           <ThemedView style={styles.heroSection}>
@@ -54,6 +81,13 @@ export default function HomeScreen() {
           {Platform.OS === 'web' && <WebBadge />}
         </SafeAreaView>
       </ThemedView>
+
+      
+      {/* Temporary button to trigger ready to study popup for prototype */}
+      <ThemedText onPress={() => setShowReadyToStudyPopup(true)}>
+        Open Popup
+      </ThemedText>
+
 
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
@@ -95,8 +129,8 @@ export default function HomeScreen() {
         </SafeAreaView>
       </ThemedView>
 
-    </ScrollView>
-    
+      </ScrollView>
+    </>
   );
 }
 
@@ -133,6 +167,12 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 48,
     fontWeight: 'bold',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)', // dim background
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   stepContainer: {
     gap: Spacing.three,
