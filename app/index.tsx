@@ -2,6 +2,7 @@ import * as Device from 'expo-device';
 import { Modal, Platform, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Points } from '@/components/points';
 import { Popup } from '@/components/popup';
 import { RecommendedActivities } from '@/components/recommended-activities';
 import { ThemedText } from '@/components/themed-text';
@@ -33,10 +34,11 @@ function getDevMenuHint() {
 export default function HomeScreen() {
 
   const [showReadyToStudyPopup, setShowReadyToStudyPopup] = useState(false);
+  const [showWellDonePoints, setShowWellDonePoints] = useState(false);
 
   return (
     <>
-      {/* POPUP OVERLAY */}
+      {/* Ready to Study Popup Overlay */}
       <Modal visible={showReadyToStudyPopup} transparent animationType="fade">
         <ThemedView style={styles.overlay}>
           <Popup
@@ -44,13 +46,25 @@ export default function HomeScreen() {
             buttons={[
               {
                 label: 'Yes!',
-                onPress: () => setShowReadyToStudyPopup(false) // console.log('Start pressed'),
+                onPress: () => setShowReadyToStudyPopup(false)
               },
               {
                 label: 'Snooze\nlose 25%',
-                onPress: () => setShowReadyToStudyPopup(false) // console.log('snooze pressed'),
+                onPress: () => setShowReadyToStudyPopup(false)
               },
             ]}
+          />
+        </ThemedView>
+      </Modal>
+
+      {/* Well Done Points Overlay 
+          Press the overlay to dismiss for demo */}
+      <Modal visible={showWellDonePoints} transparent animationType="fade">
+        <ThemedView style={styles.overlay}>
+          <Points
+            title="Well Done!"
+            points="45 points"
+            onPress={() => setShowWellDonePoints(false)}
           />
         </ThemedView>
       </Modal>
@@ -60,7 +74,6 @@ export default function HomeScreen() {
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
           <ThemedView style={styles.heroSection}>
-            {/* <AnimatedIcon /> */}
             <ThemedText type="title" style={styles.title}>
               Break Time!
             </ThemedText>
@@ -86,6 +99,9 @@ export default function HomeScreen() {
       {/* Temporary button to trigger ready to study popup for prototype */}
       <ThemedText onPress={() => setShowReadyToStudyPopup(true)}>
         Open Popup
+      </ThemedText>
+      <ThemedText onPress={() => setShowWellDonePoints(true)}>
+        Open Well Done Points
       </ThemedText>
 
 
