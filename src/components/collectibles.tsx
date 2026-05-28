@@ -17,22 +17,22 @@ type CollectiblesProps = {
 export function Collectibles({
   images = [
     {
-      name: 'Fruits',
+      name: 'Accessories',
       collected: 3,
       total: 10,
-      src: require('@/assets/images/collectibles/pineapple.png'),
+      src: require('@/assets/images/collectibles/hat.png'),
     },
     {
-      name: 'Animals',
+      name: 'Clothes',
       collected: 7,
       total: 12,
-      src: require('@/assets/images/collectibles/sheep.png'),
+      src: require('@/assets/images/collectibles/clothes.png'),
     },
     {
-      name: 'Paintings',
+      name: 'Shoes',
       collected: 1,
       total: 5,
-      src: require('@/assets/images/collectibles/monalisa.png'),
+      src: require('@/assets/images/collectibles/shoe.png'),
     },
   ],
 }: CollectiblesProps) {

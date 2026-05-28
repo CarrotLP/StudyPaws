@@ -8,11 +8,11 @@ type ProfileShowoffProps = {
 
 export function ProfileShowoff({
   images = [
-    require('@/assets/images/collectibles/pineapple.png'),
-    require('@/assets/images/collectibles/sheep.png'),
-    require('@/assets/images/collectibles/monalisa.png'),
-    require('@/assets/images/collectibles/lemon.png'),
-    require('@/assets/images/collectibles/cherries.png'),
+    require('@/assets/images/collectibles/hat.png'),
+    require('@/assets/images/collectibles/clothes.png'),
+    require('@/assets/images/collectibles/shoe.png'),
+    require('@/assets/images/collectibles/scarf.png'),
+    require('@/assets/images/collectibles/bowtie.png'),
   ],
 }: ProfileShowoffProps) {
   return (

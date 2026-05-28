@@ -8,7 +8,7 @@ import { Spacing } from '@/constants/theme';
 type PopupProps = {
   title?: string;
   buttons?: {
-    label: string;
+    label: any;
     onPress?: () => void;
   }[];
 };

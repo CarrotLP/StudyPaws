@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet } from 'react-native';
+import { Image, ScrollView, StyleSheet } from 'react-native';
 
 import { Collectibles } from '@/components/collectibles';
 import { ProfileShowoff } from '@/components/profile-showoff';
@@ -10,6 +10,14 @@ export default function ProfileScreen() {
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}> 
       <ThemedText type="subtitle" style={styles.centerText}>
         Profile
+      </ThemedText>
+      <Image
+        source={require('@/assets/images/puppy.png')}
+        style={styles.image}
+        resizeMode="contain"
+      />
+      <ThemedText type="subtitle" style={styles.centerText}>
+        Wardrobe
       </ThemedText>
       <ProfileShowoff />
       <Collectibles />
@@ -29,7 +37,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
     paddingHorizontal: Spacing.four,
     gap: Spacing.five,
-},
+  },
   container: {
     maxWidth: MaxContentWidth,
     flexGrow: 1,
@@ -42,6 +50,11 @@ const styles = StyleSheet.create({
   },
   centerText: {
     textAlign: 'left',
+  },
+  image: {
+    width: '100%',
+    height: 200,
+    borderRadius: Spacing.three,
   },
   pressed: {
     opacity: 0.7,
