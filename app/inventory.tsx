@@ -1,11 +1,15 @@
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DevResetButton } from '@/components/DevResetButton';
 import { ItemIcon } from '@/components/ItemIcon';
 import { ALL_ITEMS } from '@/components/itemSprites';
+import { Toast } from '@/components/Toast';
 import {
   Border,
   Control,
+  Durations,
   HavenColors,
   HavenFonts,
   HavenSpacing,
@@ -14,6 +18,7 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { useOutfit } from '@/hooks/use-outfit';
+import { useResetToDefaults } from '@/hooks/use-reset-to-defaults';
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -23,10 +28,29 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 export default function InventoryScreen() {
   const { owned, outfit, equip } = useOutfit();
+  const resetToDefaults = useResetToDefaults();
   const rows = chunk(ALL_ITEMS, 3);
+
+  const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  const onReset = () => {
+    resetToDefaults();
+    setToast({ msg: 'Reset to defaults · history preserved', key: Date.now() });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), Durations.toastVisible);
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
+      {toast && <Toast key={toast.key} message={toast.msg} />}
+
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.section}>inventory</Text>
         <View style={styles.rule} />
@@ -61,6 +85,8 @@ export default function InventoryScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <DevResetButton onPress={onReset} />
     </SafeAreaView>
   );
 }

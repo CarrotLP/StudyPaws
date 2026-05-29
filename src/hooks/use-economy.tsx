@@ -19,6 +19,8 @@ type EconomyContextValue = {
   addPoints: (delta: number) => void;
   /** Add or remove (negative n) earned chests of a type; never below 0. */
   addChest: (id: ChestId, n?: number) => void;
+  /** Reset points + chests to first-launch defaults (dev reset). */
+  resetEconomy: () => void;
 };
 
 const EconomyContext = createContext<EconomyContextValue | null>(null);
@@ -57,8 +59,13 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     setChests((c) => ({ ...c, [id]: Math.max(0, c[id] + n) }));
   }, []);
 
+  const resetEconomy = useCallback(() => {
+    setPoints(DEFAULT_POINTS);
+    setChests(DEFAULT_CHESTS);
+  }, []);
+
   return (
-    <EconomyContext.Provider value={{ hydrated, points, chests, addPoints, addChest }}>
+    <EconomyContext.Provider value={{ hydrated, points, chests, addPoints, addChest, resetEconomy }}>
       {children}
     </EconomyContext.Provider>
   );

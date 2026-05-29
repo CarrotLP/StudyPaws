@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { AppState } from 'react-native';
 
 import { HabitColors } from '@/constants/havenTheme';
@@ -67,12 +76,40 @@ const STUDY_MAX = 60 * 60;
 const BREAK_MIN = 60;
 const BREAK_MAX = 30 * 60;
 
-export function useStudySession() {
+type SessionState = {
+  hydrated: boolean;
+  points: number;
+  todayMinutes: number;
+  phase: SessionPhase;
+  studyDuration: number;
+  breakDuration: number;
+  secondsLeft: number;
+  activeBreakHabit: BreakHabit | null;
+  toast: { msg: string; key: number } | null;
+  habits: BreakHabit[];
+};
+
+type SessionActions = {
+  startStudy: () => void;
+  stopSession: () => void;
+  chooseBreakHabit: (habit: BreakHabit) => void;
+  devSkip: () => void;
+  decStudy: () => void;
+  incStudy: () => void;
+  decBreak: () => void;
+  incBreak: () => void;
+};
+
+// Split into two contexts so consumers that only need actions (e.g. the reset
+// button) don't re-render every second when the countdown ticks.
+const StateContext = createContext<SessionState | null>(null);
+const ActionsContext = createContext<SessionActions | null>(null);
+
+export function StudySessionProvider({ children }: { children: ReactNode }) {
   const { todayMinutes, addMinutesToday } = useStudyHistory();
   const { points, addPoints, addChest } = useEconomy();
 
   const [hydrated, setHydrated] = useState(false);
-
   const [phase, setPhase] = useState<SessionPhase>('idle');
   const [studyDuration, setStudyDuration] = useState(DEFAULT_SESSION.studyDuration);
   const [breakDuration, setBreakDuration] = useState(DEFAULT_SESSION.breakDuration);
@@ -207,8 +244,7 @@ export function useStudySession() {
   );
 
   // DEV ONLY: rewind the start time so the wall clock leaves ~2s on the active
-  // timer; it then completes through the normal transition logic. Not persisted
-  // beyond the usual session save, and only meaningful while a timer is running.
+  // timer; it then completes through the normal transition logic.
   const devSkip = useCallback(() => {
     if (startedAt == null || intendedDuration == null) return;
     setStartedAt(Date.now() - Math.max(0, intendedDuration - 2) * 1000);
@@ -222,7 +258,7 @@ export function useStudySession() {
 
   const activeBreakHabit = breakHabitId ? (HABITS.find((h) => h.id === breakHabitId) ?? null) : null;
 
-  return {
+  const state: SessionState = {
     hydrated,
     points,
     todayMinutes,
@@ -233,13 +269,31 @@ export function useStudySession() {
     activeBreakHabit,
     toast,
     habits: HABITS,
-    startStudy,
-    stopSession,
-    chooseBreakHabit,
-    devSkip,
-    decStudy,
-    incStudy,
-    decBreak,
-    incBreak,
   };
+
+  const actions = useMemo<SessionActions>(
+    () => ({ startStudy, stopSession, chooseBreakHabit, devSkip, decStudy, incStudy, decBreak, incBreak }),
+    [startStudy, stopSession, chooseBreakHabit, devSkip, decStudy, incStudy, decBreak, incBreak],
+  );
+
+  return (
+    <ActionsContext.Provider value={actions}>
+      <StateContext.Provider value={state}>{children}</StateContext.Provider>
+    </ActionsContext.Provider>
+  );
+}
+
+/** Full session (state + actions) — for the Home screen. */
+export function useStudySession() {
+  const state = useContext(StateContext);
+  const actions = useContext(ActionsContext);
+  if (!state || !actions) throw new Error('useStudySession must be used within StudySessionProvider');
+  return { ...state, ...actions };
+}
+
+/** Actions only — for consumers (e.g. reset) that must not re-render each tick. */
+export function useStudySessionActions() {
+  const actions = useContext(ActionsContext);
+  if (!actions) throw new Error('useStudySessionActions must be used within StudySessionProvider');
+  return actions;
 }
