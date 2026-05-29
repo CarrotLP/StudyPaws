@@ -1,64 +1,38 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+/**
+ * Tab layout. Uses Expo Router <Tabs> (not NativeTabs) so each of the six
+ * chapters stays mounted with its own state — e.g. Home's running timer — while
+ * switching; the default bottom bar is hidden and RibbonBar is rendered as a
+ * normal-flow bottom strip below the scene, so the ribbons sit in a grounded
+ * tab bar (reserving their own space) above the iOS home indicator.
+ */
+import { Tabs } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { RibbonBar } from '@/components/RibbonBar';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="calendar">
-        <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="dress">
-        <NativeTabs.Trigger.Label>Dress</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="treasure">
-        <NativeTabs.Trigger.Label>Treasure</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="inventory">
-        <NativeTabs.Trigger.Label>Inventory</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="buddies">
-        <NativeTabs.Trigger.Label>Buddies</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <View style={styles.root}>
+      <View style={styles.scene}>
+        <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }}>
+          <Tabs.Screen name="index" />
+          <Tabs.Screen name="calendar" />
+          <Tabs.Screen name="dress" />
+          <Tabs.Screen name="treasure" />
+          <Tabs.Screen name="inventory" />
+          <Tabs.Screen name="buddies" />
+        </Tabs>
+      </View>
+      <RibbonBar />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  scene: {
+    flex: 1,
+  },
+});
