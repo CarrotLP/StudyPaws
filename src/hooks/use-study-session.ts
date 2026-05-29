@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { HabitColors } from '@/constants/havenTheme';
+import { useEconomy } from '@/hooks/use-economy';
 import { useStudyHistory } from '@/hooks/use-study-history';
 import {
-  DEFAULT_HAVEN_STATE,
+  DEFAULT_SESSION,
   type HabitId,
-  loadHavenState,
-  saveHavenState,
+  loadSession,
+  saveSession,
   type SessionPhase,
 } from '@/lib/haven-storage';
 
@@ -68,14 +69,13 @@ const BREAK_MAX = 30 * 60;
 
 export function useStudySession() {
   const { todayMinutes, addMinutesToday } = useStudyHistory();
+  const { points, addPoints, addChest } = useEconomy();
 
   const [hydrated, setHydrated] = useState(false);
-  const [points, setPoints] = useState(DEFAULT_HAVEN_STATE.points);
-  const [chests, setChests] = useState(DEFAULT_HAVEN_STATE.chests);
 
   const [phase, setPhase] = useState<SessionPhase>('idle');
-  const [studyDuration, setStudyDuration] = useState(DEFAULT_HAVEN_STATE.session.studyDuration);
-  const [breakDuration, setBreakDuration] = useState(DEFAULT_HAVEN_STATE.session.breakDuration);
+  const [studyDuration, setStudyDuration] = useState(DEFAULT_SESSION.studyDuration);
+  const [breakDuration, setBreakDuration] = useState(DEFAULT_SESSION.breakDuration);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [intendedDuration, setIntendedDuration] = useState<number | null>(null);
   const [breakHabitId, setBreakHabitId] = useState<HabitId | null>(null);
@@ -104,16 +104,14 @@ export function useStudySession() {
   // killed will resume here and be completed by the effect below.
   useEffect(() => {
     let mounted = true;
-    loadHavenState().then((s) => {
+    loadSession().then((s) => {
       if (!mounted) return;
-      setPoints(s.points);
-      setChests(s.chests);
-      setPhase(s.session.phase);
-      setStudyDuration(s.session.studyDuration);
-      setBreakDuration(s.session.breakDuration);
-      setStartedAt(s.session.startedAt);
-      setIntendedDuration(s.session.intendedDuration);
-      setBreakHabitId(s.session.breakHabitId);
+      setPhase(s.phase);
+      setStudyDuration(s.studyDuration);
+      setBreakDuration(s.breakDuration);
+      setStartedAt(s.startedAt);
+      setIntendedDuration(s.intendedDuration);
+      setBreakHabitId(s.breakHabitId);
       firedRef.current = false;
       setNow(Date.now());
       setHydrated(true);
@@ -123,25 +121,11 @@ export function useStudySession() {
     };
   }, []);
 
-  // Persist on any change once hydrated.
+  // Persist the session on any change once hydrated.
   useEffect(() => {
     if (!hydrated) return;
-    saveHavenState({
-      points,
-      chests,
-      session: { phase, startedAt, intendedDuration, breakHabitId, studyDuration, breakDuration },
-    });
-  }, [
-    hydrated,
-    points,
-    chests,
-    phase,
-    startedAt,
-    intendedDuration,
-    breakHabitId,
-    studyDuration,
-    breakDuration,
-  ]);
+    saveSession({ phase, startedAt, intendedDuration, breakHabitId, studyDuration, breakDuration });
+  }, [hydrated, phase, startedAt, intendedDuration, breakHabitId, studyDuration, breakDuration]);
 
   // 1s tick only while a timer is running — purely to re-render the countdown.
   useEffect(() => {
@@ -168,8 +152,8 @@ export function useStudySession() {
     if (phase === 'studying') {
       const studiedMinutes = Math.ceil((intendedDuration ?? studyDuration) / 60);
       addMinutesToday(studiedMinutes);
-      setPoints((p) => p + STUDY_REWARD_POINTS);
-      setChests((c) => ({ ...c, small: c.small + 1 }));
+      addPoints(STUDY_REWARD_POINTS);
+      addChest('small');
       showToast(`Focus complete · +${STUDY_REWARD_POINTS} ✦ · +1 chest`);
       setPhase('break_choosing');
       setStartedAt(null);
@@ -177,7 +161,7 @@ export function useStudySession() {
     } else {
       const habit = HABITS.find((h) => h.id === breakHabitId);
       if (habit) {
-        setPoints((p) => p + habit.pts);
+        addPoints(habit.pts);
         showToast(`${habit.name} · +${habit.pts} ✦`);
       }
       setPhase('finished');
@@ -185,7 +169,7 @@ export function useStudySession() {
       setIntendedDuration(null);
       setBreakHabitId(null);
     }
-  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday]);
+  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday, addPoints, addChest]);
 
   useEffect(() => {
     return () => {

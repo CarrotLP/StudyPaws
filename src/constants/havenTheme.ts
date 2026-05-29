@@ -28,6 +28,13 @@ export const HavenColors = {
   cellInset: 'rgba(31, 58, 95, 0.15)',
   // Soft drop shadow under the cat (.floor-shadow)
   floorShadow: 'rgba(26, 15, 8, 0.3)',
+  // Inventory item-cell states
+  lockedCell: 'rgba(58, 36, 24, 0.35)',
+  wornCell: 'rgba(212, 168, 44, 0.35)',
+  lockedIcon: 'rgba(26, 15, 8, 0.4)',
+  // Chest-open overlay
+  overlayScrim: 'rgba(15, 10, 5, 0.85)',
+  revealItem: 'rgba(212, 168, 44, 0.25)',
 } as const;
 
 /**
@@ -119,6 +126,8 @@ export const Control = {
   dialButton: 24,
   habitIcon: 28,
   legendSwatch: 14,
+  itemIconBox: 36,
+  itemCellMinHeight: 90,
 } as const;
 
 /** VT323 (body) sizes seen in the prototype (px). */
@@ -179,6 +188,7 @@ export const ShadowOffset = {
 
 /** Spacing scale (px) approximated from the prototype's gaps/padding. */
 export const HavenSpacing = {
+  xxs: 2,
   xs: 4,
   sm: 6,
   base: 8,

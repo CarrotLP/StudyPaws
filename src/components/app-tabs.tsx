@@ -19,7 +19,7 @@ export default function AppTabs() {
           renderingMode="template"
         />
       </NativeTabs.Trigger>
-      
+
       <NativeTabs.Trigger name="calendar">
         <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
@@ -28,8 +28,24 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="shop">
-        <NativeTabs.Trigger.Label>Shop</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="dress">
+        <NativeTabs.Trigger.Label>Dress</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/explore.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="treasure">
+        <NativeTabs.Trigger.Label>Treasure</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/explore.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="inventory">
+        <NativeTabs.Trigger.Label>Inventory</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/explore.png')}
           renderingMode="template"
@@ -38,16 +54,6 @@ export default function AppTabs() {
 
       <NativeTabs.Trigger name="friends">
         <NativeTabs.Trigger.Label>Friends</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      {/* TEMPORARY debug tab for PixelCat — remove with app/debug.tsx */}
-      <NativeTabs.Trigger name="debug">
-        <NativeTabs.Trigger.Label>Debug</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/explore.png')}
           renderingMode="template"
