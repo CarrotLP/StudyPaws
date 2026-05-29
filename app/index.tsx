@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DevSkipButton } from '@/components/DevSkipButton';
 import { PixelCat } from '@/components/PixelCat';
 import {
   BodyFontSize,
@@ -126,6 +127,10 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
+
+      {(phase === 'studying' || phase === 'break_doing') && (
+        <DevSkipButton onPress={session.devSkip} />
+      )}
     </SafeAreaView>
   );
 }
