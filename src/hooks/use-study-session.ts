@@ -206,6 +206,15 @@ export function useStudySession() {
     [breakDuration],
   );
 
+  // DEV ONLY: rewind the start time so the wall clock leaves ~2s on the active
+  // timer; it then completes through the normal transition logic. Not persisted
+  // beyond the usual session save, and only meaningful while a timer is running.
+  const devSkip = useCallback(() => {
+    if (startedAt == null || intendedDuration == null) return;
+    setStartedAt(Date.now() - Math.max(0, intendedDuration - 2) * 1000);
+    setNow(Date.now());
+  }, [startedAt, intendedDuration]);
+
   const decStudy = useCallback(() => setStudyDuration((d) => Math.max(STUDY_MIN, d - STUDY_STEP)), []);
   const incStudy = useCallback(() => setStudyDuration((d) => Math.min(STUDY_MAX, d + STUDY_STEP)), []);
   const decBreak = useCallback(() => setBreakDuration((d) => Math.max(BREAK_MIN, d - BREAK_STEP)), []);
@@ -227,6 +236,7 @@ export function useStudySession() {
     startStudy,
     stopSession,
     chooseBreakHabit,
+    devSkip,
     decStudy,
     incStudy,
     decBreak,
