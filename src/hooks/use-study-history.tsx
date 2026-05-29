@@ -34,6 +34,8 @@ type StudyHistoryContextValue = {
   history: StudyHistory;
   todayMinutes: number;
   addMinutesToday: (minutes: number) => void;
+  /** Reset only today's entry to 0; all prior days are preserved (dev reset). */
+  resetToday: () => void;
 };
 
 const StudyHistoryContext = createContext<StudyHistoryContextValue | null>(null);
@@ -74,10 +76,14 @@ export function StudyHistoryProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const resetToday = useCallback(() => {
+    setHistory((h) => ({ ...h, [dateKey(new Date())]: 0 }));
+  }, []);
+
   const todayMinutes = history[dateKey(new Date())] ?? 0;
 
   return (
-    <StudyHistoryContext.Provider value={{ hydrated, history, todayMinutes, addMinutesToday }}>
+    <StudyHistoryContext.Provider value={{ hydrated, history, todayMinutes, addMinutesToday, resetToday }}>
       {children}
     </StudyHistoryContext.Provider>
   );

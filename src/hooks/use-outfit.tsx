@@ -22,6 +22,8 @@ type OutfitContextValue = {
   /** Add an item to the wardrobe (used by Treasure chest rewards). */
   addOwned: (id: ItemId) => void;
   isOwned: (id: ItemId) => boolean;
+  /** Reset owned items + outfit to first-launch defaults (dev reset). */
+  resetOutfit: () => void;
 };
 
 const OutfitContext = createContext<OutfitContextValue | null>(null);
@@ -67,8 +69,13 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
 
   const isOwned = useCallback((id: ItemId) => owned.includes(id), [owned]);
 
+  const resetOutfit = useCallback(() => {
+    setOwned(DEFAULT_OWNED as ItemId[]);
+    setOutfit(INITIAL_OUTFIT);
+  }, []);
+
   return (
-    <OutfitContext.Provider value={{ hydrated, owned, outfit, equip, addOwned, isOwned }}>
+    <OutfitContext.Provider value={{ hydrated, owned, outfit, equip, addOwned, isOwned, resetOutfit }}>
       {children}
     </OutfitContext.Provider>
   );

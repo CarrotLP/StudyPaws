@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "app_name",
+    "name": "Haven",
     "slug": "app_name",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icon.png",
     "scheme": "appname",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.justrene.drp"
     },
     "android": {
-      "package": "com.justrene.drp",
+      "package": "com.havenstudio.haven",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -30,11 +31,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
-          }
+          "image": "./assets/splash.png",
+          "imageWidth": 200,
+          "backgroundColor": "#F0E0B8"
         }
       ],
       "expo-font",
@@ -57,6 +56,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/cd602489-34a1-4b0c-8660-a7ecdacacbbb"
-    }
+    },
+    "owner": "justrene"
   }
 }

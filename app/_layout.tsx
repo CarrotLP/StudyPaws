@@ -11,6 +11,7 @@ import AppTabs from '@/components/app-tabs';
 import { EconomyProvider } from '@/hooks/use-economy';
 import { OutfitProvider } from '@/hooks/use-outfit';
 import { StudyHistoryProvider } from '@/hooks/use-study-history';
+import { StudySessionProvider } from '@/hooks/use-study-session';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,8 +37,10 @@ export default function TabLayout() {
       <EconomyProvider>
         <StudyHistoryProvider>
           <OutfitProvider>
-            <AnimatedSplashOverlay />
-            <AppTabs />
+            <StudySessionProvider>
+              <AnimatedSplashOverlay />
+              <AppTabs />
+            </StudySessionProvider>
           </OutfitProvider>
         </StudyHistoryProvider>
       </EconomyProvider>
