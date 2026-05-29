@@ -32,6 +32,8 @@ export const HavenColors = {
   lockedCell: 'rgba(58, 36, 24, 0.35)',
   wornCell: 'rgba(212, 168, 44, 0.35)',
   lockedIcon: 'rgba(26, 15, 8, 0.4)',
+  // Calendar selected-day highlight (brighter than the heat ramp / today ring)
+  selectedCell: '#FFE9A3',
   // Chest-open overlay
   overlayScrim: 'rgba(15, 10, 5, 0.85)',
   revealItem: 'rgba(212, 168, 44, 0.25)',

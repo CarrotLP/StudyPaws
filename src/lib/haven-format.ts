@@ -24,3 +24,12 @@ export function dateKey(d: Date) {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+/** "Mon 27 May" — short weekday, day, short month — from a YYYY-MM-DD key. */
+export function fmtDayLabel(key: string) {
+  const [y, m, d] = key.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+  const month = date.toLocaleDateString('en-US', { month: 'short' });
+  return `${weekday} ${d} ${month}`;
+}
