@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevSkipButton } from '@/components/DevSkipButton';
 import { PixelCat } from '@/components/PixelCat';
+import { Toast } from '@/components/Toast';
 import {
   BodyFontSize,
   Border,
@@ -44,11 +45,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      {toast && (
-        <View style={styles.toast} key={toast.key}>
-          <Text style={styles.toastText}>{toast.msg}</Text>
-        </View>
-      )}
+      {toast && <Toast key={toast.key} message={toast.msg} />}
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
@@ -475,21 +472,4 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.base,
   },
 
-  toast: {
-    position: 'absolute',
-    top: HavenSpacing.xxl,
-    alignSelf: 'center',
-    zIndex: 150,
-    backgroundColor: HavenColors.ink,
-    borderWidth: Border.base,
-    borderColor: HavenColors.gold,
-    paddingVertical: HavenSpacing.md,
-    paddingHorizontal: HavenSpacing.xl,
-    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
-  },
-  toastText: {
-    fontFamily: HavenFonts.pixel,
-    fontSize: PixelFontSize.md,
-    color: HavenColors.gold,
-  },
 });

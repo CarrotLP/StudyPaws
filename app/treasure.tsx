@@ -3,7 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChestOpenOverlay, type ChestStage } from '@/components/ChestOpenOverlay';
+import { DevAddPointsButton } from '@/components/DevAddPointsButton';
 import { ItemIcon } from '@/components/ItemIcon';
+import { Toast } from '@/components/Toast';
 import { ALL_ITEMS, type ItemId } from '@/components/itemSprites';
 import { PixelChest } from '@/components/PixelChest';
 import {
@@ -102,11 +104,7 @@ export default function TreasureScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      {toast && (
-        <View style={styles.toast} key={toast.key}>
-          <Text style={styles.toastText}>{toast.msg}</Text>
-        </View>
-      )}
+      {toast && <Toast key={toast.key} message={toast.msg} />}
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
@@ -167,6 +165,8 @@ export default function TreasureScreen() {
         rewardId={opening?.reward ?? null}
         onClaim={claimReward}
       />
+
+      <DevAddPointsButton onPress={() => addPoints(100)} />
     </SafeAreaView>
   );
 }
@@ -295,21 +295,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  toast: {
-    position: 'absolute',
-    top: HavenSpacing.xxl,
-    alignSelf: 'center',
-    zIndex: 150,
-    backgroundColor: HavenColors.ink,
-    borderWidth: Border.base,
-    borderColor: HavenColors.gold,
-    paddingVertical: HavenSpacing.md,
-    paddingHorizontal: HavenSpacing.xl,
-    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
-  },
-  toastText: {
-    fontFamily: HavenFonts.pixel,
-    fontSize: PixelFontSize.md,
-    color: HavenColors.gold,
-  },
 });
