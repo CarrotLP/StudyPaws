@@ -118,6 +118,7 @@ export const PixelFontSize = {
 export const Control = {
   dialButton: 24,
   habitIcon: 28,
+  legendSwatch: 14,
 } as const;
 
 /** VT323 (body) sizes seen in the prototype (px). */
