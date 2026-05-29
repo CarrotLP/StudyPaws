@@ -8,6 +8,8 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { EconomyProvider } from '@/hooks/use-economy';
+import { OutfitProvider } from '@/hooks/use-outfit';
 import { StudyHistoryProvider } from '@/hooks/use-study-history';
 
 SplashScreen.preventAutoHideAsync();
@@ -31,10 +33,14 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <StudyHistoryProvider>
-        <AnimatedSplashOverlay />
-        <AppTabs />
-      </StudyHistoryProvider>
+      <EconomyProvider>
+        <StudyHistoryProvider>
+          <OutfitProvider>
+            <AnimatedSplashOverlay />
+            <AppTabs />
+          </OutfitProvider>
+        </StudyHistoryProvider>
+      </EconomyProvider>
     </ThemeProvider>
   );
 }

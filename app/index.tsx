@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PixelCat, type OutfitState } from '@/components/PixelCat';
+import { PixelCat } from '@/components/PixelCat';
 import {
   BodyFontSize,
   Border,
@@ -21,15 +21,13 @@ import {
   PixelScale,
   ShadowOffset,
 } from '@/constants/havenTheme';
+import { useOutfit } from '@/hooks/use-outfit';
 import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
 import { fmt, fmtMinutes } from '@/lib/haven-format';
 
-// Placeholder until the Dress screen + shared outfit store are ported; matches
-// the prototype's starting outfit. PixelCat ignores it while sleeping.
-const HOME_OUTFIT: OutfitState = { head: null, face: 'glasses', neck: 'scarf', body: null };
-
 export default function HomeScreen() {
   const session = useStudySession();
+  const { outfit } = useOutfit();
   const {
     phase,
     points,
@@ -53,7 +51,7 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <PixelCat outfit={HOME_OUTFIT} scale={PixelScale.catHome} sleeping={sleeping} />
+          <PixelCat outfit={outfit} scale={PixelScale.catHome} sleeping={sleeping} />
           <View style={styles.floorShadow} />
         </View>
 

@@ -3,88 +3,107 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type SessionPhase = 'idle' | 'studying' | 'break_choosing' | 'break_doing' | 'finished';
 export type HabitId = 'phoneoff' | 'stretch' | 'steps' | 'water';
 export type StudyHistory = Record<string, number>; // YYYY-MM-DD -> study minutes
+export type ChestId = 'small' | 'ornate';
+export type ChestCounts = { small: number; ornate: number };
 
 /**
- * The persisted session/economy blob. `session` captures everything needed to
- * resume an in-flight timer after backgrounding, locking, or a cold restart:
- * `startedAt` is wall-clock epoch ms, `intendedDuration` is the timer length in
- * seconds, so remaining time is always recomputed from the clock — never from a
- * counter that pauses when the app is suspended. Study history lives under its
- * own key (see below), shared between Home and Calendar.
+ * The persisted study session. `startedAt` is wall-clock epoch ms and
+ * `intendedDuration` is the timer length in seconds, so remaining time is always
+ * recomputed from the clock — never from a counter that pauses when the app is
+ * suspended. Points, chests, history, owned, and outfit each live under their
+ * own keys (below) so they can be shared across screens via context.
  */
-export type PersistedHaven = {
-  points: number;
-  chests: { small: number; ornate: number };
-  session: {
-    phase: SessionPhase;
-    startedAt: number | null;
-    intendedDuration: number | null;
-    breakHabitId: HabitId | null;
-    studyDuration: number;
-    breakDuration: number;
-  };
+export type PersistedSession = {
+  phase: SessionPhase;
+  startedAt: number | null;
+  intendedDuration: number | null;
+  breakHabitId: HabitId | null;
+  studyDuration: number;
+  breakDuration: number;
 };
 
 export const DEFAULT_STUDY_DURATION = 25 * 60;
 export const DEFAULT_BREAK_DURATION = 5 * 60;
 
-export const DEFAULT_HAVEN_STATE: PersistedHaven = {
-  points: 245,
-  chests: { small: 1, ornate: 0 },
-  session: {
-    phase: 'idle',
-    startedAt: null,
-    intendedDuration: null,
-    breakHabitId: null,
-    studyDuration: DEFAULT_STUDY_DURATION,
-    breakDuration: DEFAULT_BREAK_DURATION,
-  },
+export const DEFAULT_SESSION: PersistedSession = {
+  phase: 'idle',
+  startedAt: null,
+  intendedDuration: null,
+  breakHabitId: null,
+  studyDuration: DEFAULT_STUDY_DURATION,
+  breakDuration: DEFAULT_BREAK_DURATION,
+};
+
+export const DEFAULT_POINTS = 245;
+export const DEFAULT_CHESTS: ChestCounts = { small: 1, ornate: 0 };
+
+// Prototype starting wardrobe: owns + wears scarf and glasses.
+export const DEFAULT_OWNED: string[] = ['scarf', 'glasses'];
+export const DEFAULT_OUTFIT: Record<string, string | null> = {
+  head: null,
+  face: 'glasses',
+  neck: 'scarf',
+  body: null,
 };
 
 // Every AsyncStorage key is defined here once and imported elsewhere.
-const STATE_KEY = 'haven.state.v1';
+const SESSION_KEY = 'haven.session';
+const POINTS_KEY = 'haven.points';
+const CHESTS_KEY = 'haven.chests';
 const STUDY_HISTORY_KEY = 'haven.studyHistory';
 const FIRST_LAUNCH_KEY = 'haven.firstLaunchDone';
+const OWNED_KEY = 'haven.owned';
+const OUTFIT_KEY = 'haven.outfit';
 
-export async function loadHavenState(): Promise<PersistedHaven> {
+async function readJSON<T>(key: string, fallback: T): Promise<T> {
   try {
-    const raw = await AsyncStorage.getItem(STATE_KEY);
-    if (!raw) return DEFAULT_HAVEN_STATE;
-    const parsed = JSON.parse(raw) as Partial<PersistedHaven>;
-    return {
-      ...DEFAULT_HAVEN_STATE,
-      ...parsed,
-      chests: { ...DEFAULT_HAVEN_STATE.chests, ...(parsed.chests ?? {}) },
-      session: { ...DEFAULT_HAVEN_STATE.session, ...(parsed.session ?? {}) },
-    };
+    const raw = await AsyncStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
-    return DEFAULT_HAVEN_STATE;
+    return fallback;
   }
 }
 
-export async function saveHavenState(state: PersistedHaven): Promise<void> {
+async function writeJSON(key: string, value: unknown): Promise<void> {
   try {
-    await AsyncStorage.setItem(STATE_KEY, JSON.stringify(state));
+    await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Persistence is best-effort; a failed write shouldn't crash the session.
+    // Persistence is best-effort; a failed write shouldn't crash anything.
   }
+}
+
+export async function loadSession(): Promise<PersistedSession> {
+  const parsed = await readJSON<Partial<PersistedSession>>(SESSION_KEY, {});
+  return { ...DEFAULT_SESSION, ...parsed };
+}
+
+export function saveSession(session: PersistedSession): Promise<void> {
+  return writeJSON(SESSION_KEY, session);
+}
+
+export async function loadPoints(): Promise<number> {
+  return readJSON<number>(POINTS_KEY, DEFAULT_POINTS);
+}
+
+export function savePoints(points: number): Promise<void> {
+  return writeJSON(POINTS_KEY, points);
+}
+
+export async function loadChests(): Promise<ChestCounts> {
+  const parsed = await readJSON<Partial<ChestCounts>>(CHESTS_KEY, {});
+  return { ...DEFAULT_CHESTS, ...parsed };
+}
+
+export function saveChests(chests: ChestCounts): Promise<void> {
+  return writeJSON(CHESTS_KEY, chests);
 }
 
 export async function loadStudyHistory(): Promise<StudyHistory> {
-  try {
-    const raw = await AsyncStorage.getItem(STUDY_HISTORY_KEY);
-    return raw ? (JSON.parse(raw) as StudyHistory) : {};
-  } catch {
-    return {};
-  }
+  return readJSON<StudyHistory>(STUDY_HISTORY_KEY, {});
 }
 
-export async function saveStudyHistory(history: StudyHistory): Promise<void> {
-  try {
-    await AsyncStorage.setItem(STUDY_HISTORY_KEY, JSON.stringify(history));
-  } catch {
-    // Best-effort.
-  }
+export function saveStudyHistory(history: StudyHistory): Promise<void> {
+  return writeJSON(STUDY_HISTORY_KEY, history);
 }
 
 export async function isFirstLaunch(): Promise<boolean> {
@@ -95,10 +114,23 @@ export async function isFirstLaunch(): Promise<boolean> {
   }
 }
 
-export async function markFirstLaunchDone(): Promise<void> {
-  try {
-    await AsyncStorage.setItem(FIRST_LAUNCH_KEY, '1');
-  } catch {
-    // Best-effort.
-  }
+export function markFirstLaunchDone(): Promise<void> {
+  return writeJSON(FIRST_LAUNCH_KEY, '1');
+}
+
+export async function loadOwned(): Promise<string[]> {
+  return readJSON<string[]>(OWNED_KEY, DEFAULT_OWNED);
+}
+
+export function saveOwned(owned: string[]): Promise<void> {
+  return writeJSON(OWNED_KEY, owned);
+}
+
+export async function loadOutfit(): Promise<Record<string, string | null>> {
+  const parsed = await readJSON<Record<string, string | null>>(OUTFIT_KEY, {});
+  return { ...DEFAULT_OUTFIT, ...parsed };
+}
+
+export function saveOutfit(outfit: Record<string, string | null>): Promise<void> {
+  return writeJSON(OUTFIT_KEY, outfit);
 }
