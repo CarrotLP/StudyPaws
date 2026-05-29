@@ -3,7 +3,10 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/press-start-2p": "^0.4.1",
+    "@expo-google-fonts/vt323": "^0.4.1",
     "@expo/ui": "~56.0.14",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "^56.0.5",
     "expo-constants": "~56.0.16",
     "expo-dev-client": "~56.0.16",
