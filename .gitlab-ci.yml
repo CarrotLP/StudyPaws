@@ -54,27 +54,70 @@ build:ios:
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: manual
 
-# Build both with one click
+# Build both platforms with one click (direct EAS builds — no EAS Workflows)
 build:all:
   <<: *node_setup
   stage: build
   script:
     - npm install -g eas-cli
-    - eas workflow:run create-production-builds.yml --non-interactive
+    - eas build --platform android --profile preview --non-interactive --no-wait
+    - eas build --platform ios --profile preview --non-interactive --no-wait
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: manual
 
-# OTA update on main
+# OTA update on master — publishes a JS/asset bundle to the "preview" channel,
+# which the distributed APK listens on. Installed APKs download it on cold start
+# and apply it on the NEXT launch (default expo-updates behaviour).
+#
+# runtimeVersion is pinned to "1" in app.json. Increment it ONLY when adding a
+# native module or changing native config; bumping the app version does NOT
+# require changing runtimeVersion. OTA can only reach builds with a MATCHING
+# runtimeVersion, so the safety check below blocks updates that change the
+# native/runtime surface — those require a fresh APK, not an OTA.
 eas-update:
   <<: *node_setup
   stage: update
   script:
+    # 1. Require EXPO_TOKEN (the EAS CLI reads it automatically for auth).
+    - |
+      if [ -z "$EXPO_TOKEN" ]; then
+        echo "ERROR: EXPO_TOKEN is not set."
+        echo "Create one at https://expo.dev -> Account settings -> Access Tokens."
+        echo "Then add it in GitLab: Project -> Settings -> CI/CD -> Variables"
+        echo "  Key: EXPO_TOKEN   Masked: yes   Protected: yes"
+        echo "See SETUP.md for the full walkthrough."
+        exit 1
+      fi
+    # 2. Block OTA when this commit changes runtimeVersion (app.json) or the
+    #    major/minor of the package.json version — those need a new APK.
+    - |
+      BEFORE="$CI_COMMIT_BEFORE_SHA"
+      if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+        git show "$BEFORE:app.json" > /tmp/old-app.json 2>/dev/null || echo '{}' > /tmp/old-app.json
+        git show "$BEFORE:package.json" > /tmp/old-pkg.json 2>/dev/null || echo '{}' > /tmp/old-pkg.json
+        RT_OLD=$(node -e "try{console.log(JSON.stringify(require('/tmp/old-app.json').expo.runtimeVersion))}catch(e){console.log('null')}")
+        RT_NEW=$(node -e "console.log(JSON.stringify(require('./app.json').expo.runtimeVersion))")
+        VER_OLD=$(node -e "try{console.log((require('/tmp/old-pkg.json').version||'0.0.0').split('.').slice(0,2).join('.'))}catch(e){console.log('0.0')}")
+        VER_NEW=$(node -e "console.log((require('./package.json').version||'0.0.0').split('.').slice(0,2).join('.'))")
+        if [ "$RT_OLD" != "$RT_NEW" ] || [ "$VER_OLD" != "$VER_NEW" ]; then
+          echo "Native or runtime change detected — OTA cannot apply this safely. Build a new APK instead."
+          echo "  runtimeVersion: ${RT_OLD} -> ${RT_NEW}"
+          echo "  package.json version (major.minor): ${VER_OLD} -> ${VER_NEW}"
+          exit 1
+        fi
+      else
+        echo "No valid previous commit to diff (first push / shallow clone); skipping native-change check."
+      fi
+    # 3. Publish the OTA update to the "preview" channel.
     - npm install -g eas-cli
-    - eas update --branch production --message "$CI_COMMIT_MESSAGE" --non-interactive
+    - eas update --branch preview --message "$CI_COMMIT_TITLE" --non-interactive
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       changes:
+        - "app/**/*"
         - "src/**/*"
+        - "assets/**/*"
         - "app.json"
         - "package.json"
+        - "package-lock.json"
