@@ -60,7 +60,7 @@ build:all:
   stage: build
   script:
     - npm install -g eas-cli
-    - eas build --platform all --profile preview --non-interactive --no-wait
+    - eas workflow:run create-production-builds.yml --non-interactive
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: manual
