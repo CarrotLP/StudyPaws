@@ -15,7 +15,7 @@ export default function BreaktimeScreen() {
   const [showWellDonePoints, setShowWellDonePoints] = useState(false);
 
   return (
-    <Pressable style={{ flex: 1 }} onPress={() => router.push('/breaktime')}>
+    <Pressable style={[{ flex: 1 }, styles.actionButton]} onPress={() => setShowReadyPopup(true)}>
       <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scroll}>
         <ThemedView type="background" style={styles.safeArea}>
             <View style={styles.heroSection}>
@@ -35,11 +35,11 @@ export default function BreaktimeScreen() {
             {(
               <>
                 <View style={styles.actions}> 
-                  <Pressable onPress={() => setShowReadyPopup(true)} style={styles.actionButton}>
+                  <Pressable >
                     <ThemedText style={styles.actionText}>.</ThemedText>
                   </Pressable>
 
-                  <Pressable onPress={() => setShowWellDonePoints(true)} style={styles.actionButton}>
+                  <Pressable onPress={() => setShowReadyPopup(true)} style={styles.actionButton}>
                     <ThemedText style={styles.actionText}>.</ThemedText>
                   </Pressable>
                 </View>
@@ -51,7 +51,7 @@ export default function BreaktimeScreen() {
                 <Popup
                   title="Ready to take a break?"
                   buttons={[
-                    { label: 'Yes!', onPress: () => setShowReadyPopup(false) },
+                    { label: 'Yes!', onPress: () => { setShowReadyPopup(false); setShowWellDonePoints(true); } },
                     { label: '5 minutes to finish', onPress: () => setShowReadyPopup(false) },
                   ]}
                 />
@@ -63,7 +63,7 @@ export default function BreaktimeScreen() {
                 <Points
                   title="Well Done!"
                   points="+60 points"
-                  onPress={() => setShowWellDonePoints(false)}
+                  onPress={() => router.push('/breaktime')}
                 />
               </ThemedView>
             </Modal>

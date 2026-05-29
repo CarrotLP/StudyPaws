@@ -40,10 +40,6 @@ export default function BreaktimeScreen() {
               <Pressable onPress={() => setShowReadyPopup(true)} style={styles.actionButton}>
                 <ThemedText style={styles.actionText}>.</ThemedText>
               </Pressable>
-
-              <Pressable onPress={() => setShowWellDonePoints(true)} style={styles.actionButton}>
-                <ThemedText style={styles.actionText}>.</ThemedText>
-              </Pressable>
             </View>
 
             <View style={styles.section}>
@@ -60,7 +56,7 @@ export default function BreaktimeScreen() {
             <Popup
               title="Ready to take a break?"
               buttons={[
-                { label: 'Yes!', onPress: () => setShowReadyPopup(false) },
+                { label: 'Yes!', onPress: () => {setShowReadyPopup(false); setShowWellDonePoints(true); } },
                 { label: '5 minutes to finish', onPress: () => setShowReadyPopup(false) },
               ]}
             />
