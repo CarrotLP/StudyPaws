@@ -26,6 +26,29 @@ export const HavenColors = {
   // Translucent fills reused across cards/cells
   cellFill: 'rgba(255, 240, 200, 0.5)',
   cellInset: 'rgba(31, 58, 95, 0.15)',
+  // Soft drop shadow under the cat (.floor-shadow)
+  floorShadow: 'rgba(26, 15, 8, 0.3)',
+} as const;
+
+/**
+ * Pixel-cat sprite palette, keyed by the single characters used in the
+ * sprite arrays (CAT_PALETTE in the prototype). `k` and `w` reuse existing
+ * HavenColors; the rest are the prototype's fur/shading/face hues.
+ */
+export const CatPalette = {
+  k: HavenColors.ink, // #1A0F08
+  K: '#3A2418',
+  o: '#A88060',
+  O: '#7A5A3E',
+  l: '#C9A684',
+  s: '#5C3D24',
+  c: '#F2E1C2',
+  m: '#FBEED4',
+  e: '#7BA052',
+  E: '#4A6B30',
+  p: '#E89878',
+  P: '#B85F45',
+  w: HavenColors.white, // #FFFFFF
 } as const;
 
 /** Break-activity accent colors, keyed by HABITS id. */
@@ -85,9 +108,16 @@ export const PixelFontSize = {
   xl: 11,
   xxl: 12,
   title: 13,
+  dots: 18,
   stat: 16,
   dial: 22,
   timer: 34,
+} as const;
+
+/** Interactive control sizes (px) that don't map to the spacing scale. */
+export const Control = {
+  dialButton: 24,
+  habitIcon: 28,
 } as const;
 
 /** VT323 (body) sizes seen in the prototype (px). */

@@ -1,200 +1,504 @@
-import * as Device from 'expo-device';
-import { Modal, Platform, ScrollView, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Points } from '@/components/points';
-import { Popup } from '@/components/popup';
-import { RecommendedActivities } from '@/components/recommended-activities';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useState } from 'react';
+import { PixelCat, type OutfitState } from '@/components/PixelCat';
+import {
+  BodyFontSize,
+  Border,
+  Control,
+  HavenColors,
+  HavenFonts,
+  HavenSpacing,
+  PixelFontSize,
+  PixelScale,
+  ShadowOffset,
+} from '@/constants/havenTheme';
+import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+// Placeholder until the Dress screen + shared outfit store are ported; matches
+// the prototype's starting outfit. PixelCat ignores it while sleeping.
+const HOME_OUTFIT: OutfitState = { head: null, face: 'glasses', neck: 'scarf', body: null };
+
+function fmt(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60);
+  const r = totalSeconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+}
+
+function fmtMinutes(min: number) {
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+export default function HomeScreen() {
+  const session = useStudySession();
+  const {
+    phase,
+    points,
+    todayMinutes,
+    studyDuration,
+    breakDuration,
+    secondsLeft,
+    activeBreakHabit,
+    toast,
+  } = session;
+
+  const sleeping = phase === 'break_doing' && activeBreakHabit?.id === 'phoneoff';
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      {toast && (
+        <View style={styles.toast} key={toast.key}>
+          <Text style={styles.toastText}>{toast.msg}</Text>
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.catStage}>
+          <PixelCat outfit={HOME_OUTFIT} scale={PixelScale.catHome} sleeping={sleeping} />
+          <View style={styles.floorShadow} />
+        </View>
+
+        <Text style={styles.petName}>Mochi</Text>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statPill}>
+            <Text style={styles.leaf}>✦</Text>
+            <Text style={styles.statText}>{points}</Text>
+          </View>
+          <View style={[styles.statPill, styles.statPillAlt]}>
+            <Text style={styles.statText}>today · {fmtMinutes(todayMinutes)}</Text>
+          </View>
+        </View>
+
+        <PageRule />
+
+        {phase === 'idle' && (
+          <>
+            <View style={styles.dialRow}>
+              <Dial
+                label="study"
+                minutes={Math.floor(studyDuration / 60)}
+                onMinus={session.decStudy}
+                onPlus={session.incStudy}
+              />
+              <Dial
+                label="break"
+                minutes={Math.floor(breakDuration / 60)}
+                onMinus={session.decBreak}
+                onPlus={session.incBreak}
+              />
+            </View>
+            <InkButton label="begin focus block" variant="primary" onPress={session.startStudy} />
+          </>
+        )}
+
+        {phase === 'studying' && (
+          <>
+            <Text style={styles.section}>studying</Text>
+            <Text style={styles.timerBig}>{fmt(secondsLeft)}</Text>
+            <BlinkingDots />
+            <InkButton label="give up" variant="small" onPress={session.stopSession} />
+          </>
+        )}
+
+        {phase === 'break_choosing' && (
+          <>
+            <Text style={styles.section}>pick one break activity</Text>
+            <View style={styles.habitList}>
+              {session.habits.map((habit) => (
+                <HabitRow key={habit.id} habit={habit} onPress={() => session.chooseBreakHabit(habit)} />
+              ))}
+            </View>
+          </>
+        )}
+
+        {phase === 'break_doing' && activeBreakHabit && (
+          <>
+            <Text style={styles.section}>
+              {activeBreakHabit.name} · {fmt(secondsLeft)}
+            </Text>
+            <Text style={styles.breakMsg}>{activeBreakHabit.guidance.join('\n')}</Text>
+            <InkButton label="end early" variant="small" onPress={session.stopSession} />
+          </>
+        )}
+
+        {phase === 'finished' && (
+          <>
+            <Text style={styles.section}>complete</Text>
+            <InkButton label="begin another" variant="primary" onPress={session.startStudy} />
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-
-export default function HomeScreen() {
-
-  const [showReadyToStudyPopup, setShowReadyToStudyPopup] = useState(false);
-  const [showWellDonePoints, setShowWellDonePoints] = useState(false);
-
+function PageRule() {
   return (
-    <>
-      {/* Ready to Study Popup Overlay */}
-      <Modal visible={showReadyToStudyPopup} transparent animationType="fade">
-        <ThemedView style={styles.overlay}>
-          <Popup
-            title="Ready to Study?"
-            buttons={[
-              {
-                label: 'Yes!',
-                onPress: () => setShowReadyToStudyPopup(false)
-              },
-              {
-                label: 'Snooze\nlose 25%',
-                onPress: () => setShowReadyToStudyPopup(false)
-              },
-            ]}
-          />
-        </ThemedView>
-      </Modal>
-
-      {/* Well Done Points Overlay 
-          Press the overlay to dismiss for demo */}
-      <Modal visible={showWellDonePoints} transparent animationType="fade">
-        <ThemedView style={styles.overlay}>
-          <Points
-            title="Well Done!"
-            points="45 points"
-            onPress={() => setShowWellDonePoints(false)}
-          />
-        </ThemedView>
-      </Modal>
-
-      {/* MAIN SCROLL CONTENT */}
-      <ScrollView>
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedView style={styles.heroSection}>
-            <ThemedText type="title" style={styles.title}>
-              Break Time!
-            </ThemedText>
-
-            <ThemedText type="code" style={styles.code}>
-              You have
-            </ThemedText>
-
-            <ThemedText type="subtitle" style={styles.time}>
-              5:46
-            </ThemedText>
-
-            <ThemedText type="code" style={styles.code}>
-              left of break
-            </ThemedText>
-          </ThemedView>
-
-          {Platform.OS === 'web' && <WebBadge />}
-        </SafeAreaView>
-      </ThemedView>
-
-      
-      {/* Temporary button to trigger ready to study popup for prototype */}
-      <ThemedText onPress={() => setShowReadyToStudyPopup(true)}>
-        Open Popup
-      </ThemedText>
-      <ThemedText onPress={() => setShowWellDonePoints(true)}>
-        Open Well Done Points
-      </ThemedText>
-
-
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedView style={styles.heroSection}>
-            {/* <AnimatedIcon /> */}
-            <ThemedText type="subtitle" style={styles.subtitle}>
-              Some recommended activities...
-            </ThemedText>
-
-            <RecommendedActivities />
-
-            {/* <HintRow
-              title="Try editing"
-              hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-            />
-            <HintRow title="Dev tools" hint={getDevMenuHint()} />
-            <HintRow
-              title="Fresh start"
-              hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-            /> */}
-
-          </ThemedView>
-
-          
-
-          {/* <ThemedView type="backgroundElement" style={styles.stepContainer}>
-            <HintRow
-              title="Try editing"
-              hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-            />
-            <HintRow title="Dev tools" hint={getDevMenuHint()} />
-            <HintRow
-              title="Fresh start"
-              hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-            />
-          </ThemedView> */}
-
-          {Platform.OS === 'web' && <WebBadge />}
-        </SafeAreaView>
-      </ThemedView>
-
-      </ScrollView>
-    </>
+    <View style={styles.pageRuleWrap}>
+      <View style={styles.pageRuleLine} />
+      <Text style={styles.pageRuleDiamond}>◆</Text>
+    </View>
   );
+}
+
+function Dial({
+  label,
+  minutes,
+  onMinus,
+  onPlus,
+}: {
+  label: string;
+  minutes: number;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <View style={styles.dial}>
+      <Text style={styles.dialLabel}>{label}</Text>
+      <Text style={styles.dialValue}>
+        {minutes}
+        <Text style={styles.dialValueUnit}>m</Text>
+      </Text>
+      <View style={styles.dialBtns}>
+        <Pressable style={styles.dotBtn} onPress={onMinus}>
+          <Text style={styles.dotBtnText}>−</Text>
+        </Pressable>
+        <Pressable style={styles.dotBtn} onPress={onPlus}>
+          <Text style={styles.dotBtnText}>+</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function HabitRow({ habit, onPress }: { habit: BreakHabit; onPress: () => void }) {
+  return (
+    <Pressable style={styles.habitRow} onPress={onPress}>
+      <View style={[styles.habitIcon, { backgroundColor: habit.color }]} />
+      <View style={styles.habitMid}>
+        <Text style={styles.habitName}>{habit.name}</Text>
+        <Text style={styles.habitDesc}>{habit.desc}</Text>
+      </View>
+      <Text style={styles.habitPts}>+{habit.pts}</Text>
+    </Pressable>
+  );
+}
+
+function InkButton({
+  label,
+  onPress,
+  variant = 'default',
+}: {
+  label: string;
+  onPress: () => void;
+  variant?: 'default' | 'primary' | 'small';
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.btnInk,
+        variant === 'primary' && styles.btnInkPrimary,
+        variant === 'small' && styles.btnInkSmall,
+        pressed && styles.btnInkPressed,
+      ]}>
+      <Text
+        style={[
+          styles.btnInkText,
+          variant === 'primary' && styles.btnInkTextPrimary,
+          variant === 'small' && styles.btnInkTextSmall,
+        ]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function BlinkingDots() {
+  const opacity = useSharedValue(0.4);
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [opacity]);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return <Animated.Text style={[styles.dots, style]}>. . .</Animated.Text>;
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: HavenColors.parchment,
+  },
+  content: {
+    alignItems: 'center',
+    paddingHorizontal: HavenSpacing.xxl,
+    paddingTop: HavenSpacing.xl,
+    paddingBottom: HavenSpacing.xxl,
+    gap: HavenSpacing.md,
+  },
+
+  catStage: {
+    alignItems: 'center',
+    paddingTop: HavenSpacing.lg,
+  },
+  floorShadow: {
+    width: '70%',
+    height: HavenSpacing.base,
+    marginTop: -HavenSpacing.base,
+    borderRadius: HavenSpacing.base,
+    backgroundColor: HavenColors.floorShadow,
+  },
+
+  petName: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.title,
+    color: HavenColors.ink,
+    marginTop: HavenSpacing.sm,
+  },
+
+  statsRow: {
     flexDirection: 'row',
+    gap: HavenSpacing.base,
+    marginTop: HavenSpacing.sm,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
+  statPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    gap: HavenSpacing.sm,
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.sm,
+    paddingHorizontal: HavenSpacing.lg,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.leatherShadow}`,
   },
-  heroSection: {
+  statPillAlt: {
+    backgroundColor: HavenColors.leather,
+  },
+  statText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.md,
+    color: HavenColors.gold,
+  },
+  leaf: {
+    fontSize: PixelFontSize.md,
+    color: HavenColors.gold,
+  },
+
+  pageRuleWrap: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    marginVertical: HavenSpacing.md,
   },
-  title: {
+  pageRuleLine: {
+    width: '100%',
+    height: Border.thick,
+    backgroundColor: HavenColors.ink,
+  },
+  pageRuleDiamond: {
+    position: 'absolute',
+    color: HavenColors.gold,
+    fontSize: PixelFontSize.xxl,
+  },
+
+  section: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.xl,
+    color: HavenColors.leather,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
     textAlign: 'center',
   },
-  code: {
-    textAlign: 'center'
+
+  timerBig: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.timer,
+    color: HavenColors.ink,
+    letterSpacing: 1.5,
+    marginVertical: HavenSpacing.md,
+    textShadowColor: HavenColors.parchmentShadow,
+    textShadowOffset: { width: ShadowOffset.three, height: ShadowOffset.three },
+    textShadowRadius: 0,
   },
-  subtitle: {
-    textAlign: 'center',
+  dots: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.dots,
+    color: HavenColors.inkSoft,
+    letterSpacing: 4,
+    marginVertical: HavenSpacing.base,
   },
-  time: {
-    fontSize: 48,
-    fontWeight: 'bold',
+
+  dialRow: {
+    flexDirection: 'row',
+    gap: HavenSpacing.lg,
+    width: '100%',
+    marginVertical: HavenSpacing.xs,
   },
-  overlay: {
+  dial: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)', // dim background
-    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.lg,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  dialLabel: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.inkSoft,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  dialValue: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.dial,
+    color: HavenColors.ink,
+    marginVertical: HavenSpacing.sm,
+  },
+  dialValueUnit: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.xl,
+    color: HavenColors.inkSoft,
+  },
+  dialBtns: {
+    flexDirection: 'row',
+    gap: HavenSpacing.sm,
+  },
+  dotBtn: {
+    width: Control.dialButton,
+    height: Control.dialButton,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    boxShadow: `${ShadowOffset.one}px ${ShadowOffset.one}px 0px ${HavenColors.leatherShadow}`,
+  },
+  dotBtnText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.parchment,
+  },
+
+  habitList: {
+    width: '100%',
+    gap: HavenSpacing.base,
+    marginTop: HavenSpacing.xs,
+  },
+  habitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: HavenSpacing.md,
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    paddingVertical: HavenSpacing.base,
+    paddingHorizontal: HavenSpacing.md,
+  },
+  habitIcon: {
+    width: Control.habitIcon,
+    height: Control.habitIcon,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+  },
+  habitMid: {
+    flex: 1,
+  },
+  habitName: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.md,
+    color: HavenColors.ink,
+    marginBottom: HavenSpacing.xs,
+  },
+  habitDesc: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.base,
+    color: HavenColors.inkSoft,
+  },
+  habitPts: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.xl,
+    color: HavenColors.leather,
+  },
+
+  breakMsg: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.lg,
+    color: HavenColors.ink,
+    textAlign: 'center',
+    lineHeight: BodyFontSize.lg * 1.4,
+    marginVertical: HavenSpacing.md,
+  },
+
+  btnInk: {
+    alignSelf: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.xl,
+    marginVertical: HavenSpacing.xs,
+    boxShadow: `${ShadowOffset.three}px ${ShadowOffset.three}px 0px ${HavenColors.leatherShadow}`,
+  },
+  btnInkPrimary: {
+    backgroundColor: HavenColors.leather,
+    paddingVertical: HavenSpacing.lg,
+    paddingHorizontal: HavenSpacing.xxl,
+  },
+  btnInkSmall: {
+    paddingVertical: HavenSpacing.sm,
+    paddingHorizontal: HavenSpacing.lg,
+  },
+  btnInkPressed: {
+    transform: [{ translateX: ShadowOffset.two }, { translateY: ShadowOffset.two }],
+    boxShadow: `${ShadowOffset.one}px ${ShadowOffset.one}px 0px ${HavenColors.leatherShadow}`,
+  },
+  btnInkText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.gold,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  btnInkTextPrimary: {
+    fontSize: PixelFontSize.xl,
+  },
+  btnInkTextSmall: {
+    fontSize: PixelFontSize.base,
+  },
+
+  toast: {
+    position: 'absolute',
+    top: HavenSpacing.xxl,
+    alignSelf: 'center',
+    zIndex: 150,
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.gold,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.xl,
+    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
+  },
+  toastText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.md,
+    color: HavenColors.gold,
   },
 });

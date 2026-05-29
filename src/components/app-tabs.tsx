@@ -44,6 +44,15 @@ export default function AppTabs() {
           renderingMode="template"
         />
       </NativeTabs.Trigger>
+
+      {/* TEMPORARY debug tab for PixelCat — remove with app/debug.tsx */}
+      <NativeTabs.Trigger name="debug">
+        <NativeTabs.Trigger.Label>Debug</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/explore.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
