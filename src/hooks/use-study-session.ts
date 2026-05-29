@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { HabitColors } from '@/constants/havenTheme';
+import { useStudyHistory } from '@/hooks/use-study-history';
 import {
   DEFAULT_HAVEN_STATE,
   type HabitId,
@@ -65,15 +66,12 @@ const STUDY_MAX = 60 * 60;
 const BREAK_MIN = 60;
 const BREAK_MAX = 30 * 60;
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function useStudySession() {
+  const { todayMinutes, addMinutesToday } = useStudyHistory();
+
   const [hydrated, setHydrated] = useState(false);
   const [points, setPoints] = useState(DEFAULT_HAVEN_STATE.points);
   const [chests, setChests] = useState(DEFAULT_HAVEN_STATE.chests);
-  const [history, setHistory] = useState<Record<string, number>>(DEFAULT_HAVEN_STATE.history);
 
   const [phase, setPhase] = useState<SessionPhase>('idle');
   const [studyDuration, setStudyDuration] = useState(DEFAULT_HAVEN_STATE.session.studyDuration);
@@ -110,7 +108,6 @@ export function useStudySession() {
       if (!mounted) return;
       setPoints(s.points);
       setChests(s.chests);
-      setHistory(s.history);
       setPhase(s.session.phase);
       setStudyDuration(s.session.studyDuration);
       setBreakDuration(s.session.breakDuration);
@@ -132,14 +129,12 @@ export function useStudySession() {
     saveHavenState({
       points,
       chests,
-      history,
       session: { phase, startedAt, intendedDuration, breakHabitId, studyDuration, breakDuration },
     });
   }, [
     hydrated,
     points,
     chests,
-    history,
     phase,
     startedAt,
     intendedDuration,
@@ -172,8 +167,7 @@ export function useStudySession() {
 
     if (phase === 'studying') {
       const studiedMinutes = Math.ceil((intendedDuration ?? studyDuration) / 60);
-      const key = todayKey();
-      setHistory((h) => ({ ...h, [key]: (h[key] ?? 0) + studiedMinutes }));
+      addMinutesToday(studiedMinutes);
       setPoints((p) => p + STUDY_REWARD_POINTS);
       setChests((c) => ({ ...c, small: c.small + 1 }));
       showToast(`Focus complete · +${STUDY_REWARD_POINTS} ✦ · +1 chest`);
@@ -191,7 +185,7 @@ export function useStudySession() {
       setIntendedDuration(null);
       setBreakHabitId(null);
     }
-  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast]);
+  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday]);
 
   useEffect(() => {
     return () => {
@@ -238,7 +232,7 @@ export function useStudySession() {
   return {
     hydrated,
     points,
-    todayMinutes: history[todayKey()] ?? 0,
+    todayMinutes,
     phase,
     studyDuration,
     breakDuration,

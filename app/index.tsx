@@ -22,23 +22,11 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
+import { fmt, fmtMinutes } from '@/lib/haven-format';
 
 // Placeholder until the Dress screen + shared outfit store are ported; matches
 // the prototype's starting outfit. PixelCat ignores it while sleeping.
 const HOME_OUTFIT: OutfitState = { head: null, face: 'glasses', neck: 'scarf', body: null };
-
-function fmt(totalSeconds: number) {
-  const m = Math.floor(totalSeconds / 60);
-  const r = totalSeconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
-}
-
-function fmtMinutes(min: number) {
-  if (min < 60) return `${min}m`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
 
 export default function HomeScreen() {
   const session = useStudySession();
