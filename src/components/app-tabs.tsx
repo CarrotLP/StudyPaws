@@ -52,8 +52,8 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="friends">
-        <NativeTabs.Trigger.Label>Friends</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="buddies">
+        <NativeTabs.Trigger.Label>Buddies</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/explore.png')}
           renderingMode="template"
