@@ -29,7 +29,7 @@ const BUDDIES: Buddy[] = [
   { name: 'Jules', pet: 'Biscuit', habits: 12, fur: '#C9A684', accent: '#A88060' },
 ];
 
-const RANKS = ['I', 'II', 'III'];
+const RANKS = ['1', '2', '3'];
 
 export default function BuddiesScreen() {
   return (
