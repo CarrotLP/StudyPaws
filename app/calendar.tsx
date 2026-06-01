@@ -19,7 +19,7 @@ import {
 import { useStudyHistory } from '@/hooks/use-study-history';
 import { dateKey, fmtMinutes } from '@/lib/haven-format';
 
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const WEEKDAYS = ['T', 'T', 'W', 'T', 'F', 'S', 'S'];
 // Window of past months kept mounted at fixed positions. Data only exists ~5
 // weeks back; swiping further legitimately shows empty months (caption shows).
 const MONTHS_BACK = 12;
