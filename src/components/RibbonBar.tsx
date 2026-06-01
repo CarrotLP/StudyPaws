@@ -12,11 +12,14 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 
-// Chapters + colours + glyphs match the prototype's `ribbons` array exactly.
-// `id` is the route name; home is the index route ('/').
-const RIBBONS: { id: string; href: Href; color: string; glyph: string }[] = [
+// Chapters + colours + glyphs. `id` is the route name; home is the index ('/').
+// `href` is typed as `string` (rather than `Href`) so a freshly-added route
+// works before Expo Router regenerates `.expo/types/router.d.ts` on next dev
+// server start; the cast at navigate-time below is the single boundary check.
+const RIBBONS: { id: string; href: string; color: string; glyph: string }[] = [
   { id: 'index', href: '/', color: RibbonColors.home, glyph: '❀' },
-  { id: 'calendar', href: '/calendar', color: RibbonColors.calendar, glyph: '▦' },
+  // daily_quest currently inherits Calendar's slot (colour + glyph) — swap if you want a distinct look.
+  { id: 'daily_quest', href: '/daily_quest', color: RibbonColors.calendar, glyph: '▦' },
   { id: 'dress', href: '/dress', color: RibbonColors.dress, glyph: '✦' },
   { id: 'treasure', href: '/treasure', color: RibbonColors.treasure, glyph: '❖' },
   { id: 'inventory', href: '/inventory', color: RibbonColors.inventory, glyph: '◐' },
@@ -103,7 +106,7 @@ export function RibbonBar() {
           color={ribbon.color}
           glyph={ribbon.glyph}
           active={ribbon.id === activeId}
-          onPress={() => router.navigate(ribbon.href)}
+          onPress={() => router.navigate(ribbon.href as Href)}
         />
       ))}
     </View>
