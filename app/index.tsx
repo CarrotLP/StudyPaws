@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DailyQuestOverlay } from '@/components/DailyQuestOverlay';
 import { DevSkipButton } from '@/components/DevSkipButton';
 import { PixelCat } from '@/components/PixelCat';
 import { Toast } from '@/components/Toast';
@@ -46,6 +47,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       {toast && <Toast key={toast.key} message={toast.msg} />}
+
+      <DailyQuestOverlay
+        visible={phase === 'break_active' && activeBreakHabit?.id === 'dailyquest'}
+        onCancel={session.closeBreakActivity}
+        onComplete={session.completeBreakActivity}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
@@ -99,7 +106,7 @@ export default function HomeScreen() {
         {phase === 'break_intro' && <BreakIntroCard onStart={session.startBreak} />}
 
         {phase === 'break_active' &&
-          (activeBreakHabit ? (
+          (activeBreakHabit && activeBreakHabit.id !== 'dailyquest' ? (
             <BreakActivityView
               habit={activeBreakHabit}
               onComplete={session.completeBreakActivity}
