@@ -41,7 +41,7 @@ export default function HomeScreen() {
     toast,
   } = session;
 
-  const sleeping = phase === 'break_doing' && activeBreakHabit?.id === 'phoneoff';
+  const sleeping = phase === 'break_active' && activeBreakHabit?.id === 'phoneoff';
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -96,24 +96,41 @@ export default function HomeScreen() {
           </>
         )}
 
-        {phase === 'break_choosing' && (
-          <>
-            <Text style={styles.section}>pick one break activity</Text>
-            <View style={styles.habitList}>
-              {session.habits.map((habit) => (
-                <HabitRow key={habit.id} habit={habit} onPress={() => session.chooseBreakHabit(habit)} />
-              ))}
-            </View>
-          </>
-        )}
+        {phase === 'break_intro' && <BreakIntroCard onStart={session.startBreak} />}
 
-        {phase === 'break_doing' && activeBreakHabit && (
+        {phase === 'break_active' &&
+          (activeBreakHabit ? (
+            <BreakActivityView
+              habit={activeBreakHabit}
+              onComplete={session.completeBreakActivity}
+              onBack={session.closeBreakActivity}
+            />
+          ) : (
+            <>
+              <Text style={styles.section}>break · {fmt(secondsLeft)}</Text>
+              <View style={styles.habitList}>
+                {session.habits.map((habit) => (
+                  <HabitRow
+                    key={habit.id}
+                    habit={habit}
+                    done={session.completedBreakHabits.includes(habit.id)}
+                    onPress={() => session.openBreakActivity(habit)}
+                  />
+                ))}
+              </View>
+              <InkButton label="end break early" variant="small" onPress={session.endBreak} />
+            </>
+          ))}
+
+        {phase === 'break_expired_prompt' && (
           <>
-            <Text style={styles.section}>
-              {activeBreakHabit.name} · {fmt(secondsLeft)}
-            </Text>
-            <Text style={styles.breakMsg}>{activeBreakHabit.guidance.join('\n')}</Text>
-            <InkButton label="end early" variant="small" onPress={session.stopSession} />
+            <Text style={styles.section}>Break's over.</Text>
+            {/* TODO: Add "Extend 5 min" button here. On tap:
+                  - Add 300 seconds to the break duration
+                  - Reset break_expired_prompt state
+                  - Transition back to break_active list view
+                  - Optionally cap the number of extensions per break (e.g. max 2) */}
+            <InkButton label="End break" variant="primary" onPress={session.endBreak} />
           </>
         )}
 
@@ -125,7 +142,7 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
-      {(phase === 'studying' || phase === 'break_doing') && (
+      {(phase === 'studying' || (phase === 'break_active' && !activeBreakHabit)) && (
         <DevSkipButton onPress={session.devSkip} />
       )}
     </SafeAreaView>
@@ -171,16 +188,62 @@ function Dial({
   );
 }
 
-function HabitRow({ habit, onPress }: { habit: BreakHabit; onPress: () => void }) {
+function HabitRow({
+  habit,
+  done = false,
+  onPress,
+}: {
+  habit: BreakHabit;
+  done?: boolean;
+  onPress: () => void;
+}) {
   return (
-    <Pressable style={styles.habitRow} onPress={onPress}>
+    <Pressable
+      style={[styles.habitRow, done && styles.habitRowDone]}
+      onPress={onPress}
+      disabled={done}>
       <View style={[styles.habitIcon, { backgroundColor: habit.color }]} />
       <View style={styles.habitMid}>
         <Text style={styles.habitName}>{habit.name}</Text>
         <Text style={styles.habitDesc}>{habit.desc}</Text>
       </View>
-      <Text style={styles.habitPts}>+{habit.pts}</Text>
+      <Text style={styles.habitPts}>{done ? '✓' : `+${habit.pts}`}</Text>
     </Pressable>
+  );
+}
+
+// break_intro card — points/chest/today's minutes have ALREADY been awarded by
+// the session hook before this renders. This is just the gating UX to start
+// the break timer; closing the app here keeps everything already earned.
+function BreakIntroCard({ onStart }: { onStart: () => void }) {
+  return (
+    <>
+      <Text style={styles.section}>Study block complete.</Text>
+      <Text style={styles.breakMsg}>Ready to take a break?</Text>
+      <InkButton label="Yes, let's take a break" variant="primary" onPress={onStart} />
+    </>
+  );
+}
+
+// Sub-activity view inside break_active. NO timer here — the parent break
+// timer keeps ticking in the background via the session hook; the user does
+// the activity at their own pace.
+function BreakActivityView({
+  habit,
+  onComplete,
+  onBack,
+}: {
+  habit: BreakHabit;
+  onComplete: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <>
+      <Text style={styles.section}>{habit.name}</Text>
+      <Text style={styles.breakMsg}>{habit.guidance.join('\n')}</Text>
+      <InkButton label="Complete" variant="primary" onPress={onComplete} />
+      <InkButton label="back" variant="small" onPress={onBack} />
+    </>
   );
 }
 
@@ -399,6 +462,9 @@ const styles = StyleSheet.create({
     borderColor: HavenColors.inkSoft,
     paddingVertical: HavenSpacing.base,
     paddingHorizontal: HavenSpacing.md,
+  },
+  habitRowDone: {
+    opacity: 0.5,
   },
   habitIcon: {
     width: Control.habitIcon,
