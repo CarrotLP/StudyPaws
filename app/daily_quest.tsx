@@ -17,7 +17,11 @@ export default function DailyQuestScreen() {
     setShowPopup(false);
   }
 
-  
+  const updateRatings = () => {
+    // updateVotes(ratings); // Assume this function updates the ratings on the backend
+    setShowPopup(false);
+  }
+
   const objectsPerRow = [
     ...galleryImages.map((imageSource, index) => (
       <View key={index} style={{ alignItems: 'center' }}>
@@ -58,6 +62,12 @@ export default function DailyQuestScreen() {
         {ratings.every((r) => r > 0) && !voted && (
           <Pressable onPress={submitRatings}>
             <Text>Submit</Text>
+          </Pressable>
+        )}
+
+        {ratings.every((r) => r > 0) && voted && (
+          <Pressable onPress={updateRatings}>
+            <Text>Update</Text>
           </Pressable>
         )}
       </View>
