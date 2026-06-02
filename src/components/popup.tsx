@@ -1,42 +1,28 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
 
 type PopupProps = {
+  /** Array of arbitrary items to render inside the popup. Each item may be any React node. */
   title?: string;
-  buttons?: {
-    label: any;
-    onPress?: () => void;
-  }[];
+  objects?: any[];
 };
 
-export function Popup({
-  title = 'Centered Title',
-  buttons = [],
-}: PopupProps) {
+export function Popup({ title, objects = [] }: PopupProps) {
   return (
     <View style={styles.container}>
-      <ThemedView type="backgroundSelected" style={styles.card}>
-        {/* Text */}
-        <ThemedText type="small" style={styles.title}>
-          {title}
-        </ThemedText>
-
-        {/* Buttons */}
-        <View style={styles.buttonRow}>
-          {buttons.map((btn, index) => (
-            <Pressable
-              key={index}
-              onPress={btn.onPress}
-              style={styles.button}>
-              <ThemedText>{btn.label}</ThemedText>
-            </Pressable>
-          ))}
-        </View>
-      </ThemedView>
+      <View style={styles.card}>
+        <ScrollView contentContainerStyle={styles.cardContent}>
+          <View style={styles.objectColumn}>
+            {title && <Text style={styles.title}>{title}</Text>}
+            {objects.map((obj, index) => (
+              <View key={index} style={styles.object}>
+                {obj}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -50,25 +36,31 @@ const styles = StyleSheet.create({
 
   card: {
     width: '80%',
-    padding: 20,
+    maxHeight: '80%',
+    backgroundColor: '#ffffff',
+    padding: 12,
     borderRadius: Spacing.two,
-    alignItems: 'center',
-    gap: 16,
+  },
+
+  objectColumn: {
+    width: '100%',
+    flexDirection: 'column',
+    gap: 12,
+  },
+
+  object: {
+    width: '100%',
+    alignItems: 'stretch',
+  },
+
+  cardContent: {
+    width: '100%',
+    paddingBottom: 12,
   },
 
   title: {
+    fontSize: 18,
+    fontWeight: 'bold',
     textAlign: 'center',
-  },
-
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-
-  button: {
-    flex: 1,
-    textAlign: 'center',
-    paddingVertical: 10,
   },
 });
