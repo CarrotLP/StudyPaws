@@ -66,6 +66,9 @@ export const HabitColors = {
   stretch: '#7BA05B',
   steps: '#C97B3F',
   water: '#5BA8C9',
+  // Plum, picked to be distinct from the other four habit colours and to
+  // share the existing chest/ribbon palette family.
+  dailyquest: '#8E5C7C',
 } as const;
 
 /** Ribbon-bookmark colors, keyed by chapter id. */

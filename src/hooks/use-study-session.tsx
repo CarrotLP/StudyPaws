@@ -66,7 +66,20 @@ export const HABITS: BreakHabit[] = [
     pts: 10,
     color: HabitColors.water,
   },
+  {
+    id: 'dailyquest',
+    name: 'Complete Daily Quest',
+    desc: "Today's quest — open it to find out.",
+    guidance: ["Take today's photo.", 'See the quest card for details.'],
+    pts: 30,
+    color: HabitColors.dailyquest,
+  },
 ];
+
+// What the break activity list actually shows. `water` stays in the array
+// above (and in HabitId) so existing data/history aren't broken, but it's
+// hidden from the live list while the daily quest takes its slot.
+const VISIBLE_HABITS = HABITS.filter((h) => h.id !== 'water');
 
 const STUDY_REWARD_POINTS = 50;
 const STUDY_STEP = 5 * 60;
@@ -356,7 +369,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     completedBreakHabits,
     breakExpiredWhileInActivity,
     toast,
-    habits: HABITS,
+    habits: VISIBLE_HABITS,
   };
 
   const actions = useMemo<SessionActions>(

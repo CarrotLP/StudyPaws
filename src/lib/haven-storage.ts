@@ -7,7 +7,7 @@ export type SessionPhase =
   | 'break_active'
   | 'break_expired_prompt'
   | 'finished';
-export type HabitId = 'phoneoff' | 'stretch' | 'steps' | 'water';
+export type HabitId = 'phoneoff' | 'stretch' | 'steps' | 'water' | 'dailyquest';
 export type StudyHistory = Record<string, number>; // YYYY-MM-DD -> study minutes
 export type ChestId = 'small' | 'ornate';
 export type ChestCounts = { small: number; ornate: number };
