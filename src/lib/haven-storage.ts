@@ -1,7 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type SessionPhase = 'idle' | 'studying' | 'break_choosing' | 'break_doing' | 'finished';
-export type HabitId = 'phoneoff' | 'stretch' | 'steps' | 'water';
+export type SessionPhase =
+  | 'idle'
+  | 'studying'
+  | 'break_intro'
+  | 'break_active'
+  | 'break_expired_prompt'
+  | 'finished';
+export type HabitId = 'phoneoff' | 'stretch' | 'steps' | 'water' | 'dailyquest';
 export type StudyHistory = Record<string, number>; // YYYY-MM-DD -> study minutes
 export type ChestId = 'small' | 'ornate';
 export type ChestCounts = { small: number; ornate: number };
