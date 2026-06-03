@@ -66,7 +66,20 @@ export const HABITS: BreakHabit[] = [
     pts: 10,
     color: HabitColors.water,
   },
+  {
+    id: 'dailyquest',
+    name: 'Complete Daily Quest',
+    desc: "Today's quest — open it to find out.",
+    guidance: ["Take today's photo.", 'See the quest card for details.'],
+    pts: 30,
+    color: HabitColors.dailyquest,
+  },
 ];
+
+// What the break activity list actually shows. `water` stays in the array
+// above (and in HabitId) so existing data/history aren't broken, but it's
+// hidden from the live list while the daily quest takes its slot.
+const VISIBLE_HABITS = HABITS.filter((h) => h.id !== 'water');
 
 const STUDY_REWARD_POINTS = 50;
 const STUDY_STEP = 5 * 60;
@@ -84,7 +97,12 @@ type SessionState = {
   studyDuration: number;
   breakDuration: number;
   secondsLeft: number;
+  /** The sub-activity currently open during break_active (null = on the list). */
   activeBreakHabit: BreakHabit | null;
+  /** Habits already claimed in this break session (once-per-session). */
+  completedBreakHabits: HabitId[];
+  /** True if the break timer expired while the user was inside a sub-activity. */
+  breakExpiredWhileInActivity: boolean;
   toast: { msg: string; key: number } | null;
   habits: BreakHabit[];
 };
@@ -92,7 +110,11 @@ type SessionState = {
 type SessionActions = {
   startStudy: () => void;
   stopSession: () => void;
-  chooseBreakHabit: (habit: BreakHabit) => void;
+  startBreak: () => void;
+  openBreakActivity: (habit: BreakHabit) => void;
+  closeBreakActivity: () => void;
+  completeBreakActivity: () => void;
+  endBreak: () => void;
   devSkip: () => void;
   decStudy: () => void;
   incStudy: () => void;
@@ -115,7 +137,12 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   const [breakDuration, setBreakDuration] = useState(DEFAULT_SESSION.breakDuration);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [intendedDuration, setIntendedDuration] = useState<number | null>(null);
+  // `breakHabitId` now means "the sub-activity currently open during break_active"
+  // (null = on the habit list). It opens/closes freely; it does NOT start a timer.
   const [breakHabitId, setBreakHabitId] = useState<HabitId | null>(null);
+  // Per-break-session state (not persisted; resets on launch).
+  const [completedBreakHabits, setCompletedBreakHabits] = useState<HabitId[]>([]);
+  const [breakExpiredWhileInActivity, setBreakExpiredWhileInActivity] = useState(false);
 
   // `now` is bumped by the 1s interval and on resume; it only triggers
   // re-renders. Remaining time is derived from wall-clock subtraction below.
@@ -143,7 +170,17 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     loadSession().then((s) => {
       if (!mounted) return;
-      setPhase(s.phase);
+      // Migrate any pre-restructure phase value to a known one. (Old saves can
+      // hold 'break_choosing'/'break_doing'; those don't exist anymore.)
+      const KNOWN: SessionPhase[] = [
+        'idle',
+        'studying',
+        'break_intro',
+        'break_active',
+        'break_expired_prompt',
+        'finished',
+      ];
+      setPhase((KNOWN as string[]).includes(s.phase) ? s.phase : 'idle');
       setStudyDuration(s.studyDuration);
       setBreakDuration(s.breakDuration);
       setStartedAt(s.startedAt);
@@ -165,8 +202,10 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   }, [hydrated, phase, startedAt, intendedDuration, breakHabitId, studyDuration, breakDuration]);
 
   // 1s tick only while a timer is running — purely to re-render the countdown.
+  // (Sub-activities inside break_active have no timer; the parent break timer
+  // still counts down via this same interval.)
   useEffect(() => {
-    if (phase !== 'studying' && phase !== 'break_doing') return;
+    if (phase !== 'studying' && phase !== 'break_active') return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [phase]);
@@ -180,9 +219,18 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Completion: fires when the wall clock says the timer reached zero.
+  //
+  //   - studying  -> award focus block (+pts +chest +today minutes) and move to
+  //                  `break_intro`. Points are awarded HERE, before the user
+  //                  taps the intro CTA, so closing the app at this moment
+  //                  doesn't cost them what they earned.
+  //   - break_active on the habit LIST -> jump straight to the expired prompt.
+  //   - break_active inside a sub-activity -> DO NOT interrupt. Just mark the
+  //                  `breakExpiredWhileInActivity` flag; the prompt fires when
+  //                  the user closes the activity (via Complete or back).
   useEffect(() => {
     if (!hydrated) return;
-    if (phase !== 'studying' && phase !== 'break_doing') return;
+    if (phase !== 'studying' && phase !== 'break_active') return;
     if (secondsLeft > 0 || firedRef.current) return;
     firedRef.current = true;
 
@@ -192,19 +240,18 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       addPoints(STUDY_REWARD_POINTS);
       addChest('small');
       showToast(`Focus complete · +${STUDY_REWARD_POINTS} ✦ · +1 chest`);
-      setPhase('break_choosing');
+      setPhase('break_intro');
       setStartedAt(null);
       setIntendedDuration(null);
     } else {
-      const habit = HABITS.find((h) => h.id === breakHabitId);
-      if (habit) {
-        addPoints(habit.pts);
-        showToast(`${habit.name} · +${habit.pts} ✦`);
-      }
-      setPhase('finished');
+      // break_active timer hit zero.
       setStartedAt(null);
       setIntendedDuration(null);
-      setBreakHabitId(null);
+      if (breakHabitId) {
+        setBreakExpiredWhileInActivity(true); // defer prompt until they exit
+      } else {
+        setPhase('break_expired_prompt');
+      }
     }
   }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday, addPoints, addChest]);
 
@@ -217,31 +264,83 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   const startStudy = useCallback(() => {
     firedRef.current = false;
     setBreakHabitId(null);
+    setCompletedBreakHabits([]);
+    setBreakExpiredWhileInActivity(false);
     setIntendedDuration(studyDuration);
     setStartedAt(Date.now());
     setNow(Date.now());
     setPhase('studying');
   }, [studyDuration]);
 
+  // "Give up" (studying) and dev reset. Returns fully to idle.
   const stopSession = useCallback(() => {
     firedRef.current = false;
     setPhase('idle');
     setStartedAt(null);
     setIntendedDuration(null);
     setBreakHabitId(null);
+    setCompletedBreakHabits([]);
+    setBreakExpiredWhileInActivity(false);
   }, []);
 
-  const chooseBreakHabit = useCallback(
+  // break_intro CTA: kick off the wall-clock break timer and enter the list.
+  const startBreak = useCallback(() => {
+    firedRef.current = false;
+    setBreakHabitId(null);
+    setCompletedBreakHabits([]);
+    setBreakExpiredWhileInActivity(false);
+    setIntendedDuration(breakDuration);
+    setStartedAt(Date.now());
+    setNow(Date.now());
+    setPhase('break_active');
+  }, [breakDuration]);
+
+  // Tap a habit in the list — open its sub-activity view. No timer is started.
+  const openBreakActivity = useCallback(
     (habit: BreakHabit) => {
-      firedRef.current = false;
+      if (completedBreakHabits.includes(habit.id)) return; // once per break
       setBreakHabitId(habit.id);
-      setIntendedDuration(breakDuration);
-      setStartedAt(Date.now());
-      setNow(Date.now());
-      setPhase('break_doing');
     },
-    [breakDuration],
+    [completedBreakHabits],
   );
+
+  // Back out of a sub-activity without claiming. If the break timer expired
+  // while we were in here, surface the expired prompt now.
+  const closeBreakActivity = useCallback(() => {
+    setBreakHabitId(null);
+    if (breakExpiredWhileInActivity) {
+      setBreakExpiredWhileInActivity(false);
+      setPhase('break_expired_prompt');
+    }
+  }, [breakExpiredWhileInActivity]);
+
+  // Finish a sub-activity: award its points, mark it done, return to the list
+  // (or to the expired prompt if the parent timer expired while inside).
+  const completeBreakActivity = useCallback(() => {
+    if (!breakHabitId) return;
+    const habit = HABITS.find((h) => h.id === breakHabitId);
+    if (habit && !completedBreakHabits.includes(habit.id)) {
+      addPoints(habit.pts);
+      setCompletedBreakHabits((prev) => [...prev, habit.id]);
+      showToast(`${habit.name} · +${habit.pts} ✦`);
+    }
+    setBreakHabitId(null);
+    if (breakExpiredWhileInActivity) {
+      setBreakExpiredWhileInActivity(false);
+      setPhase('break_expired_prompt');
+    }
+  }, [breakHabitId, completedBreakHabits, breakExpiredWhileInActivity, addPoints, showToast]);
+
+  // "End break early" (list) and "End break" (expired prompt) → finished.
+  const endBreak = useCallback(() => {
+    firedRef.current = false;
+    setPhase('finished');
+    setStartedAt(null);
+    setIntendedDuration(null);
+    setBreakHabitId(null);
+    setBreakExpiredWhileInActivity(false);
+    // `completedBreakHabits` is reset on the next session start.
+  }, []);
 
   // DEV ONLY: rewind the start time so the wall clock leaves ~2s on the active
   // timer; it then completes through the normal transition logic.
@@ -267,13 +366,41 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     breakDuration,
     secondsLeft,
     activeBreakHabit,
+    completedBreakHabits,
+    breakExpiredWhileInActivity,
     toast,
-    habits: HABITS,
+    habits: VISIBLE_HABITS,
   };
 
   const actions = useMemo<SessionActions>(
-    () => ({ startStudy, stopSession, chooseBreakHabit, devSkip, decStudy, incStudy, decBreak, incBreak }),
-    [startStudy, stopSession, chooseBreakHabit, devSkip, decStudy, incStudy, decBreak, incBreak],
+    () => ({
+      startStudy,
+      stopSession,
+      startBreak,
+      openBreakActivity,
+      closeBreakActivity,
+      completeBreakActivity,
+      endBreak,
+      devSkip,
+      decStudy,
+      incStudy,
+      decBreak,
+      incBreak,
+    }),
+    [
+      startStudy,
+      stopSession,
+      startBreak,
+      openBreakActivity,
+      closeBreakActivity,
+      completeBreakActivity,
+      endBreak,
+      devSkip,
+      decStudy,
+      incStudy,
+      decBreak,
+      incBreak,
+    ],
   );
 
   return (
