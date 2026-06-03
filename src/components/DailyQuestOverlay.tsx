@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
-import { Alert, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, BackHandler, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   BodyFontSize,
@@ -25,12 +25,18 @@ type DailyQuestOverlayProps = {
 export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestOverlayProps) {
   const [completed, setCompleted] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
+  // Captured photo URI is held in component state for the immediate popup;
+  // it's also persisted to AsyncStorage via saveDailyQuestPhoto.
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState(false);
 
   // Reset internal state when the overlay closes so reopening starts fresh.
   useEffect(() => {
     if (!visible) {
       setCompleted(false);
       setTakingPhoto(false);
+      setPhotoUri(null);
+      setPhotoError(false);
     }
   }, [visible]);
 
@@ -58,12 +64,14 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
         quality: 0.8,
       });
       if (result.canceled) return;
-      const photoUri = result.assets[0]?.uri;
-      if (!photoUri) {
+      const capturedUri = result.assets[0]?.uri;
+      if (!capturedUri) {
         Alert.alert('Photo unavailable', 'The captured photo could not be read. Please try again.');
         return;
       }
-      await saveDailyQuestPhoto(photoUri);
+      setPhotoUri(capturedUri);
+      setPhotoError(false);
+      await saveDailyQuestPhoto(capturedUri);
       setCompleted(true);
     } catch {
       Alert.alert('Camera unavailable', 'The camera could not be opened. Please try again.');
@@ -91,10 +99,32 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
               style={[styles.closeButton, styles.closeRight]}>
               <Text style={styles.closeText}>X</Text>
             </Pressable>
-            <Text style={styles.title}>Quest Complete</Text>
-            <Text style={styles.description}>
-              Congratulations, you've completed your daily quest!
-            </Text>
+            <Text style={styles.submissionHeading}>Today's submission</Text>
+            <View style={styles.photoFrame}>
+              {photoUri && !photoError ? (
+                <Image
+                  source={{ uri: photoUri }}
+                  style={styles.photo}
+                  resizeMode="cover"
+                  onError={() => setPhotoError(true)}
+                />
+              ) : (
+                <View style={styles.photoFallback}>
+                  <Text style={styles.photoFallbackGlyph}>X</Text>
+                  <Text style={styles.photoFallbackText}>Photo couldn't load</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.questNoun}>{dailyQuest.noun}</Text>
+            <Pressable
+              accessibilityLabel="Done"
+              onPress={onComplete}
+              style={({ pressed }) => [
+                styles.doneButton,
+                pressed && styles.buttonPressed,
+              ]}>
+              <Text style={styles.doneText}>Done</Text>
+            </Pressable>
           </>
         ) : (
           <>
@@ -241,5 +271,70 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+
+  // --- Completion-state visuals (photo card) ---
+  submissionHeading: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.inkSoft,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  photoFrame: {
+    width: '80%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: HavenSpacing.sm,
+    backgroundColor: HavenColors.cellInset,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    boxShadow: `inset ${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.parchmentShadow}`,
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  photoFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: HavenSpacing.base,
+    backgroundColor: HavenColors.parchmentDark,
+  },
+  photoFallbackGlyph: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.dial,
+    color: HavenColors.inkSoft,
+  },
+  photoFallbackText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
+  },
+  questNoun: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.title,
+    color: HavenColors.ink,
+    textAlign: 'center',
+  },
+  doneButton: {
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.xxl,
+    backgroundColor: HavenColors.leather,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    boxShadow: `${ShadowOffset.three}px ${ShadowOffset.three}px 0px ${HavenColors.leatherShadow}`,
+  },
+  doneText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.xl,
+    color: HavenColors.gold,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });
