@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { supabase } from "@/backend/src/lib/supabase";
+import { supabase } from "@/backend/lib/supabase";
 console.log("supabase client:", !!supabase);
 
 import { BuddyAvatar } from '@/components/BuddyAvatar';
