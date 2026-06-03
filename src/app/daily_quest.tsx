@@ -17,6 +17,11 @@ import { TEAM_NAME, dailyQuest } from '@/lib/daily-quest';
 import { dateKey } from '@/lib/haven-format';
 import { loadQuestPhotos } from '@/lib/haven-storage';
 
+/** Rating-star glyph size (px). Fill is rendered slightly smaller so the
+ *  black outline stays visible underneath when a star is selected. */
+const STAR_SIZE = 20;
+const STAR_FILL_SIZE = STAR_SIZE - 5;
+
 export default function DailyQuestScreen() {
   const [showGallery, setShowGallery] = useState(false);
   const [todayPhotoUri, setTodayPhotoUri] = useState<string | null>(null);
@@ -150,11 +155,23 @@ export default function DailyQuestScreen() {
                                       return updated;
                                     })
                                   }>
-                                  <FontAwesome
-                                    name={star <= (ratings[i] ?? 0) ? 'star' : 'star-o'}
-                                    size={18}
-                                    color="#ffd700"
-                                  />
+                                  {/*
+                                   * Layered star: a black 'star-o' outline is
+                                   * ALWAYS rendered for contrast against the
+                                   * parchment; a solid yellow 'star' is overlaid
+                                   * only when selected. Avoids a native SVG dep.
+                                   */}
+                                  <View style={styles.star}>
+                                    <FontAwesome name="star-o" size={STAR_SIZE} color="#000000" />
+                                    {star <= (ratings[i] ?? 0) && (
+                                      <FontAwesome
+                                        name="star"
+                                        size={STAR_FILL_SIZE}
+                                        color="#FFD700"
+                                        style={styles.starFill}
+                                      />
+                                    )}
+                                  </View>
                                 </Pressable>
                               ))}
                             </View>
@@ -380,5 +397,15 @@ const styles = StyleSheet.create({
   starRow: {
     flexDirection: 'row',
     gap: HavenSpacing.xs,
+  },
+  // Square container holding the black outline with the yellow fill centered on top.
+  star: {
+    width: STAR_SIZE,
+    height: STAR_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  starFill: {
+    position: 'absolute',
   },
 });
