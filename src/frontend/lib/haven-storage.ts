@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { uploadPhoto } from '@/services/gallery.services';
 
 export type SessionPhase =
   | 'idle'
@@ -152,4 +153,17 @@ export async function loadQuestPhotos(): Promise<QuestPhotoMap> {
 export async function saveQuestPhotoForDay(dateKey: string, uri: string): Promise<void> {
   const existing = await loadQuestPhotos();
   return writeJSON(QUEST_PHOTOS_KEY, { ...existing, [dateKey]: uri });
+}
+
+// Also try to upload the quest photo to Supabase Storage. Best-effort: failures
+// are ignored so local persistence remains the source of truth for the UI.
+export async function saveAndUploadQuestPhoto(dateKey: string, uri: string, userId = '0a058ab2-140b-4869-9061-f4d0b16f1bc6') {
+  await saveQuestPhotoForDay(dateKey, uri);
+  try {
+    await uploadPhoto(userId, uri);
+  } catch (e) {
+    // Swallow upload errors; log for debugging.
+    // eslint-disable-next-line no-console
+    console.error('Quest photo upload failed', e);
+  }
 }
