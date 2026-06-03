@@ -8,9 +8,17 @@ import { saveQuestPhotoForDay } from '@/lib/haven-storage';
  * doesn't need to change when we swap to a Supabase-fetched / randomly-rolled
  * quest. The shape (id / title / description / noun / type) is the planned schema.
  *
- *   - `description` is the instruction shown on the quest card ("Take a picture of a tree")
- *   - `noun` is the display noun shown on the completion card ("a tree")
+ *   - `description` is the instruction shown on the quest card
+ *     ("Take a picture of a ${DAILY_QUEST_SUBJECT}")
+ *   - `noun` is the display noun shown on the completion card
+ *     ("a ${DAILY_QUEST_SUBJECT}")
  *     — split out so generated quests can populate it without parsing.
+ *
+ * Change DAILY_QUEST_SUBJECT here to update the quest subject everywhere at once.
+ * Note: the "a/an" article in `noun` won't auto-adjust for vowel-initial subjects.
+ *
+ * Change TEAM_NAME here to update the gallery header everywhere at once.
+ * This will become data-driven once Buddies is Supabase-backed.
  */
 export type DailyQuestType = 'photo';
 
@@ -22,13 +30,19 @@ export type DailyQuest = {
   type: DailyQuestType;
 };
 
+/** Single source of truth for the quest subject. Change this to update all UI copy. */
+export const DAILY_QUEST_SUBJECT = 'tree';
+
+/** Single source of truth for the team name shown in the gallery header. */
+export const TEAM_NAME = 'Unicorns';
+
 // TODO: replace this constant with `fetchTodaysQuest()` once the Supabase
 // `daily_quests` table exists. Same shape; the UI plugs in unchanged.
 export const dailyQuest: DailyQuest = {
   id: 'tree-photo',
   title: 'Complete Daily Quest',
-  description: 'Take a picture of a tree',
-  noun: 'a tree',
+  description: `Take a picture of a ${DAILY_QUEST_SUBJECT}`,
+  noun: `a ${DAILY_QUEST_SUBJECT}`,
   type: 'photo',
 };
 

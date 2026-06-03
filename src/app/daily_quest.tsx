@@ -1,124 +1,200 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-import { Popup } from '@/components/popup';
-import { Border, HavenColors, HavenFonts, HavenSpacing, PixelFontSize, ShadowOffset } from '@/constants/havenTheme';
 import { useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontAwesome } from '@expo/vector-icons';
 
-// Intentionally blank placeholder — content TBD. Replaces Calendar in the nav.
+import {
+  BodyFontSize,
+  Border,
+  HavenColors,
+  HavenFonts,
+  HavenSpacing,
+  PixelFontSize,
+  ShadowOffset,
+} from '@/constants/havenTheme';
+import { TEAM_NAME, dailyQuest } from '@/lib/daily-quest';
+import { dateKey } from '@/lib/haven-format';
+import { loadQuestPhotos } from '@/lib/haven-storage';
+
 export default function DailyQuestScreen() {
-  const [showPopup, setShowPopup] = useState(false);
-  const [galleryImages, setGalleryImages] = useState<string[]>([
+  const [showGallery, setShowGallery] = useState(false);
+  const [todayPhotoUri, setTodayPhotoUri] = useState<string | null>(null);
+  const [photoLoadError, setPhotoLoadError] = useState(false);
+
+  // Placeholder gallery images until Supabase team photos are wired up.
+  const [galleryImages] = useState<string[]>([
     'https://picsum.photos/200',
     'https://samplelib.com/png/sample-boat-400x300.png',
     'https://samplelib.com/png/sample-hut-400x300.png',
   ]);
-  const [voted, setVoted] = useState(false); // getVotedStatus(); // Assume this function checks if the user has already voted for the day
+  const [voted, setVoted] = useState(false);
   const [ratings, setRatings] = useState<number[]>([]);
 
+  // Load today's persisted photo from AsyncStorage (key: haven.questPhotos, by date).
   useEffect(() => {
-    setRatings((prev) => {
-      if (prev.length === galleryImages.length) return prev;
-      return Array(galleryImages.length).fill(0);
-    });
+    loadQuestPhotos()
+      .then((photos) => setTodayPhotoUri(photos[dateKey(new Date())] ?? null))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setRatings((prev) =>
+      prev.length === galleryImages.length ? prev : Array(galleryImages.length).fill(0),
+    );
   }, [galleryImages.length]);
 
+  const allRated = ratings.every((r) => r > 0);
+
   const submitRatings = () => {
-    // postVotes(ratings); // Assume this function submits the ratings to the backend
-    setShowPopup(false);
+    // postVotes(ratings);
+    setShowGallery(false);
     setVoted(true);
-  }
+  };
 
   const updateRatings = () => {
-    // updateVotes(ratings); // Assume this function updates the ratings on the backend
-    setShowPopup(false);
-  }
-
-  const objectsPerRow = [
-    ...galleryImages.map((imageUrl, index) => (
-      <View key={index} style={{ alignItems: 'center' }}>
-        {/* Image */}
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: 100, height: 100 }}
-          onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
-        />
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* Stars for THIS image */}
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Pressable
-              key={star}
-              onPress={() => {
-                setRatings((prev) => {
-                  const updated = [...prev];
-                  updated[index] = star;
-                  return updated;
-                });
-              }}
-            >
-              <FontAwesome
-                name={star <= (ratings[index] ?? 0) ? 'star' : 'star-o'}
-                size={14}
-                color="#ffd700"
-              />
-            </Pressable>
-          ))}
-        </View>
-      </View>
-    )),
-    (
-      <View key="close-and-submit" style={styles.actionRow}>
-        <Pressable 
-          style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
-          onPress={() => setShowPopup(false)}>
-          <Text style={styles.btnText}>Close</Text>
-        </Pressable>
-
-        {ratings.every((r) => r > 0) && !voted && (
-          <Pressable 
-            style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
-            onPress={submitRatings}>
-            <Text style={styles.btnText}>Submit</Text>
-          </Pressable>
-        )}
-
-        {ratings.every((r) => r > 0) && voted && (
-          <Pressable 
-            style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
-            onPress={updateRatings}>
-            <Text style={styles.btnText}>Update</Text>
-          </Pressable>
-        )}
-      </View>
-    ),
-  ];
-
+    // updateVotes(ratings);
+    setShowGallery(false);
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.section}>daily quest</Text>
-      <View style={styles.rule} />
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.section}>daily quest</Text>
+        <View style={styles.rule} />
 
-      <View style={styles.centerContent}>
-        <Pressable
-          style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
-          onPress={() => setShowPopup(true)}>
-          <Text style={styles.btnText}>View Team Gallery</Text>
-        </Pressable>
-      </View>
+        {/* ── Submission panel ── */}
+        <Text style={styles.submissionLabel}>Your submission for today</Text>
 
-      {showPopup && (
-        <Popup
-          title="Team Gallery"
-          objects={objectsPerRow}
-        />
+        <View style={styles.photoFrame}>
+          {todayPhotoUri && !photoLoadError ? (
+            <Image
+              source={{ uri: todayPhotoUri }}
+              style={styles.photo}
+              resizeMode="cover"
+              onError={() => setPhotoLoadError(true)}
+            />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Text style={styles.placeholderIcon}>[ ]</Text>
+              <Text style={styles.placeholderText}>No photo yet</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.questPrompt}>{dailyQuest.description}</Text>
+
+        {/* ── View Team Gallery button (a) — keep ── */}
+        <View style={styles.centerContent}>
+          <Pressable
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+            onPress={() => setShowGallery(true)}>
+            <Text style={styles.btnText}>View Team Gallery</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      {/* ── Gallery overlay ── */}
+      {showGallery && (
+        <View style={styles.scrim} pointerEvents="auto">
+          {/*
+           * galleryWrapper is position:relative so we can pin the close button
+           * just outside the top-right corner of the card below it.
+           */}
+          <View style={styles.galleryWrapper}>
+            {/* Close button OUTSIDE the gallery card */}
+            <Pressable
+              accessibilityLabel="Close gallery"
+              style={styles.galleryClose}
+              onPress={() => setShowGallery(false)}>
+              <Text style={styles.galleryCloseText}>X</Text>
+            </Pressable>
+
+            {/* Gallery card */}
+            <View style={styles.galleryCard}>
+              <Text style={styles.galleryHeader}>
+                {TEAM_NAME} - team gallery
+              </Text>
+              <View style={styles.galleryRule} />
+
+              {/* Scrollable photo grid */}
+              <ScrollView
+                style={styles.galleryScroll}
+                contentContainerStyle={styles.galleryGrid}
+                showsVerticalScrollIndicator={false}>
+                {/* 2-column row layout */}
+                {galleryImages.reduce<React.JSX.Element[]>((rows, _img, idx) => {
+                  if (idx % 2 !== 0) return rows;
+                  const pair = galleryImages.slice(idx, idx + 2);
+                  rows.push(
+                    <View key={idx} style={styles.galleryRow}>
+                      {pair.map((imageUrl, offset) => {
+                        const i = idx + offset;
+                        return (
+                          <View key={i} style={styles.galleryItem}>
+                            <Image
+                              source={{ uri: imageUrl }}
+                              style={styles.galleryPhoto}
+                              resizeMode="contain"
+                              onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
+                            />
+                            <View style={styles.starRow}>
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Pressable
+                                  key={star}
+                                  hitSlop={4}
+                                  onPress={() =>
+                                    setRatings((prev) => {
+                                      const updated = [...prev];
+                                      updated[i] = star;
+                                      return updated;
+                                    })
+                                  }>
+                                  <FontAwesome
+                                    name={star <= (ratings[i] ?? 0) ? 'star' : 'star-o'}
+                                    size={18}
+                                    color="#ffd700"
+                                  />
+                                </Pressable>
+                              ))}
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>,
+                  );
+                  return rows;
+                }, [])}
+              </ScrollView>
+
+              {/* Submit / Update — only when all photos are rated; no Close inside */}
+              {allRated && !voted && (
+                <Pressable
+                  style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
+                  onPress={submitRatings}>
+                  <Text style={styles.btnText}>Submit</Text>
+                </Pressable>
+              )}
+              {allRated && voted && (
+                <Pressable
+                  style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
+                  onPress={updateRatings}>
+                  <Text style={styles.btnText}>Update</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
       )}
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: HavenColors.parchment,
+  },
   content: {
     flexGrow: 1,
     paddingHorizontal: HavenSpacing.xxl,
@@ -138,16 +214,62 @@ const styles = StyleSheet.create({
     height: Border.thick,
     backgroundColor: HavenColors.ink,
   },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+
+  // ── Submission panel ──────────────────────────────────────────────────────
+  submissionLabel: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.inkSoft,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: HavenSpacing.lg,
-    padding: HavenSpacing.lg,
+  photoFrame: {
     width: '100%',
+    aspectRatio: 1,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: HavenSpacing.sm,
+    backgroundColor: HavenColors.cellInset,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: HavenSpacing.base,
+    backgroundColor: HavenColors.parchmentDark,
+  },
+  placeholderIcon: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.dial,
+    color: HavenColors.inkSoft,
+  },
+  placeholderText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
+  },
+  questPrompt: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.xl,
+    color: HavenColors.ink,
+    textAlign: 'center',
+    lineHeight: BodyFontSize.xl * 1.3,
+  },
+
+  // ── Buttons ───────────────────────────────────────────────────────────────
+  centerContent: {
+    alignItems: 'center',
+    paddingTop: HavenSpacing.sm,
   },
   btn: {
     backgroundColor: HavenColors.ink,
@@ -158,7 +280,7 @@ const styles = StyleSheet.create({
     boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.leatherShadow}`,
   },
   btnWide: {
-    flex: 1,
+    alignSelf: 'stretch',
     alignItems: 'center',
   },
   btnPressed: {
@@ -169,5 +291,94 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.base,
     color: HavenColors.gold,
     letterSpacing: 0.5,
+  },
+
+  // ── Gallery overlay ───────────────────────────────────────────────────────
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: HavenSpacing.xxl,
+    backgroundColor: HavenColors.overlayScrim,
+  },
+  galleryWrapper: {
+    position: 'relative',
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '90%',
+  },
+  // Close button sits just above/right of the gallery card
+  galleryClose: {
+    position: 'absolute',
+    top: -14,
+    right: -10,
+    zIndex: 201,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.gold,
+  },
+  galleryCloseText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.gold,
+  },
+  galleryCard: {
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.frame,
+    borderColor: HavenColors.ink,
+    padding: HavenSpacing.lg,
+    gap: HavenSpacing.md,
+    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
+    maxHeight: '100%',
+  },
+  galleryHeader: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.leather,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  galleryRule: {
+    height: Border.thick,
+    backgroundColor: HavenColors.ink,
+  },
+  galleryScroll: {
+    flexGrow: 0,
+  },
+  galleryGrid: {
+    gap: HavenSpacing.md,
+    paddingBottom: HavenSpacing.base,
+  },
+  galleryRow: {
+    flexDirection: 'row',
+    gap: HavenSpacing.md,
+  },
+  galleryItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: HavenSpacing.sm,
+  },
+  galleryPhoto: {
+    // Fixed uniform display box for every submission; resizeMode="contain"
+    // letterboxes odd-ratio photos so the whole image stays visible.
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: HavenColors.cellInset,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+  },
+  starRow: {
+    flexDirection: 'row',
+    gap: HavenSpacing.xs,
   },
 });
