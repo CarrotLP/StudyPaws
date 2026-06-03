@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 // Chooes to use UserTeamInput or use userId, teamId as different params
 // Dont know if we wanna keep this same for all services, but for some services with a lot of params this might be annoying(?)
 // and this can be moved to the types folder
@@ -6,22 +8,46 @@ export type UserTeamInput = {
   teamId: string;
 };
 
-export async function getTeamsForUser(userId: string) {
-  // TODO: fetch teams for user from DB
-  return [];
+// --- Specific Service Queries ("The SQL") ---
+
+// example of how to set the function up if you want to put the result in the ui
+export async function devFetchAndShowUser(targetUid: string, setter: (text: string) => void) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('name')
+      .eq('user_uid', targetUid)
+      .single();
+
+    if (error) throw error;
+    setter(`User Name: ${data?.name || 'No name found'}`);
+  } catch (err: any) {
+    setter(`Query Error: ${err.message}`);
+  }
 }
 
-export async function getUsersForTeam(teamId: string) {
-  // TODO: fetch users for team from DB
-  return [];
+/**
+ * Returns the team_uid for any users_teams entries with the user_uid.
+ */
+export async function getTeamsForUser(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('users_teams')
+    .select('team')
+    .eq('user', userId);
+
+  if (error) throw error;
+  return data.map((item) => item.team);
 }
 
-export async function addUserToTeam(userId: string, teamId: string) {
-  // TODO: insert into join table
-  return { userId, teamId };
-}
+/**
+ * Returns the user_uid for any users_teams entries with the team_uid.
+ */
+export async function getUsersForTeam(teamId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('users_teams')
+    .select('user')
+    .eq('team', teamId);
 
-export async function removeUserFromTeam(userId: string, teamId: string) {
-  // TODO: delete from join table
-  return { success: true };
+  if (error) throw error;
+  return data.map((item) => item.user);
 }

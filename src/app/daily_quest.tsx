@@ -3,11 +3,18 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Popup } from '@/components/popup';
 import { Border, HavenColors, HavenFonts, HavenSpacing, PixelFontSize, ShadowOffset } from '@/constants/havenTheme';
 import { useEffect, useState } from 'react';
+import * as UserTeamService from '@/backend/services/userTeam.services';
 
 import { FontAwesome } from '@expo/vector-icons';
 
 // Intentionally blank placeholder — content TBD. Replaces Calendar in the nav.
 export default function DailyQuestScreen() {
+    // example of database access
+//   const [devText, setDevText] = useState('Fetching...');
+//   useEffect(() => {
+//     UserTeamService.devFetchAndShowUser('0a058ab2-140b-4869-9061-f4d0b16f1bc6', setDevText);
+//   }, []);
+
   const [showPopup, setShowPopup] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>([
     'https://picsum.photos/200',
@@ -97,6 +104,15 @@ export default function DailyQuestScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
+      {/* Developer Textbox */}
+
+
+ {/* // for database access example
+     <View style={styles.devContainer}>
+        <Text style={styles.devLabel}>Dev Output:</Text>
+        <Text style={styles.devInput}>{devText}</Text>
+      </View> */}
+
       <Text style={styles.section}>daily quest</Text>
       <View style={styles.rule} />
 
@@ -169,5 +185,22 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.base,
     color: HavenColors.gold,
     letterSpacing: 0.5,
+  },
+  devContainer: {
+    padding: HavenSpacing.sm,
+    backgroundColor: '#eee',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  devLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  devInput: {
+    fontSize: 12,
+    color: '#333',
+    minHeight: 40,
   },
 });
