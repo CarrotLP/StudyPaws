@@ -76,10 +76,15 @@ export const HABITS: BreakHabit[] = [
   },
 ];
 
-// What the break activity list actually shows. `water` stays in the array
-// above (and in HabitId) so existing data/history aren't broken, but it's
-// hidden from the live list while the daily quest takes its slot.
-const VISIBLE_HABITS = HABITS.filter((h) => h.id !== 'water');
+// What the break activity list actually shows. For now only the daily quest is
+// implemented, so it's the sole (and first) option. The other habits stay in the
+// HABITS array above (and in HabitId) so existing data/history aren't broken;
+// they're hidden from the live list until they're built out.
+// To re-enable them later, add their ids back to this allow-list.
+const VISIBLE_HABIT_IDS: BreakHabit['id'][] = ['dailyquest'];
+const VISIBLE_HABITS = VISIBLE_HABIT_IDS.map(
+  (id) => HABITS.find((h) => h.id === id)!,
+);
 
 const STUDY_REWARD_POINTS = 50;
 const STUDY_STEP = 5 * 60;
