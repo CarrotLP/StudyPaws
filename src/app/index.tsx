@@ -103,7 +103,9 @@ export default function HomeScreen() {
           </>
         )}
 
-        {phase === 'break_intro' && <BreakIntroCard onStart={session.startBreak} />}
+        {phase === 'break_intro' && (
+          <BreakIntroCard onStart={session.startBreak} onSkip={session.stopSession} />
+        )}
 
         {phase === 'break_active' &&
           (activeBreakHabit && activeBreakHabit.id !== 'dailyquest' ? (
@@ -222,12 +224,15 @@ function HabitRow({
 // break_intro card — points/chest/today's minutes have ALREADY been awarded by
 // the session hook before this renders. This is just the gating UX to start
 // the break timer; closing the app here keeps everything already earned.
-function BreakIntroCard({ onStart }: { onStart: () => void }) {
+function BreakIntroCard({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
   return (
     <>
       <Text style={styles.section}>Study block complete.</Text>
       <Text style={styles.breakMsg}>Ready to take a break?</Text>
       <InkButton label="Yes, let's take a break" variant="primary" onPress={onStart} />
+      {/* Secondary, border-only — focus points + chest were already awarded at
+          study end, so this just skips the break flow and returns to idle. */}
+      <InkButton label="I'm done for the day" variant="secondary" onPress={onSkip} />
     </>
   );
 }
@@ -261,7 +266,7 @@ function InkButton({
 }: {
   label: string;
   onPress: () => void;
-  variant?: 'default' | 'primary' | 'small';
+  variant?: 'default' | 'primary' | 'small' | 'secondary';
 }) {
   return (
     <Pressable
@@ -270,6 +275,7 @@ function InkButton({
         styles.btnInk,
         variant === 'primary' && styles.btnInkPrimary,
         variant === 'small' && styles.btnInkSmall,
+        variant === 'secondary' && styles.btnInkSecondary,
         pressed && styles.btnInkPressed,
       ]}>
       <Text
@@ -277,6 +283,7 @@ function InkButton({
           styles.btnInkText,
           variant === 'primary' && styles.btnInkTextPrimary,
           variant === 'small' && styles.btnInkTextSmall,
+          variant === 'secondary' && styles.btnInkTextSecondary,
         ]}>
         {label}
       </Text>
@@ -527,6 +534,15 @@ const styles = StyleSheet.create({
     paddingVertical: HavenSpacing.sm,
     paddingHorizontal: HavenSpacing.lg,
   },
+  // Border-only secondary: same footprint as primary so the two buttons stack
+  // with equal weight, but transparent fill keeps primary visually dominant.
+  btnInkSecondary: {
+    backgroundColor: 'transparent',
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.lg,
+    paddingHorizontal: HavenSpacing.xxl,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.parchmentShadow}`,
+  },
   btnInkPressed: {
     transform: [{ translateX: ShadowOffset.two }, { translateY: ShadowOffset.two }],
     boxShadow: `${ShadowOffset.one}px ${ShadowOffset.one}px 0px ${HavenColors.leatherShadow}`,
@@ -543,6 +559,10 @@ const styles = StyleSheet.create({
   },
   btnInkTextSmall: {
     fontSize: PixelFontSize.base,
+  },
+  btnInkTextSecondary: {
+    fontSize: PixelFontSize.xl,
+    color: HavenColors.ink,
   },
 
 });

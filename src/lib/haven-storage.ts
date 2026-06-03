@@ -52,6 +52,9 @@ export const DEFAULT_OUTFIT: Record<string, string | null> = {
   body: null,
 };
 
+/** Daily quest photo URIs, keyed by ISO local date (YYYY-MM-DD). */
+export type QuestPhotoMap = Record<string, string>;
+
 // Every AsyncStorage key is defined here once and imported elsewhere.
 const SESSION_KEY = 'haven.session';
 const POINTS_KEY = 'haven.points';
@@ -60,6 +63,7 @@ const STUDY_HISTORY_KEY = 'haven.studyHistory';
 const FIRST_LAUNCH_KEY = 'haven.firstLaunchDone';
 const OWNED_KEY = 'haven.owned';
 const OUTFIT_KEY = 'haven.outfit';
+const QUEST_PHOTOS_KEY = 'haven.questPhotos';
 
 async function readJSON<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -139,4 +143,13 @@ export async function loadOutfit(): Promise<Record<string, string | null>> {
 
 export function saveOutfit(outfit: Record<string, string | null>): Promise<void> {
   return writeJSON(OUTFIT_KEY, outfit);
+}
+
+export async function loadQuestPhotos(): Promise<QuestPhotoMap> {
+  return readJSON<QuestPhotoMap>(QUEST_PHOTOS_KEY, {});
+}
+
+export async function saveQuestPhotoForDay(dateKey: string, uri: string): Promise<void> {
+  const existing = await loadQuestPhotos();
+  return writeJSON(QUEST_PHOTOS_KEY, { ...existing, [dateKey]: uri });
 }
