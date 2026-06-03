@@ -1,5 +1,5 @@
 import { dateKey } from '@/lib/haven-format';
-import { saveQuestPhotoForDay } from '@/lib/haven-storage';
+import { saveAndUploadQuestPhoto, saveQuestPhotoForDay } from '@/lib/haven-storage';
 
 /**
  * Daily-quest data + persistence skeleton.
@@ -41,10 +41,15 @@ export const dailyQuest: DailyQuest = {
  *       and insert a row into `daily_quest_completions` referencing the storage
  *       path + current user + today's quest id.
  */
+
+const mockUserId = '0a058ab2-140b-4869-9061-f4d0b16f1bc6';
+
 export async function saveDailyQuestPhoto(photoUri: string): Promise<void> {
   try {
     await saveQuestPhotoForDay(dateKey(new Date()), photoUri);
-  } catch {
+    await saveAndUploadQuestPhoto(dateKey(new Date()), photoUri, mockUserId);
+  } catch (error) {
+    console.error('Error saving daily quest photo:', error);
     // ignore — popup still renders from in-memory URI
   }
 }
