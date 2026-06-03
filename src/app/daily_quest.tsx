@@ -11,9 +11,10 @@ import {
   HavenFonts,
   HavenSpacing,
   PixelFontSize,
+  RibbonColors,
   ShadowOffset,
 } from '@/constants/havenTheme';
-import { TEAM_NAME, dailyQuest } from '@/lib/daily-quest';
+import { DAILY_QUEST_SUBJECT, TEAM_NAME, dailyQuest } from '@/lib/daily-quest';
 import { dateKey } from '@/lib/haven-format';
 import { loadQuestPhotos } from '@/lib/haven-storage';
 
@@ -87,7 +88,11 @@ export default function DailyQuestScreen() {
           )}
         </View>
 
-        <Text style={styles.questPrompt}>{dailyQuest.description}</Text>
+        {/* Quiet label + the day's subject phrase, large and in the chapter accent colour. */}
+        <View style={styles.promptBlock}>
+          <Text style={styles.promptLabel}>Take a picture of</Text>
+          <Text style={styles.promptSubject}>{DAILY_QUEST_SUBJECT}</Text>
+        </View>
 
         {/* ── View Team Gallery button (a) — keep ── */}
         <View style={styles.centerContent}>
@@ -120,6 +125,8 @@ export default function DailyQuestScreen() {
               <Text style={styles.galleryHeader}>
                 {TEAM_NAME} - team gallery
               </Text>
+              {/* Small secondary line so raters know what today's quest was. */}
+              <Text style={styles.gallerySubtitle}>{dailyQuest.description}</Text>
               <View style={styles.galleryRule} />
 
               {/* Scrollable photo grid */}
@@ -275,12 +282,22 @@ const styles = StyleSheet.create({
     color: HavenColors.inkSoft,
     textAlign: 'center',
   },
-  questPrompt: {
+  promptBlock: {
+    alignItems: 'center',
+    gap: HavenSpacing.xs,
+  },
+  promptLabel: {
     fontFamily: HavenFonts.body,
-    fontSize: BodyFontSize.xl,
-    color: HavenColors.ink,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.inkSoft,
     textAlign: 'center',
-    lineHeight: BodyFontSize.xl * 1.3,
+  },
+  promptSubject: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.title,
+    color: RibbonColors.calendar,
+    textAlign: 'center',
+    lineHeight: PixelFontSize.title * 1.6,
   },
 
   // ── Buttons ───────────────────────────────────────────────────────────────
@@ -363,6 +380,12 @@ const styles = StyleSheet.create({
     color: HavenColors.leather,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  gallerySubtitle: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.inkSoft,
     textAlign: 'center',
   },
   galleryRule: {
