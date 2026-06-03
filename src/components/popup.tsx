@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Border, HavenColors, HavenFonts, HavenSpacing, PixelFontSize, ShadowOffset } from '@/constants/havenTheme';
 
 type PopupProps = {
   /** Array of arbitrary items to render inside the popup. Each item may be any React node. */
@@ -29,23 +29,29 @@ export function Popup({ title, objects = [] }: PopupProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: HavenSpacing.xxl,
+    backgroundColor: HavenColors.parchment,
   },
 
   card: {
-    width: '80%',
-    maxHeight: '80%',
-    backgroundColor: '#ffffff',
-    padding: 12,
-    borderRadius: Spacing.two,
+    width: '100%',
+    maxHeight: '100%',
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    padding: HavenSpacing.lg,
+    //boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.parchmentShadow}`,
+    shadowColor: HavenColors.parchmentShadow,
+    shadowOffset: { width: ShadowOffset.two, height: ShadowOffset.two },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+
   },
 
   objectColumn: {
     width: '100%',
     flexDirection: 'column',
-    gap: 12,
+    gap: HavenSpacing.lg,
   },
 
   object: {
@@ -55,12 +61,15 @@ const styles = StyleSheet.create({
 
   cardContent: {
     width: '100%',
-    paddingBottom: 12,
+    paddingBottom: HavenSpacing.lg,
+    flexGrow: 1,
   },
 
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: PixelFontSize.lg,
+    fontFamily: HavenFonts.pixel,
+    color: HavenColors.ink,
     textAlign: 'center',
+    marginBottom: HavenSpacing.md,
   },
 });
