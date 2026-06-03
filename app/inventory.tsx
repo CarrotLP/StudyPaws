@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DevResetButton } from '../src/components/DevResetButton';
-import { ItemIcon } from '../src/components/ItemIcon';
-import { ALL_ITEMS } from '../src/components/itemSprites';
-import { Toast } from '../src/components/Toast';
+import { DevResetButton } from '@/components/DevResetButton';
+import { ItemIcon } from '@/components/ItemIcon';
+import { ALL_ITEMS } from '@/components/itemSprites';
+import { Toast } from '@/components/Toast';
 import {
     Border,
     Control,
@@ -16,9 +16,9 @@ import {
     PixelFontSize,
     PixelScale,
     ShadowOffset,
-} from '../src/constants/havenTheme';
-import { useOutfit } from '../src/hooks/use-outfit';
-import { useResetToDefaults } from '../src/hooks/use-reset-to-defaults';
+} from '@/constants/havenTheme';
+import { useOutfit } from '@/hooks/use-outfit';
+import { useResetToDefaults } from '@/hooks/use-reset-to-defaults';
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];

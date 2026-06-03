@@ -1,9 +1,9 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ItemIcon } from '../src/components/ItemIcon';
-import { ALL_ITEMS, type Item } from '../src/components/itemSprites';
-import { PixelCat } from '../src/components/PixelCat';
+import { ItemIcon } from '@/components/ItemIcon';
+import { ALL_ITEMS, type Item } from '@/components/itemSprites';
+import { PixelCat } from '@/components/PixelCat';
 import {
     BodyFontSize,
     Border,
@@ -14,8 +14,8 @@ import {
     PixelFontSize,
     PixelScale,
     ShadowOffset,
-} from '../src/constants/havenTheme';
-import { useOutfit } from '../src/hooks/use-outfit';
+} from '@/constants/havenTheme';
+import { useOutfit } from '@/hooks/use-outfit';
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];

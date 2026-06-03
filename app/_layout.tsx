@@ -6,12 +6,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { AnimatedSplashOverlay } from '../src/components/animated-icon';
-import AppTabs from '../src/components/app-tabs';
-import { EconomyProvider } from '../src/hooks/use-economy';
-import { OutfitProvider } from '../src/hooks/use-outfit';
-import { StudyHistoryProvider } from '../src/hooks/use-study-history';
-import { StudySessionProvider } from '../src/hooks/use-study-session';
+import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import AppTabs from '@/components/app-tabs';
+import { EconomyProvider } from '@/hooks/use-economy';
+import { OutfitProvider } from '@/hooks/use-outfit';
+import { StudyHistoryProvider } from '@/hooks/use-study-history';
+import { StudySessionProvider } from '@/hooks/use-study-session';
 
 SplashScreen.preventAutoHideAsync();
 

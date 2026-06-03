@@ -1,10 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { supabase } from "../../backend/src/lib/supabase";
+import { supabase } from "@/backend/src/lib/supabase";
 console.log("supabase client:", !!supabase);
 
-import { BuddyAvatar } from '../src/components/BuddyAvatar';
+import { BuddyAvatar } from '@/components/BuddyAvatar';
 import {
   BodyFontSize,
   Border,
@@ -14,7 +14,7 @@ import {
   PixelFontSize,
   PixelScale,
   ShadowOffset,
-} from '../src/constants/havenTheme';
+} from '@/constants/havenTheme';
 
 type Buddy = {
   name: string;

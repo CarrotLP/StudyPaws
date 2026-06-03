@@ -4,7 +4,7 @@
     "strict": true,
     "paths": {
       "@/*": [
-        "frontend/src/*"
+        "src/*"
       ],
       "@/assets/*": [
         "./assets/*"

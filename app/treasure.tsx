@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ChestOpenOverlay, type ChestStage } from '../src/components/ChestOpenOverlay';
-import { DevAddPointsButton } from '../src/components/DevAddPointsButton';
-import { ItemIcon } from '../src/components/ItemIcon';
-import { ALL_ITEMS, type ItemId } from '../src/components/itemSprites';
-import { PixelChest } from '../src/components/PixelChest';
-import { Toast } from '../src/components/Toast';
+import { ChestOpenOverlay, type ChestStage } from '@/components/ChestOpenOverlay';
+import { DevAddPointsButton } from '@/components/DevAddPointsButton';
+import { ItemIcon } from '@/components/ItemIcon';
+import { ALL_ITEMS, type ItemId } from '@/components/itemSprites';
+import { PixelChest } from '@/components/PixelChest';
+import { Toast } from '@/components/Toast';
 import {
     BodyFontSize,
     Border,
@@ -20,10 +20,10 @@ import {
     PixelFontSize,
     PixelScale,
     ShadowOffset,
-} from '../src/constants/havenTheme';
-import { useEconomy } from '../src/hooks/use-economy';
-import { useOutfit } from '../src/hooks/use-outfit';
-import { type ChestId } from '../src/lib/haven-storage';
+} from '@/constants/havenTheme';
+import { useEconomy } from '@/hooks/use-economy';
+import { useOutfit } from '@/hooks/use-outfit';
+import { type ChestId } from '@/lib/haven-storage';
 
 type Chest = {
   id: ChestId;

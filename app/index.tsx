@@ -9,9 +9,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DevSkipButton } from '../src/components/DevSkipButton';
-import { PixelCat } from '../src/components/PixelCat';
-import { Toast } from '../src/components/Toast';
+import { DevSkipButton } from '@/components/DevSkipButton';
+import { PixelCat } from '@/components/PixelCat';
+import { Toast } from '@/components/Toast';
 import {
     BodyFontSize,
     Border,
@@ -22,10 +22,10 @@ import {
     PixelFontSize,
     PixelScale,
     ShadowOffset,
-} from '../src/constants/havenTheme';
-import { useOutfit } from '../src/hooks/use-outfit';
-import { type BreakHabit, useStudySession } from '../src/hooks/use-study-session';
-import { fmt, fmtMinutes } from '../src/lib/haven-format';
+} from '@/constants/havenTheme';
+import { useOutfit } from '@/hooks/use-outfit';
+import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
+import { fmt, fmtMinutes } from '@/lib/haven-format';
 
 export default function HomeScreen() {
   const session = useStudySession();

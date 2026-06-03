@@ -4,8 +4,8 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MonthGrid } from '../src/components/MonthGrid';
-import { SelectedDayPanel } from '../src/components/SelectedDayPanel';
+import { MonthGrid } from '@/components/MonthGrid';
+import { SelectedDayPanel } from '@/components/SelectedDayPanel';
 import {
     BodyFontSize,
     Border,
@@ -15,9 +15,9 @@ import {
     HavenFonts,
     HavenSpacing,
     PixelFontSize,
-} from '../src/constants/havenTheme';
-import { useStudyHistory } from '../src/hooks/use-study-history';
-import { dateKey, fmtMinutes } from '../src/lib/haven-format';
+} from '@/constants/havenTheme';
+import { useStudyHistory } from '@/hooks/use-study-history';
+import { dateKey, fmtMinutes } from '@/lib/haven-format';
 
 const WEEKDAYS = ['T', 'T', 'W', 'T', 'F', 'S', 'S'];
 // Window of past months kept mounted at fixed positions. Data only exists ~5
