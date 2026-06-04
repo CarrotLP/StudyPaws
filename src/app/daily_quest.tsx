@@ -24,8 +24,8 @@ import { getTeamGallery, submitVote, type GallerySubmission } from '@/services/v
 
 /** Rating-star glyph size (px). Fill is rendered slightly smaller so the
  *  black outline stays visible underneath when a star is selected. */
-const STAR_SIZE = 20;
-const STAR_FILL_SIZE = STAR_SIZE - 5;
+const STAR_SIZE = 32;
+const STAR_FILL_SIZE = STAR_SIZE - 7;
 
 export default function DailyQuestScreen() {
   const { user } = useAuth();
@@ -38,6 +38,8 @@ export default function DailyQuestScreen() {
   const [voted, setVoted] = useState(false);
   const [ratings, setRatings] = useState<number[]>([]);
   const [submittingVotes, setSubmittingVotes] = useState(false);
+  const [galleryPageWidth, setGalleryPageWidth] = useState(0);
+  const [galleryPage, setGalleryPage] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -70,6 +72,7 @@ export default function DailyQuestScreen() {
       setGallerySubmissions(submissions);
       setRatings(existingRatings);
       setVoted(submissions.length > 0 && existingRatings.every((rating) => rating > 0));
+      setGalleryPage(0);
       setShowGallery(true);
     } catch (error) {
       Alert.alert('Gallery unavailable', error instanceof Error ? error.message : 'Please try again.');
@@ -185,70 +188,105 @@ export default function DailyQuestScreen() {
               <Text style={styles.gallerySubtitle}>{quest?.description}</Text>
               <View style={styles.galleryRule} />
 
-              {/* Scrollable photo grid */}
-              <ScrollView
-                style={styles.galleryScroll}
-                contentContainerStyle={styles.galleryGrid}
-                showsVerticalScrollIndicator={false}>
-                {gallerySubmissions.length === 0 && (
-                  <Text style={styles.gallerySubtitle}>No teammate submissions yet.</Text>
-                )}
-                {/* 2-column row layout */}
-                {gallerySubmissions.reduce<React.JSX.Element[]>((rows, _submission, idx) => {
-                  if (idx % 2 !== 0) return rows;
-                  const pair = gallerySubmissions.slice(idx, idx + 2);
-                  rows.push(
-                    <View key={idx} style={styles.galleryRow}>
-                      {pair.map((submission, offset) => {
-                        const i = idx + offset;
-                        return (
-                          <View key={submission.userId} style={styles.galleryItem}>
-                            <Image
-                              source={{ uri: submission.imageUrl }}
-                              style={styles.galleryPhoto}
-                              resizeMode="contain"
-                              onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
-                            />
-                            <View style={styles.starRow}>
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Pressable
-                                  key={star}
-                                  hitSlop={4}
-                                  onPress={() =>
-                                    setRatings((prev) => {
-                                      const updated = [...prev];
-                                      updated[i] = star;
-                                      return updated;
-                                    })
-                                  }>
-                                  {/*
-                                   * Layered star: a black 'star-o' outline is
-                                   * ALWAYS rendered for contrast against the
-                                   * parchment; a solid yellow 'star' is overlaid
-                                   * only when selected. Avoids a native SVG dep.
-                                   */}
-                                  <View style={styles.star}>
-                                    <FontAwesome name="star-o" size={STAR_SIZE} color="#000000" />
-                                    {star <= (ratings[i] ?? 0) && (
-                                      <FontAwesome
-                                        name="star"
-                                        size={STAR_FILL_SIZE}
-                                        color="#FFD700"
-                                        style={styles.starFill}
-                                      />
-                                    )}
-                                  </View>
-                                </Pressable>
-                              ))}
+              {gallerySubmissions.length === 0 ? (
+                <Text style={styles.gallerySubtitle}>No teammate submissions yet.</Text>
+              ) : (
+                <View
+                  style={styles.galleryCarousel}
+                  onLayout={(event) => setGalleryPageWidth(event.nativeEvent.layout.width)}>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    bounces={false}
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(event) => {
+                      if (galleryPageWidth === 0) return;
+                      setGalleryPage(
+                        Math.round(event.nativeEvent.contentOffset.x / galleryPageWidth),
+                      );
+                    }}>
+                    {gallerySubmissions.map((submission, index) => (
+                      <View
+                        key={submission.userId}
+                        style={[styles.galleryItem, { width: galleryPageWidth }]}>
+                        <View style={styles.galleryPhotoWrap}>
+                          <Image
+                            source={{ uri: submission.imageUrl }}
+                            style={styles.galleryPhoto}
+                            resizeMode="contain"
+                            onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
+                          />
+                          {index > 0 && (
+                            <View pointerEvents="none" style={[styles.swipeArrow, styles.swipeArrowLeft]}>
+                              <View style={styles.swipeArrowLeftHead} />
                             </View>
+                          )}
+                          {index < gallerySubmissions.length - 1 && (
+                            <View pointerEvents="none" style={[styles.swipeArrow, styles.swipeArrowRight]}>
+                              <View style={styles.swipeArrowRightHead} />
+                            </View>
+                          )}
+                          <View pointerEvents="none" style={styles.galleryCountStamp}>
+                            <Text style={styles.galleryCountStampText}>
+                              {index + 1}/{gallerySubmissions.length}
+                            </Text>
                           </View>
-                        );
-                      })}
-                    </View>,
-                  );
-                  return rows;
-                }, [])}
-              </ScrollView>
+                        </View>
+                        <View style={styles.starRow}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Pressable
+                              key={star}
+                              accessibilityLabel={`Rate ${star} out of 5 stars`}
+                              hitSlop={6}
+                              onPress={() =>
+                                setRatings((prev) => {
+                                  const updated = [...prev];
+                                  updated[index] = star;
+                                  return updated;
+                                })
+                              }>
+                              {/*
+                               * Layered star: a black 'star-o' outline is
+                               * ALWAYS rendered for contrast against the
+                               * parchment; a solid yellow 'star' is overlaid
+                               * only when selected. Avoids a native SVG dep.
+                               */}
+                              <View style={styles.star}>
+                                <FontAwesome name="star-o" size={STAR_SIZE} color="#000000" />
+                                {star <= (ratings[index] ?? 0) && (
+                                  <FontAwesome
+                                    name="star"
+                                    size={STAR_FILL_SIZE}
+                                    color="#FFD700"
+                                    style={styles.starFill}
+                                  />
+                                )}
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+
+                  <View style={styles.galleryPosition}>
+                    <View style={styles.galleryDots}>
+                      {gallerySubmissions.map((submission, index) => (
+                        <View
+                          key={submission.userId}
+                          style={[
+                            styles.galleryDot,
+                            index === galleryPage && styles.galleryDotActive,
+                            ratings[index] > 0 && styles.galleryDotRated,
+                          ]}
+                        />
+                      ))}
+                    </View>
+                    <Text style={styles.gallerySwipeHint}>Swipe to view and rate submissions</Text>
+                    <Text style={styles.galleryRewardHint}>Winner receives 100 study points</Text>
+                  </View>
+                </View>
+              )}
 
               {/* Submit / Update — only when all photos are rated; no Close inside */}
               {allRated && !voted && (
@@ -464,34 +502,110 @@ const styles = StyleSheet.create({
     height: Border.thick,
     backgroundColor: HavenColors.ink,
   },
-  galleryScroll: {
-    flexGrow: 0,
-  },
-  galleryGrid: {
-    gap: HavenSpacing.md,
-    paddingBottom: HavenSpacing.base,
-  },
-  galleryRow: {
-    flexDirection: 'row',
-    gap: HavenSpacing.md,
+  galleryCarousel: {
+    width: '100%',
+    overflow: 'hidden',
   },
   galleryItem: {
-    flex: 1,
     alignItems: 'center',
-    gap: HavenSpacing.sm,
+    gap: HavenSpacing.xs,
   },
-  galleryPhoto: {
-    // Fixed uniform display box for every submission; resizeMode="contain"
-    // letterboxes odd-ratio photos so the whole image stays visible.
+  galleryPhotoWrap: {
+    position: 'relative',
     width: '100%',
     aspectRatio: 1,
+  },
+  galleryPhoto: {
+    // Large uniform display box; resizeMode="contain" keeps the whole submission visible.
+    width: '100%',
+    height: '100%',
     backgroundColor: HavenColors.cellInset,
     borderWidth: Border.base,
     borderColor: HavenColors.inkSoft,
   },
+  swipeArrow: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -12,
+    opacity: 0.36,
+  },
+  swipeArrowLeft: {
+    left: HavenSpacing.sm,
+  },
+  swipeArrowRight: {
+    right: HavenSpacing.sm,
+  },
+  swipeArrowLeftHead: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 12,
+    borderBottomWidth: 12,
+    borderRightWidth: 14,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderRightColor: HavenColors.ink,
+  },
+  swipeArrowRightHead: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 12,
+    borderBottomWidth: 12,
+    borderLeftWidth: 14,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: HavenColors.ink,
+  },
+  galleryCountStamp: {
+    position: 'absolute',
+    right: HavenSpacing.base,
+    bottom: HavenSpacing.base,
+    paddingHorizontal: HavenSpacing.base,
+    paddingVertical: HavenSpacing.xs,
+    backgroundColor: 'rgba(26, 15, 8, 0.55)',
+    borderRadius: 14,
+  },
+  galleryCountStampText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.sm,
+    color: HavenColors.white,
+  },
   starRow: {
     flexDirection: 'row',
+    gap: HavenSpacing.sm,
+    paddingVertical: HavenSpacing.xs,
+  },
+  galleryPosition: {
+    alignItems: 'center',
     gap: HavenSpacing.xs,
+    paddingTop: HavenSpacing.sm,
+  },
+  galleryDots: {
+    flexDirection: 'row',
+    gap: HavenSpacing.xs,
+  },
+  galleryDot: {
+    width: 7,
+    height: 7,
+    backgroundColor: HavenColors.parchmentDark,
+    borderWidth: 1,
+    borderColor: HavenColors.inkSoft,
+  },
+  galleryDotActive: {
+    width: 12,
+    backgroundColor: HavenColors.leather,
+  },
+  galleryDotRated: {
+    backgroundColor: HavenColors.gold,
+  },
+  gallerySwipeHint: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.inkSoft,
+  },
+  galleryRewardHint: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.leather,
   },
   // Square container holding the black outline with the yellow fill centered on top.
   star: {
