@@ -8,6 +8,8 @@ import { useColorScheme } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { WinnerAnnouncementOverlay } from '@/components/WinnerAnnouncementOverlay';
+import { AuthProvider } from '@/hooks/use-auth';
+import { DailyQuestProvider } from '@/hooks/use-daily-quest';
 import { EconomyProvider } from '@/hooks/use-economy';
 import { OutfitProvider } from '@/hooks/use-outfit';
 import { StudyHistoryProvider } from '@/hooks/use-study-history';
@@ -34,17 +36,21 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <EconomyProvider>
-        <StudyHistoryProvider>
-          <OutfitProvider>
-            <StudySessionProvider>
-              <AnimatedSplashOverlay />
-              <AppTabs />
-              <WinnerAnnouncementOverlay />
-            </StudySessionProvider>
-          </OutfitProvider>
-        </StudyHistoryProvider>
-      </EconomyProvider>
+      <AuthProvider>
+        <DailyQuestProvider>
+          <EconomyProvider>
+            <StudyHistoryProvider>
+              <OutfitProvider>
+                <StudySessionProvider>
+                  <AnimatedSplashOverlay />
+                  <AppTabs />
+                  <WinnerAnnouncementOverlay />
+                </StudySessionProvider>
+              </OutfitProvider>
+            </StudyHistoryProvider>
+          </EconomyProvider>
+        </DailyQuestProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

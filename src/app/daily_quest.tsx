@@ -15,8 +15,8 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
+import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
-import { DAILY_QUEST_SUBJECT, TEAM_NAME, dailyQuest } from '@/lib/daily-quest';
 import { dateKey } from '@/lib/haven-format';
 import { loadQuestPhotos } from '@/lib/haven-storage';
 
@@ -26,6 +26,7 @@ const STAR_SIZE = 20;
 const STAR_FILL_SIZE = STAR_SIZE - 5;
 
 export default function DailyQuestScreen() {
+  const { loading: questLoading, quest, team } = useDailyQuest();
   const [showGallery, setShowGallery] = useState(false);
   const [todayPhotoUri, setTodayPhotoUri] = useState<string | null>(null);
   const [photoLoadError, setPhotoLoadError] = useState(false);
@@ -104,9 +105,13 @@ export default function DailyQuestScreen() {
           )}
         </View>
 
-        {/* The day's subject phrase straight from questPrompts.json, large and in the chapter accent colour. */}
+        {/* Today's task is loaded from Supabase using the UTC quest date. */}
         <View style={styles.promptBlock}>
-          <Text style={styles.promptSubject}>{DAILY_QUEST_SUBJECT}</Text>
+          <Text style={styles.promptSubject}>
+            {questLoading
+              ? 'Loading today’s quest...'
+              : quest?.description ?? 'No daily quest is available today.'}
+          </Text>
         </View>
 
         {/* ── View Team Gallery button (a) — always visible; deactivated outside
@@ -126,7 +131,7 @@ export default function DailyQuestScreen() {
           </Pressable>
           {!votingOpen && (
             <Text style={styles.gatedHint}>
-              You can view and rate your teammates submissions after 8pm (to 12pm)
+              You can view and rate your teammates submissions after 8pm (to 12am)
             </Text>
           )}
         </View>
@@ -151,10 +156,10 @@ export default function DailyQuestScreen() {
             {/* Gallery card */}
             <View style={styles.galleryCard}>
               <Text style={styles.galleryHeader}>
-                {TEAM_NAME} - team gallery
+                {team?.teamName ?? 'Team'} - team gallery
               </Text>
               {/* Small secondary line so raters know what today's quest was. */}
-              <Text style={styles.gallerySubtitle}>{dailyQuest.noun}</Text>
+              <Text style={styles.gallerySubtitle}>{quest?.description}</Text>
               <View style={styles.galleryRule} />
 
               {/* Scrollable photo grid */}

@@ -12,7 +12,8 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
-import { dailyQuest, saveDailyQuestPhoto } from '@/lib/daily-quest';
+import { useDailyQuest } from '@/hooks/use-daily-quest';
+import { saveDailyQuestPhoto } from '@/lib/daily-quest';
 
 type DailyQuestOverlayProps = {
   visible: boolean;
@@ -24,6 +25,7 @@ type DailyQuestOverlayProps = {
 };
 
 export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestOverlayProps) {
+  const { loading: questLoading, quest } = useDailyQuest();
   const [completed, setCompleted] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
   // Captured photo URI is held in component state for the immediate popup;
@@ -53,6 +55,11 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
   }, [visible, completed, onCancel, onComplete]);
 
   const takePhoto = async () => {
+    if (!quest) {
+      Alert.alert('Daily quest unavailable');
+      return;
+    }
+
     // Action guard: local-clock verification (no server enforcement). Re-check
     // the submission window before opening the camera / writing the photo.
     if (!isWithinWindow(QUEST_WINDOWS.submission)) {
@@ -122,7 +129,7 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
                 </View>
               )}
             </View>
-            <Text style={styles.questNoun}>{dailyQuest.noun}</Text>
+            <Text style={styles.questNoun}>{quest?.description ?? 'Daily quest'}</Text>
             <Pressable
               accessibilityLabel="Done"
               onPress={onComplete}
@@ -143,16 +150,20 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
               style={[styles.closeButton, styles.closeLeft]}>
               <Text style={styles.closeText}>X</Text>
             </Pressable>
-            <Text style={styles.title}>{dailyQuest.title}</Text>
-            <Text style={styles.description}>{dailyQuest.noun}</Text>
+            <Text style={styles.title}>Complete Daily Quest</Text>
+            <Text style={styles.description}>
+              {questLoading
+                ? 'Loading today’s quest...'
+                : quest?.description ?? 'No daily quest is available today.'}
+            </Text>
             <Pressable
               accessibilityLabel="Take photo"
-              disabled={takingPhoto}
+              disabled={takingPhoto || !quest}
               onPress={takePhoto}
               style={({ pressed }) => [
                 styles.cameraButton,
                 pressed && styles.buttonPressed,
-                takingPhoto && styles.buttonDisabled,
+                (takingPhoto || !quest) && styles.buttonDisabled,
               ]}>
               {/* Inline pixel-art-style camera glyph — matches Haven's aesthetic
                   without pulling in an icon font. */}

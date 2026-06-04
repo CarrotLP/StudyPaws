@@ -1,14 +1,43 @@
-// Chooes to use UserTeamInput or use userId, teamId as different params
-// Dont know if we wanna keep this same for all services, but for some services with a lot of params this might be annoying(?)
-// and this can be moved to the types folder
+import { supabase } from '@/backend/lib/supabase';
+
 export type UserTeamInput = {
   userId: string;
   teamId: string;
 };
 
-export async function getTeamsForUser(userId: string) {
-  // TODO: fetch teams for user from DB
-  return [];
+export type UserTeam = {
+  teamId: string;
+  teamName: string;
+};
+
+export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
+  const { data: memberships, error: membershipError } = await supabase
+    .from('users_teams')
+    .select('team')
+    .eq('user', userId);
+
+  if (membershipError) {
+    throw membershipError;
+  }
+
+  const teamIds = memberships.map((membership) => membership.team);
+  if (teamIds.length === 0) {
+    return [];
+  }
+
+  const { data: teams, error: teamError } = await supabase
+    .from('teams')
+    .select('team_uid, team_name')
+    .in('team_uid', teamIds);
+
+  if (teamError) {
+    throw teamError;
+  }
+
+  return teams.map((team) => ({
+    teamId: team.team_uid,
+    teamName: team.team_name,
+  }));
 }
 
 export async function getUsersForTeam(teamId: string) {

@@ -25,6 +25,11 @@ export function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+/** UTC calendar-date key used by Supabase daily-quest records. */
+export function utcDateKey(d: Date = new Date()) {
+  return d.toISOString().slice(0, 10);
+}
+
 /** "Mon 27 May" — short weekday, day, short month — from a YYYY-MM-DD key. */
 export function fmtDayLabel(key: string) {
   const [y, m, d] = key.split('-').map(Number);
