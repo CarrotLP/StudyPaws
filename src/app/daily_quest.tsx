@@ -209,15 +209,29 @@ export default function DailyQuestScreen() {
                       <View
                         key={submission.userId}
                         style={[styles.galleryItem, { width: galleryPageWidth }]}>
-                        <Image
-                          source={{ uri: submission.imageUrl }}
-                          style={styles.galleryPhoto}
-                          resizeMode="contain"
-                          onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
-                        />
-                        <Text style={styles.ratingPrompt}>
-                          {ratings[index] > 0 ? `${ratings[index]} out of 5 stars` : 'Tap to rate'}
-                        </Text>
+                        <View style={styles.galleryPhotoWrap}>
+                          <Image
+                            source={{ uri: submission.imageUrl }}
+                            style={styles.galleryPhoto}
+                            resizeMode="contain"
+                            onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
+                          />
+                          {index > 0 && (
+                            <View pointerEvents="none" style={[styles.swipeArrow, styles.swipeArrowLeft]}>
+                              <View style={styles.swipeArrowLeftHead} />
+                            </View>
+                          )}
+                          {index < gallerySubmissions.length - 1 && (
+                            <View pointerEvents="none" style={[styles.swipeArrow, styles.swipeArrowRight]}>
+                              <View style={styles.swipeArrowRightHead} />
+                            </View>
+                          )}
+                          <View pointerEvents="none" style={styles.galleryCountStamp}>
+                            <Text style={styles.galleryCountStampText}>
+                              {index + 1}/{gallerySubmissions.length}
+                            </Text>
+                          </View>
+                        </View>
                         <View style={styles.starRow}>
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Pressable
@@ -256,9 +270,6 @@ export default function DailyQuestScreen() {
                   </ScrollView>
 
                   <View style={styles.galleryPosition}>
-                    <Text style={styles.galleryPositionText}>
-                      {galleryPage + 1} of {gallerySubmissions.length}
-                    </Text>
                     <View style={styles.galleryDots}>
                       {gallerySubmissions.map((submission, index) => (
                         <View
@@ -271,7 +282,8 @@ export default function DailyQuestScreen() {
                         />
                       ))}
                     </View>
-                    <Text style={styles.gallerySwipeHint}>Swipe to view teammates</Text>
+                    <Text style={styles.gallerySwipeHint}>Swipe to view and rate submissions</Text>
+                    <Text style={styles.galleryRewardHint}>Winner receives 100 study points</Text>
                   </View>
                 </View>
               )}
@@ -498,34 +510,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: HavenSpacing.xs,
   },
+  galleryPhotoWrap: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 1,
+  },
   galleryPhoto: {
     // Large uniform display box; resizeMode="contain" keeps the whole submission visible.
     width: '100%',
-    aspectRatio: 1,
+    height: '100%',
     backgroundColor: HavenColors.cellInset,
     borderWidth: Border.base,
     borderColor: HavenColors.inkSoft,
+  },
+  swipeArrow: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -12,
+    opacity: 0.36,
+  },
+  swipeArrowLeft: {
+    left: HavenSpacing.sm,
+  },
+  swipeArrowRight: {
+    right: HavenSpacing.sm,
+  },
+  swipeArrowLeftHead: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 12,
+    borderBottomWidth: 12,
+    borderRightWidth: 14,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderRightColor: HavenColors.ink,
+  },
+  swipeArrowRightHead: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 12,
+    borderBottomWidth: 12,
+    borderLeftWidth: 14,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: HavenColors.ink,
+  },
+  galleryCountStamp: {
+    position: 'absolute',
+    right: HavenSpacing.base,
+    bottom: HavenSpacing.base,
+    paddingHorizontal: HavenSpacing.base,
+    paddingVertical: HavenSpacing.xs,
+    backgroundColor: 'rgba(26, 15, 8, 0.55)',
+    borderRadius: 14,
+  },
+  galleryCountStampText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.sm,
+    color: HavenColors.white,
   },
   starRow: {
     flexDirection: 'row',
     gap: HavenSpacing.sm,
     paddingVertical: HavenSpacing.xs,
   },
-  ratingPrompt: {
-    fontFamily: HavenFonts.body,
-    fontSize: BodyFontSize.md,
-    color: HavenColors.inkSoft,
-    textAlign: 'center',
-  },
   galleryPosition: {
     alignItems: 'center',
     gap: HavenSpacing.xs,
     paddingTop: HavenSpacing.sm,
-  },
-  galleryPositionText: {
-    fontFamily: HavenFonts.pixel,
-    fontSize: PixelFontSize.base,
-    color: HavenColors.leather,
   },
   galleryDots: {
     flexDirection: 'row',
@@ -549,6 +601,11 @@ const styles = StyleSheet.create({
     fontFamily: HavenFonts.body,
     fontSize: BodyFontSize.md,
     color: HavenColors.inkSoft,
+  },
+  galleryRewardHint: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.leather,
   },
   // Square container holding the black outline with the yellow fill centered on top.
   star: {
