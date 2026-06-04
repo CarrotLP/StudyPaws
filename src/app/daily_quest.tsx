@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
 import { getOwnQuestSubmission } from '@/services/questSubmission.services';
+import { getTeamGallery, submitVote, type GallerySubmission } from '@/services/vote.services';
 
 /** Rating-star glyph size (px). Fill is rendered slightly smaller so the
  *  black outline stays visible underneath when a star is selected. */
@@ -33,14 +34,10 @@ export default function DailyQuestScreen() {
   const [todayPhotoUri, setTodayPhotoUri] = useState<string | null>(null);
   const [photoLoadError, setPhotoLoadError] = useState(false);
 
-  // Placeholder gallery images until Supabase team photos are wired up.
-  const [galleryImages] = useState<string[]>([
-    'https://picsum.photos/200',
-    'https://samplelib.com/png/sample-boat-400x300.png',
-    'https://samplelib.com/png/sample-hut-400x300.png',
-  ]);
+  const [gallerySubmissions, setGallerySubmissions] = useState<GallerySubmission[]>([]);
   const [voted, setVoted] = useState(false);
   const [ratings, setRatings] = useState<number[]>([]);
+  const [submittingVotes, setSubmittingVotes] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,13 +52,7 @@ export default function DailyQuestScreen() {
     }, [quest, user]),
   );
 
-  useEffect(() => {
-    setRatings((prev) =>
-      prev.length === galleryImages.length ? prev : Array(galleryImages.length).fill(0),
-    );
-  }, [galleryImages.length]);
-
-  const allRated = ratings.every((r) => r > 0);
+  const allRated = gallerySubmissions.length > 0 && ratings.every((r) => r > 0);
 
   // Local-clock gate: voting/rating UI is only available during the voting window.
   const windows = questWindowsFromDeadlines(
@@ -70,26 +61,44 @@ export default function DailyQuestScreen() {
   );
   const votingOpen = useWithinWindow(windows.voting);
 
-  const submitRatings = () => {
-    // Action guard: re-check the clock at submit time (no server enforcement).
-    if (!isWithinWindow(windows.voting)) {
-      setShowGallery(false);
-      Alert.alert('Voting is closed right now');
-      return;
+  const openGallery = async () => {
+    if (!votingOpen || !team || !quest || !user) return;
+
+    try {
+      const submissions = await getTeamGallery(team.teamId, quest.questDate, user.id);
+      const existingRatings = submissions.map((submission) => submission.voteValue);
+      setGallerySubmissions(submissions);
+      setRatings(existingRatings);
+      setVoted(submissions.length > 0 && existingRatings.every((rating) => rating > 0));
+      setShowGallery(true);
+    } catch (error) {
+      Alert.alert('Gallery unavailable', error instanceof Error ? error.message : 'Please try again.');
     }
-    // postVotes(ratings);
-    setShowGallery(false);
-    setVoted(true);
   };
 
-  const updateRatings = () => {
-    if (!isWithinWindow(windows.voting)) {
+  const saveRatings = async () => {
+    // Action guard: re-check the clock at submit time (no server enforcement).
+    if (!isWithinWindow(windows.voting) || !team || !quest) {
       setShowGallery(false);
       Alert.alert('Voting is closed right now');
       return;
     }
-    // updateVotes(ratings);
-    setShowGallery(false);
+
+    try {
+      setSubmittingVotes(true);
+      await Promise.all(
+        gallerySubmissions.map((submission, index) =>
+          submitVote(team.teamId, quest.questDate, submission.userId, ratings[index]),
+        ),
+      );
+      setShowGallery(false);
+      setVoted(true);
+      Alert.alert('Votes saved');
+    } catch (error) {
+      Alert.alert('Votes could not be saved', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setSubmittingVotes(false);
+    }
   };
 
   return (
@@ -136,7 +145,7 @@ export default function DailyQuestScreen() {
               pressed && votingOpen && styles.btnPressed,
               !votingOpen && styles.btnDisabled,
             ]}
-            onPress={() => setShowGallery(true)}>
+            onPress={openGallery}>
             <Text style={[styles.btnText, !votingOpen && styles.btnTextDisabled]}>
               View Team Gallery
             </Text>
@@ -181,18 +190,21 @@ export default function DailyQuestScreen() {
                 style={styles.galleryScroll}
                 contentContainerStyle={styles.galleryGrid}
                 showsVerticalScrollIndicator={false}>
+                {gallerySubmissions.length === 0 && (
+                  <Text style={styles.gallerySubtitle}>No teammate submissions yet.</Text>
+                )}
                 {/* 2-column row layout */}
-                {galleryImages.reduce<React.JSX.Element[]>((rows, _img, idx) => {
+                {gallerySubmissions.reduce<React.JSX.Element[]>((rows, _submission, idx) => {
                   if (idx % 2 !== 0) return rows;
-                  const pair = galleryImages.slice(idx, idx + 2);
+                  const pair = gallerySubmissions.slice(idx, idx + 2);
                   rows.push(
                     <View key={idx} style={styles.galleryRow}>
-                      {pair.map((imageUrl, offset) => {
+                      {pair.map((submission, offset) => {
                         const i = idx + offset;
                         return (
-                          <View key={i} style={styles.galleryItem}>
+                          <View key={submission.userId} style={styles.galleryItem}>
                             <Image
-                              source={{ uri: imageUrl }}
+                              source={{ uri: submission.imageUrl }}
                               style={styles.galleryPhoto}
                               resizeMode="contain"
                               onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
@@ -241,16 +253,18 @@ export default function DailyQuestScreen() {
               {/* Submit / Update — only when all photos are rated; no Close inside */}
               {allRated && !voted && (
                 <Pressable
+                  disabled={submittingVotes}
                   style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
-                  onPress={submitRatings}>
-                  <Text style={styles.btnText}>Submit</Text>
+                  onPress={saveRatings}>
+                  <Text style={styles.btnText}>{submittingVotes ? 'Saving...' : 'Submit'}</Text>
                 </Pressable>
               )}
               {allRated && voted && (
                 <Pressable
+                  disabled={submittingVotes}
                   style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
-                  onPress={updateRatings}>
-                  <Text style={styles.btnText}>Update</Text>
+                  onPress={saveRatings}>
+                  <Text style={styles.btnText}>{submittingVotes ? 'Saving...' : 'Update'}</Text>
                 </Pressable>
               )}
             </View>
