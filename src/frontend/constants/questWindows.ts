@@ -9,6 +9,7 @@
  * so the voting window stays open through the end of the day.
  */
 export type QuestWindow = { start: string; end: string };
+export type QuestStage = 'submission' | 'voting';
 
 export const QUEST_WINDOWS = {
   // Submissions allowed 12am → 8pm; closed 8pm → 12am (matches the break-page hint).
@@ -24,11 +25,30 @@ function toMinutes(hhmm: string): number {
 
 export function isWithinWindow(win: QuestWindow): boolean {
   const now = new Date();
-  const cur = now.getHours() * 60 + now.getMinutes();
+  const cur = now.getUTCHours() * 60 + now.getUTCMinutes();
   const start = toMinutes(win.start);
   const end = toMinutes(win.end);
   // Same-day window (start < end) vs. overnight window that wraps past midnight
   // (start > end, e.g. 20:00 → 04:00): in the wrap case "inside" means after the
   // start OR before the end.
   return start <= end ? cur >= start && cur < end : cur >= start || cur < end;
+}
+
+export function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export function questWindowsFromDeadlines(
+  submissionDeadlineMinutes: number,
+  votingDeadlineMinutes: number,
+) {
+  const submissionEnd = minutesToTime(submissionDeadlineMinutes);
+  const votingEnd = minutesToTime(votingDeadlineMinutes);
+
+  return {
+    submission: { start: '00:00', end: submissionEnd },
+    voting: { start: submissionEnd, end: votingEnd },
+  } as const;
 }

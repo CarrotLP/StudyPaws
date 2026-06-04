@@ -20,12 +20,12 @@ export function useWithinWindow(win: QuestWindow): boolean {
   useEffect(() => {
     const id = setInterval(() => setOpen(isWithinWindow(win)), TICK_MS);
     return () => clearInterval(id);
-  }, [win]);
+  }, [win.start, win.end]);
 
   useFocusEffect(
     useCallback(() => {
       setOpen(isWithinWindow(win));
-    }, [win]),
+    }, [win.start, win.end]),
   );
 
   return open;

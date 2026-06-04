@@ -11,7 +11,7 @@ import {
   PixelFontSize,
   ShadowOffset,
 } from '@/constants/havenTheme';
-import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
+import { isWithinWindow, questWindowsFromDeadlines } from '@/constants/questWindows';
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { saveQuestSubmission } from '@/services/questSubmission.services';
@@ -27,7 +27,8 @@ type DailyQuestOverlayProps = {
 
 export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestOverlayProps) {
   const { user } = useAuth();
-  const { loading: questLoading, quest } = useDailyQuest();
+  const { loading: questLoading, quest, deadlines, hasSubmittedToday, markSubmittedToday } =
+    useDailyQuest();
   const [completed, setCompleted] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
   // Captured photo URI is held in component state for the immediate popup;
@@ -57,14 +58,18 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
   }, [visible, completed, onCancel, onComplete]);
 
   const takePhoto = async () => {
-    if (!quest || !user) {
+    if (!quest || !user || hasSubmittedToday) {
       Alert.alert('Daily quest unavailable');
       return;
     }
 
     // Action guard: local-clock verification (no server enforcement). Re-check
     // the submission window before opening the camera / writing the photo.
-    if (!isWithinWindow(QUEST_WINDOWS.submission)) {
+    const windows = questWindowsFromDeadlines(
+      deadlines.submissionDeadlineMinutes,
+      deadlines.votingDeadlineMinutes,
+    );
+    if (!isWithinWindow(windows.submission)) {
       Alert.alert('Submissions are closed until tomorrow');
       return;
     }
@@ -88,6 +93,7 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
       setPhotoUri(capturedUri);
       setPhotoError(false);
       await saveQuestSubmission(user.id, quest.questDate, capturedUri);
+      markSubmittedToday();
       setCompleted(true);
     } catch {
       Alert.alert('Photo could not be saved', 'Please try again.');
@@ -160,12 +166,12 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
             </Text>
             <Pressable
               accessibilityLabel="Take photo"
-              disabled={takingPhoto || !quest}
+              disabled={takingPhoto || !quest || hasSubmittedToday}
               onPress={takePhoto}
               style={({ pressed }) => [
                 styles.cameraButton,
                 pressed && styles.buttonPressed,
-                (takingPhoto || !quest) && styles.buttonDisabled,
+                (takingPhoto || !quest || hasSubmittedToday) && styles.buttonDisabled,
               ]}>
               {/* Inline pixel-art-style camera glyph — matches Haven's aesthetic
                   without pulling in an icon font. */}

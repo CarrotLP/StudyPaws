@@ -18,7 +18,7 @@ export async function saveQuestSubmission(
     throw uploadError;
   }
 
-  const { error: submissionError } = await supabase.from('quest_submissions').upsert({
+  const { error: submissionError } = await supabase.from('quest_submissions').insert({
     quest_date: questDate,
     user_id: userId,
     image_path: imagePath,

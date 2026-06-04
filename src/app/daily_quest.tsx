@@ -15,7 +15,7 @@ import {
   RibbonColors,
   ShadowOffset,
 } from '@/constants/havenTheme';
-import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
+import { isWithinWindow, minutesToTime, questWindowsFromDeadlines } from '@/constants/questWindows';
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
@@ -28,7 +28,7 @@ const STAR_FILL_SIZE = STAR_SIZE - 5;
 
 export default function DailyQuestScreen() {
   const { user } = useAuth();
-  const { loading: questLoading, quest, team } = useDailyQuest();
+  const { loading: questLoading, quest, team, deadlines } = useDailyQuest();
   const [showGallery, setShowGallery] = useState(false);
   const [todayPhotoUri, setTodayPhotoUri] = useState<string | null>(null);
   const [photoLoadError, setPhotoLoadError] = useState(false);
@@ -64,11 +64,15 @@ export default function DailyQuestScreen() {
   const allRated = ratings.every((r) => r > 0);
 
   // Local-clock gate: voting/rating UI is only available during the voting window.
-  const votingOpen = useWithinWindow(QUEST_WINDOWS.voting);
+  const windows = questWindowsFromDeadlines(
+    deadlines.submissionDeadlineMinutes,
+    deadlines.votingDeadlineMinutes,
+  );
+  const votingOpen = useWithinWindow(windows.voting);
 
   const submitRatings = () => {
     // Action guard: re-check the clock at submit time (no server enforcement).
-    if (!isWithinWindow(QUEST_WINDOWS.voting)) {
+    if (!isWithinWindow(windows.voting)) {
       setShowGallery(false);
       Alert.alert('Voting is closed right now');
       return;
@@ -79,7 +83,7 @@ export default function DailyQuestScreen() {
   };
 
   const updateRatings = () => {
-    if (!isWithinWindow(QUEST_WINDOWS.voting)) {
+    if (!isWithinWindow(windows.voting)) {
       setShowGallery(false);
       Alert.alert('Voting is closed right now');
       return;
@@ -139,7 +143,9 @@ export default function DailyQuestScreen() {
           </Pressable>
           {!votingOpen && (
             <Text style={styles.gatedHint}>
-              You can view and rate your teammates submissions after 8pm (to 12am)
+              You can view and rate your teammates submissions from{' '}
+              {minutesToTime(deadlines.submissionDeadlineMinutes)} to{' '}
+              {minutesToTime(deadlines.votingDeadlineMinutes)} UTC
             </Text>
           )}
         </View>

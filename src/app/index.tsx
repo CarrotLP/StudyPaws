@@ -24,7 +24,8 @@ import {
   PixelScale,
   ShadowOffset,
 } from '@/constants/havenTheme';
-import { QUEST_WINDOWS } from '@/constants/questWindows';
+import { minutesToTime, questWindowsFromDeadlines } from '@/constants/questWindows';
+import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useOutfit } from '@/hooks/use-outfit';
 import { useWithinWindow } from '@/hooks/use-quest-window';
 import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
@@ -33,6 +34,7 @@ import { fmt, fmtMinutes } from '@/lib/haven-format';
 export default function HomeScreen() {
   const session = useStudySession();
   const { outfit } = useOutfit();
+  const { deadlines, hasSubmittedToday } = useDailyQuest();
   const {
     phase,
     points,
@@ -47,7 +49,12 @@ export default function HomeScreen() {
   const sleeping = phase === 'break_active' && activeBreakHabit?.id === 'phoneoff';
 
   // Local-clock gate: the daily quest is only offered during the submission window.
-  const submissionOpen = useWithinWindow(QUEST_WINDOWS.submission);
+  const submissionOpen = useWithinWindow(
+    questWindowsFromDeadlines(
+      deadlines.submissionDeadlineMinutes,
+      deadlines.votingDeadlineMinutes,
+    ).submission,
+  );
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -130,9 +137,16 @@ export default function HomeScreen() {
                   <HabitRow
                     key={habit.id}
                     habit={habit}
-                    done={session.completedBreakHabits.includes(habit.id)}
-                    disabled={habit.id === 'dailyquest' && !submissionOpen}
-                    disabledHint="Submissions are closed between 8pm and 12am. Come back tomorrow."
+                    done={
+                      session.completedBreakHabits.includes(habit.id) ||
+                      (habit.id === 'dailyquest' && hasSubmittedToday)
+                    }
+                    disabled={habit.id === 'dailyquest' && (!submissionOpen || hasSubmittedToday)}
+                    disabledHint={
+                      hasSubmittedToday
+                        ? 'Daily quest completed. Come back tomorrow.'
+                        : `Submissions close at ${minutesToTime(deadlines.submissionDeadlineMinutes)} UTC. Come back tomorrow.`
+                    }
                     onPress={() => session.openBreakActivity(habit)}
                   />
                 ))}
