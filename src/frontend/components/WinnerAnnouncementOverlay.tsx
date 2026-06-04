@@ -10,37 +10,41 @@ import {
   PixelFontSize,
   ShadowOffset,
 } from '@/constants/havenTheme';
-import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
-import { getWinnerItems, type WinnerOutput } from '@/services/winner.services';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  getWinnerItems,
+  markWinnerAnnouncementSeen,
+  type WinnerOutput,
+} from '@/services/winner.services';
 
 export function WinnerAnnouncementOverlay() {
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
   const [winner, setWinner] = useState<WinnerOutput | null>(null);
 
   useEffect(() => {
-    const showWinnerAfterVoting = () => {
-      if (!isWithinWindow(QUEST_WINDOWS.submission)) {
-        return;
-      }
-
+    const showUnseenWinner = () => {
+      if (!user) return;
       getWinnerItems()
         .then((result) => {
+          if (!result) return;
           setWinner(result);
           setVisible(true);
+          void markWinnerAnnouncementSeen(result.teamId, result.questDate);
         })
         .catch(() => setWinner(null));
     };
 
-    showWinnerAfterVoting();
+    showUnseenWinner();
 
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        showWinnerAfterVoting();
+        showUnseenWinner();
       }
     });
 
     return () => subscription.remove();
-  }, []);
+  }, [user]);
 
   if (!winner) {
     return null;
