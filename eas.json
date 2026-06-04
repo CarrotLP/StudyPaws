@@ -13,6 +13,7 @@
       }
     },
     "preview": {
+      "environment": "preview",
       "distribution": "internal",
       "channel": "preview",
       "android": {
