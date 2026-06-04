@@ -11,6 +11,7 @@ import {
   PixelFontSize,
   ShadowOffset,
 } from '@/constants/havenTheme';
+import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
 import { dailyQuest, saveDailyQuestPhoto } from '@/lib/daily-quest';
 
 type DailyQuestOverlayProps = {
@@ -52,6 +53,12 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
   }, [visible, completed, onCancel, onComplete]);
 
   const takePhoto = async () => {
+    // Action guard: local-clock verification (no server enforcement). Re-check
+    // the submission window before opening the camera / writing the photo.
+    if (!isWithinWindow(QUEST_WINDOWS.submission)) {
+      Alert.alert('Submissions are closed until tomorrow');
+      return;
+    }
     try {
       setTakingPhoto(true);
       const permission = await ImagePicker.requestCameraPermissionsAsync();

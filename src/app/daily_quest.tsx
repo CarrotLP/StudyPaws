@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontAwesome } from '@expo/vector-icons';
@@ -14,6 +14,8 @@ import {
   RibbonColors,
   ShadowOffset,
 } from '@/constants/havenTheme';
+import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
+import { useWithinWindow } from '@/hooks/use-quest-window';
 import { DAILY_QUEST_SUBJECT, TEAM_NAME, dailyQuest } from '@/lib/daily-quest';
 import { dateKey } from '@/lib/haven-format';
 import { loadQuestPhotos } from '@/lib/haven-storage';
@@ -52,13 +54,27 @@ export default function DailyQuestScreen() {
 
   const allRated = ratings.every((r) => r > 0);
 
+  // Local-clock gate: voting/rating UI is only available during the voting window.
+  const votingOpen = useWithinWindow(QUEST_WINDOWS.voting);
+
   const submitRatings = () => {
+    // Action guard: re-check the clock at submit time (no server enforcement).
+    if (!isWithinWindow(QUEST_WINDOWS.voting)) {
+      setShowGallery(false);
+      Alert.alert('Voting is closed right now');
+      return;
+    }
     // postVotes(ratings);
     setShowGallery(false);
     setVoted(true);
   };
 
   const updateRatings = () => {
+    if (!isWithinWindow(QUEST_WINDOWS.voting)) {
+      setShowGallery(false);
+      Alert.alert('Voting is closed right now');
+      return;
+    }
     // updateVotes(ratings);
     setShowGallery(false);
   };
@@ -93,18 +109,31 @@ export default function DailyQuestScreen() {
           <Text style={styles.promptSubject}>{DAILY_QUEST_SUBJECT}</Text>
         </View>
 
-        {/* ── View Team Gallery button (a) — keep ── */}
+        {/* ── View Team Gallery button (a) — always visible; deactivated outside
+              the voting window so users know the option exists. ── */}
         <View style={styles.centerContent}>
           <Pressable
-            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+            disabled={!votingOpen}
+            style={({ pressed }) => [
+              styles.btn,
+              pressed && votingOpen && styles.btnPressed,
+              !votingOpen && styles.btnDisabled,
+            ]}
             onPress={() => setShowGallery(true)}>
-            <Text style={styles.btnText}>View Team Gallery</Text>
+            <Text style={[styles.btnText, !votingOpen && styles.btnTextDisabled]}>
+              View Team Gallery
+            </Text>
           </Pressable>
+          {!votingOpen && (
+            <Text style={styles.gatedHint}>
+              You can view and rate your teammates submissions after 8pm (to 12pm)
+            </Text>
+          )}
         </View>
       </ScrollView>
 
-      {/* ── Gallery overlay ── */}
-      {showGallery && (
+      {/* ── Gallery overlay (closes itself if the voting window passes) ── */}
+      {showGallery && votingOpen && (
         <View style={styles.scrim} pointerEvents="auto">
           {/*
            * galleryWrapper is position:relative so we can pin the close button
@@ -318,6 +347,23 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.base,
     color: HavenColors.gold,
     letterSpacing: 0.5,
+  },
+  // Deactivated look for the gallery button outside the voting window.
+  btnDisabled: {
+    opacity: 0.45,
+    backgroundColor: HavenColors.inkSoft,
+    borderColor: HavenColors.inkSoft,
+    boxShadow: 'none',
+  },
+  btnTextDisabled: {
+    color: HavenColors.parchmentDark,
+  },
+  gatedHint: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
+    marginTop: HavenSpacing.xs,
   },
 
   // ── Gallery overlay ───────────────────────────────────────────────────────

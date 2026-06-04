@@ -24,7 +24,9 @@ import {
   PixelScale,
   ShadowOffset,
 } from '@/constants/havenTheme';
+import { QUEST_WINDOWS } from '@/constants/questWindows';
 import { useOutfit } from '@/hooks/use-outfit';
+import { useWithinWindow } from '@/hooks/use-quest-window';
 import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
 import { fmt, fmtMinutes } from '@/lib/haven-format';
 
@@ -43,6 +45,9 @@ export default function HomeScreen() {
   } = session;
 
   const sleeping = phase === 'break_active' && activeBreakHabit?.id === 'phoneoff';
+
+  // Local-clock gate: the daily quest is only offered during the submission window.
+  const submissionOpen = useWithinWindow(QUEST_WINDOWS.submission);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -126,6 +131,8 @@ export default function HomeScreen() {
                     key={habit.id}
                     habit={habit}
                     done={session.completedBreakHabits.includes(habit.id)}
+                    disabled={habit.id === 'dailyquest' && !submissionOpen}
+                    disabledHint="Submissions are closed between 8pm and 12am. Come back tomorrow."
                     onPress={() => session.openBreakActivity(habit)}
                   />
                 ))}
@@ -203,21 +210,25 @@ function Dial({
 function HabitRow({
   habit,
   done = false,
+  disabled = false,
+  disabledHint,
   onPress,
 }: {
   habit: BreakHabit;
   done?: boolean;
+  disabled?: boolean;
+  disabledHint?: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      style={[styles.habitRow, done && styles.habitRowDone]}
+      style={[styles.habitRow, (done || disabled) && styles.habitRowDone]}
       onPress={onPress}
-      disabled={done}>
+      disabled={done || disabled}>
       <View style={[styles.habitIcon, { backgroundColor: habit.color }]} />
       <View style={styles.habitMid}>
         <Text style={styles.habitName}>{habit.name}</Text>
-        <Text style={styles.habitDesc}>{habit.desc}</Text>
+        <Text style={styles.habitDesc}>{disabled && disabledHint ? disabledHint : habit.desc}</Text>
       </View>
       <Text style={styles.habitPts}>{done ? '✓' : `+${habit.pts}`}</Text>
     </Pressable>
