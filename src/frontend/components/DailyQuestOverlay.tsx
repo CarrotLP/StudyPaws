@@ -137,7 +137,7 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
               <Text style={styles.closeText}>X</Text>
             </Pressable>
             <Text style={styles.title}>{dailyQuest.title}</Text>
-            <Text style={styles.description}>{dailyQuest.description}</Text>
+            <Text style={styles.description}>{dailyQuest.noun}</Text>
             <Pressable
               accessibilityLabel="Take photo"
               disabled={takingPhoto}

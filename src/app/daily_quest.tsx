@@ -88,9 +88,8 @@ export default function DailyQuestScreen() {
           )}
         </View>
 
-        {/* Quiet label + the day's subject phrase, large and in the chapter accent colour. */}
+        {/* The day's subject phrase straight from questPrompts.json, large and in the chapter accent colour. */}
         <View style={styles.promptBlock}>
-          <Text style={styles.promptLabel}>Take a picture of</Text>
           <Text style={styles.promptSubject}>{DAILY_QUEST_SUBJECT}</Text>
         </View>
 
@@ -126,7 +125,7 @@ export default function DailyQuestScreen() {
                 {TEAM_NAME} - team gallery
               </Text>
               {/* Small secondary line so raters know what today's quest was. */}
-              <Text style={styles.gallerySubtitle}>{dailyQuest.description}</Text>
+              <Text style={styles.gallerySubtitle}>{dailyQuest.noun}</Text>
               <View style={styles.galleryRule} />
 
               {/* Scrollable photo grid */}
@@ -285,12 +284,6 @@ const styles = StyleSheet.create({
   promptBlock: {
     alignItems: 'center',
     gap: HavenSpacing.xs,
-  },
-  promptLabel: {
-    fontFamily: HavenFonts.body,
-    fontSize: BodyFontSize.md,
-    color: HavenColors.inkSoft,
-    textAlign: 'center',
   },
   promptSubject: {
     fontFamily: HavenFonts.pixel,

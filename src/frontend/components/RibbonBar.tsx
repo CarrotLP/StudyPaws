@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, usePathname, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,14 +17,28 @@ import {
 // `href` is typed as `string` (rather than `Href`) so a freshly-added route
 // works before Expo Router regenerates `.expo/types/router.d.ts` on next dev
 // server start; the cast at navigate-time below is the single boundary check.
-const RIBBONS: { id: string; href: string; color: string; glyph: string }[] = [
-  { id: 'index', href: '/', color: RibbonColors.home, glyph: '❀' },
-  // daily_quest currently inherits Calendar's slot (colour + glyph) — swap if you want a distinct look.
-  { id: 'daily_quest', href: '/daily_quest', color: RibbonColors.calendar, glyph: '▦' },
-  { id: 'dress', href: '/dress', color: RibbonColors.dress, glyph: '✦' },
-  { id: 'treasure', href: '/treasure', color: RibbonColors.treasure, glyph: '❖' },
-  { id: 'inventory', href: '/inventory', color: RibbonColors.inventory, glyph: '◐' },
-  { id: 'buddies', href: '/buddies', color: RibbonColors.buddies, glyph: '❦' },
+// A ribbon shows either a vector `icon` (MaterialCommunityIcons — reliable
+// monochrome glyphs that honour the tint colour) or a text `glyph` symbol.
+type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+type RibbonDef = {
+  id: string;
+  href: string;
+  color: string;
+  glyph?: string;
+  icon?: IconName;
+};
+
+const RIBBONS: RibbonDef[] = [
+  // Home = book with pen; Daily Quest = image stack; Settings = gear.
+  // Home = book with pen; Daily Quest = image stack; Dress = cat silhouette;
+  // Treasure = treasure chest; Settings = gear.
+  { id: 'index', href: '/', color: RibbonColors.home, icon: 'book-edit-outline' },
+  { id: 'daily_quest', href: '/daily_quest', color: RibbonColors.calendar, icon: 'image-multiple-outline' },
+  { id: 'dress', href: '/dress', color: RibbonColors.dress, icon: 'cat' },
+  { id: 'treasure', href: '/treasure', color: RibbonColors.treasure, icon: 'treasure-chest-outline' },
+  // Inventory and Buddies routes/files are kept (not deleted) — just no longer
+  // surfaced in the ribbon.
+  { id: 'settings', href: '/settings', color: RibbonColors.buddies, icon: 'cog-outline' },
 ];
 
 const W = Layout.ribbonWidth;
@@ -68,11 +83,13 @@ function Pentagon({
 function Ribbon({
   color,
   glyph,
+  icon,
   active,
   onPress,
 }: {
   color: string;
-  glyph: string;
+  glyph?: string;
+  icon?: IconName;
   active: boolean;
   onPress: () => void;
 }) {
@@ -86,7 +103,11 @@ function Ribbon({
         <Pentagon width={W - 2 * B} bodyHeight={BODY - B} tipHeight={Math.max(0, TIP - B)} color={color} />
       </View>
       <View style={styles.glyphWrap}>
-        <Text style={styles.glyph}>{glyph}</Text>
+        {icon ? (
+          <MaterialCommunityIcons name={icon} size={PixelFontSize.stat} color={HavenColors.parchment} />
+        ) : (
+          <Text style={styles.glyph}>{glyph}</Text>
+        )}
       </View>
     </Pressable>
   );
@@ -105,6 +126,7 @@ export function RibbonBar() {
           key={ribbon.id}
           color={ribbon.color}
           glyph={ribbon.glyph}
+          icon={ribbon.icon}
           active={ribbon.id === activeId}
           onPress={() => router.navigate(ribbon.href as Href)}
         />

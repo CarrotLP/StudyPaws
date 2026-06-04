@@ -1,5 +1,4 @@
-import { PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
-import { VT323_400Regular } from '@expo-google-fonts/vt323';
+import { NunitoSans_400Regular, NunitoSans_700Bold } from '@expo-google-fonts/nunito-sans';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -18,8 +17,8 @@ SplashScreen.preventAutoHideAsync();
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const [fontsLoaded, fontError] = useFonts({
-    PressStart2P_400Regular,
-    VT323_400Regular,
+    NunitoSans_400Regular,
+    NunitoSans_700Bold,
   });
 
   useEffect(() => {

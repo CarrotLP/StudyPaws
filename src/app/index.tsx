@@ -76,6 +76,9 @@ export default function HomeScreen() {
 
         {phase === 'idle' && (
           <>
+            <Text style={styles.statsCaption}>
+              Earn study points from focused study and healthy breaks. Use them to dress Mochi.
+            </Text>
             <View style={styles.dialRow}>
               <Dial
                 label="study"
@@ -341,6 +344,14 @@ const styles = StyleSheet.create({
     gap: HavenSpacing.base,
     marginTop: HavenSpacing.sm,
   },
+  statsCaption: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.xl,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
+    marginTop: HavenSpacing.sm,
+    paddingHorizontal: HavenSpacing.lg,
+  },
   statPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -393,10 +404,14 @@ const styles = StyleSheet.create({
 
   timerBig: {
     fontFamily: HavenFonts.pixel,
-    fontSize: PixelFontSize.timer,
+    // Explicit large display size (deliberately decoupled from the two-size
+    // app scale) so the running timer fills the screen.
+    fontSize: 96,
+    lineHeight: 104,
+    textAlign: 'center',
     color: HavenColors.ink,
     letterSpacing: 1.5,
-    marginVertical: HavenSpacing.md,
+    marginVertical: HavenSpacing.xl,
     textShadowColor: HavenColors.parchmentShadow,
     textShadowOffset: { width: ShadowOffset.three, height: ShadowOffset.three },
     textShadowRadius: 0,
@@ -460,6 +475,14 @@ const styles = StyleSheet.create({
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.lg,
     color: HavenColors.parchment,
+    // Centre the glyph within the small square button: pin line height to the
+    // box, centre both axes, and drop Android's extra font padding.
+    width: Control.dialButton,
+    height: Control.dialButton,
+    lineHeight: Control.dialButton,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   habitList: {
@@ -491,13 +514,13 @@ const styles = StyleSheet.create({
   },
   habitName: {
     fontFamily: HavenFonts.pixel,
-    fontSize: PixelFontSize.md,
+    fontSize: PixelFontSize.title, // important → 22
     color: HavenColors.ink,
     marginBottom: HavenSpacing.xs,
   },
   habitDesc: {
     fontFamily: HavenFonts.body,
-    fontSize: BodyFontSize.base,
+    fontSize: BodyFontSize.md, // minor → 16
     color: HavenColors.inkSoft,
   },
   habitPts: {

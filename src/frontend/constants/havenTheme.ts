@@ -106,24 +106,36 @@ export const CalendarHeat = {
  * which become the loaded `fontFamily` strings (see foundation step 2).
  */
 export const HavenFonts = {
-  pixel: 'PressStart2P_400Regular',
-  body: 'VT323_400Regular',
+  // Whole app uses Nunito Sans. The `pixel` role (former Press Start 2P) maps to
+  // the Bold weight for headers/labels; `body` (former VT323) maps to Regular.
+  pixel: 'NunitoSans_700Bold',
+  body: 'NunitoSans_400Regular',
 } as const;
 
-/** Press Start 2P sizes seen in the prototype (px). */
+/**
+ * App-wide type scale collapsed to TWO reasonable sizes for Nunito Sans:
+ *   IMPORTANT (headings / numbers / prominent labels) = 22
+ *   MINOR     (small / secondary labels)              = 16
+ * Keys are kept so existing call sites don't need to change.
+ */
+const FONT_IMPORTANT = 22;
+const FONT_MINOR = 16;
+
 export const PixelFontSize = {
-  xs: 6,
-  sm: 7,
-  base: 8,
-  md: 9,
-  lg: 10,
-  xl: 11,
-  xxl: 12,
-  title: 13,
-  dots: 18,
-  stat: 16,
-  dial: 22,
-  timer: 34,
+  // Minor labels
+  xs: FONT_MINOR,
+  sm: FONT_MINOR,
+  base: FONT_MINOR,
+  md: FONT_MINOR,
+  // Headings / prominent / display numbers
+  lg: FONT_IMPORTANT,
+  xl: FONT_IMPORTANT,
+  xxl: FONT_IMPORTANT,
+  title: FONT_IMPORTANT,
+  dots: FONT_IMPORTANT,
+  stat: FONT_IMPORTANT,
+  dial: FONT_IMPORTANT,
+  timer: FONT_IMPORTANT,
 } as const;
 
 /** Interactive control sizes (px) that don't map to the spacing scale. */
@@ -135,13 +147,15 @@ export const Control = {
   itemCellMinHeight: 90,
 } as const;
 
-/** VT323 (body) sizes seen in the prototype (px). */
+/** Body sizes, collapsed to the same two app-wide values (see PixelFontSize). */
 export const BodyFontSize = {
-  sm: 14,
-  base: 15,
-  md: 18,
-  lg: 20,
-  xl: 22,
+  // Minor / secondary text
+  sm: FONT_MINOR,
+  base: FONT_MINOR,
+  md: FONT_MINOR,
+  // Important / prominent body text
+  lg: FONT_IMPORTANT,
+  xl: FONT_IMPORTANT,
 } as const;
 
 /** Default px-per-cell scale for each pixel sprite. */

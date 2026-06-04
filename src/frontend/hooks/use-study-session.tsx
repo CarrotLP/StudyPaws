@@ -69,9 +69,9 @@ export const HABITS: BreakHabit[] = [
   {
     id: 'dailyquest',
     name: 'Complete Daily Quest',
-    desc: "Today's quest — open it to find out.",
+    desc: 'Step away from your desk for a quick challenge. Complete it for +10 study points',
     guidance: ["Take today's photo.", 'See the quest card for details.'],
-    pts: 30,
+    pts: 10,
     color: HabitColors.dailyquest,
   },
 ];

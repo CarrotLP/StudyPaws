@@ -20,6 +20,8 @@ export default function AppTabs() {
           <Tabs.Screen name="dress" />
           <Tabs.Screen name="treasure" />
           <Tabs.Screen name="inventory" />
+          <Tabs.Screen name="settings" />
+          {/* Buddies kept registered (not deleted) though it's no longer in the ribbon. */}
           <Tabs.Screen name="buddies" />
         </Tabs>
       </View>
