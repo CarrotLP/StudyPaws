@@ -12,8 +12,9 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
+import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
-import { saveDailyQuestPhoto } from '@/lib/daily-quest';
+import { saveQuestSubmission } from '@/services/questSubmission.services';
 
 type DailyQuestOverlayProps = {
   visible: boolean;
@@ -25,6 +26,7 @@ type DailyQuestOverlayProps = {
 };
 
 export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestOverlayProps) {
+  const { user } = useAuth();
   const { loading: questLoading, quest } = useDailyQuest();
   const [completed, setCompleted] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
@@ -55,7 +57,7 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
   }, [visible, completed, onCancel, onComplete]);
 
   const takePhoto = async () => {
-    if (!quest) {
+    if (!quest || !user) {
       Alert.alert('Daily quest unavailable');
       return;
     }
@@ -85,10 +87,10 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
       }
       setPhotoUri(capturedUri);
       setPhotoError(false);
-      await saveDailyQuestPhoto(capturedUri);
+      await saveQuestSubmission(user.id, quest.questDate, capturedUri);
       setCompleted(true);
     } catch {
-      Alert.alert('Camera unavailable', 'The camera could not be opened. Please try again.');
+      Alert.alert('Photo could not be saved', 'Please try again.');
     } finally {
       setTakingPhoto(false);
     }

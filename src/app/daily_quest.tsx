@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontAwesome } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 
 import {
   BodyFontSize,
@@ -15,10 +16,10 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { QUEST_WINDOWS, isWithinWindow } from '@/constants/questWindows';
+import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
-import { dateKey } from '@/lib/haven-format';
-import { loadQuestPhotos } from '@/lib/haven-storage';
+import { getOwnQuestSubmission } from '@/services/questSubmission.services';
 
 /** Rating-star glyph size (px). Fill is rendered slightly smaller so the
  *  black outline stays visible underneath when a star is selected. */
@@ -26,6 +27,7 @@ const STAR_SIZE = 20;
 const STAR_FILL_SIZE = STAR_SIZE - 5;
 
 export default function DailyQuestScreen() {
+  const { user } = useAuth();
   const { loading: questLoading, quest, team } = useDailyQuest();
   const [showGallery, setShowGallery] = useState(false);
   const [todayPhotoUri, setTodayPhotoUri] = useState<string | null>(null);
@@ -40,12 +42,18 @@ export default function DailyQuestScreen() {
   const [voted, setVoted] = useState(false);
   const [ratings, setRatings] = useState<number[]>([]);
 
-  // Load today's persisted photo from AsyncStorage (key: haven.questPhotos, by date).
-  useEffect(() => {
-    loadQuestPhotos()
-      .then((photos) => setTodayPhotoUri(photos[dateKey(new Date())] ?? null))
-      .catch(() => {});
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user || !quest) return;
+
+      getOwnQuestSubmission(user.id, quest.questDate)
+        .then((photoUri) => {
+          setTodayPhotoUri(photoUri);
+          setPhotoLoadError(false);
+        })
+        .catch(() => {});
+    }, [quest, user]),
+  );
 
   useEffect(() => {
     setRatings((prev) =>
