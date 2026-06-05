@@ -260,7 +260,7 @@ function BreakIntroCard({ onStart, onSkip }: { onStart: () => void; onSkip: () =
       <InkButton label="Yes, let's take a break" variant="primary" onPress={onStart} />
       {/* Secondary, border-only — focus points + chest were already awarded at
           study end, so this just skips the break flow and returns to idle. */}
-      <InkButton label="I'm done for the day" variant="secondary" onPress={onSkip} />
+      <InkButton label="I'm done studying for the day" variant="secondary" onPress={onSkip} />
     </>
   );
 }
