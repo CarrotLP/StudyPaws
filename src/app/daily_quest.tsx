@@ -62,6 +62,7 @@ export default function DailyQuestScreen() {
     deadlines.votingDeadlineMinutes,
   );
   const votingOpen = useWithinWindow(windows.voting);
+  const galleryEnabled = votingOpen && Boolean(team);
 
   const openGallery = async () => {
     if (!votingOpen || !team || !quest || !user) return;
@@ -142,24 +143,26 @@ export default function DailyQuestScreen() {
               the voting window so users know the option exists. ── */}
         <View style={styles.centerContent}>
           <Pressable
-            disabled={!votingOpen}
+            disabled={!galleryEnabled}
             style={({ pressed }) => [
               styles.btn,
-              pressed && votingOpen && styles.btnPressed,
-              !votingOpen && styles.btnDisabled,
+              pressed && galleryEnabled && styles.btnPressed,
+              !galleryEnabled && styles.btnDisabled,
             ]}
             onPress={openGallery}>
-            <Text style={[styles.btnText, !votingOpen && styles.btnTextDisabled]}>
+            <Text style={[styles.btnText, !galleryEnabled && styles.btnTextDisabled]}>
               View Team Gallery
             </Text>
           </Pressable>
-          {!votingOpen && (
+          {!team ? (
+            <Text style={styles.gatedHint}>Join a team to view and rate teammate submissions.</Text>
+          ) : !votingOpen ? (
             <Text style={styles.gatedHint}>
               You can view and rate your teammates submissions from{' '}
               {minutesToTime(deadlines.submissionDeadlineMinutes)} to{' '}
               {minutesToTime(deadlines.votingDeadlineMinutes)} UTC
             </Text>
-          )}
+          ) : null}
         </View>
       </ScrollView>
 

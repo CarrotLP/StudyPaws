@@ -22,7 +22,7 @@ import {
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
 
-export function LoginScreen() {
+export function LoginScreen({ onRegisterPress }: { onRegisterPress: () => void }) {
   const { error: authError, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -104,6 +104,20 @@ export function LoginScreen() {
                 <Text style={styles.buttonText}>login</Text>
               )}
             </Pressable>
+
+            <View style={styles.registerPrompt}>
+              <Text style={styles.promptText}>Dont have an account?</Text>
+              <Pressable
+                disabled={submitting}
+                onPress={onRegisterPress}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && !submitting && styles.buttonPressed,
+                  submitting && styles.buttonDisabled,
+                ]}>
+                <Text style={styles.secondaryButtonText}>Register</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -185,6 +199,34 @@ const styles = StyleSheet.create({
   buttonText: {
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.xl,
+    color: HavenColors.gold,
+    textAlign: 'center',
+  },
+  registerPrompt: {
+    alignItems: 'center',
+    gap: HavenSpacing.sm,
+    marginTop: HavenSpacing.md,
+  },
+  promptText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.base,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
+  },
+  secondaryButton: {
+    alignSelf: 'center',
+    minWidth: 140,
+    alignItems: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.xl,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.leatherShadow}`,
+  },
+  secondaryButtonText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
     color: HavenColors.gold,
     textAlign: 'center',
   },
