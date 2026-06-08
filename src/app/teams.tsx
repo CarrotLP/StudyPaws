@@ -14,7 +14,7 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
-import { createTeam } from '@/services/team.services';
+import { createTeam, getTeamByTeamCode } from '@/services/team.services';
 import { addUserToTeam, getTeamsForUser, type UserTeam } from '@/services/userTeam.services';
 
 export default function TeamsScreen() {
@@ -23,7 +23,9 @@ export default function TeamsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
+  const [teamCode, setTeamCode] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -61,6 +63,37 @@ export default function TeamsScreen() {
       };
     }, [user]),
   );
+
+  const joinTeam = useCallback(async () => {
+    if (!user) {
+      setError('You must be signed in to join a team.');
+      return;
+    }
+
+    if (!teamCode.trim()) {
+      setError('Please enter a team code.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const teamUid = await getTeamByTeamCode(teamCode.trim());
+      if (!teamUid) {
+        throw new Error('Team not found.');
+      }
+
+      await addUserToTeam(user.id, teamUid);
+      const nextTeams = await getTeamsForUser(user.id);
+      setTeams(nextTeams);
+      setJoining(false);
+      setTeamCode('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to join team.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, teamCode]);
 
   const submitTeam = useCallback(async () => {
     if (!user) {
@@ -113,12 +146,35 @@ export default function TeamsScreen() {
           ))}
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {}}
-          style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
-          <Text style={styles.joinButtonText}>Join team</Text>
-        </Pressable>
+        {joining ? (
+          <View style={{ width: '100%' }}>
+            <Text style={styles.label}>Team code</Text>
+            <TextInput
+              value={teamCode}
+              onChangeText={setTeamCode}
+              placeholder="Team code"
+              style={styles.input}
+            />
+            <Pressable
+              accessibilityRole="button"
+              disabled={loading || !teamCode.trim()}
+              onPress={() => void joinTeam()}
+              style={({ pressed }) => [
+                styles.joinButton,
+                pressed && styles.buttonPressed,
+                (loading || !teamCode.trim()) && styles.buttonDisabled,
+              ]}>
+              <Text style={styles.joinButtonText}>Join team</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setJoining(true)}
+            style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
+            <Text style={styles.joinButtonText}>Join team</Text>
+          </Pressable>
+        )}
 
         {creating ? (
           <View style={{ width: '100%' }}>
@@ -238,7 +294,6 @@ const styles = StyleSheet.create({
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
     color: HavenColors.ink,
-    textTransform: 'lowercase',
     marginTop: HavenSpacing.md,
   },
   buttonDisabled: {
