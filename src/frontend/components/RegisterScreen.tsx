@@ -22,16 +22,24 @@ import {
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
 
-export function RegisterScreen({ onRegistered }: { onRegistered: () => void }) {
+export function RegisterScreen({
+  onLoginPress,
+  onRegistered,
+}: {
+  onLoginPress: () => void;
+  onRegistered: () => void;
+}) {
   const { error: authError, signUp } = useAuth();
+  const [username, setUsername] = useState('');
+  const [petName, setPetName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const register = async () => {
-    if (!email.trim() || !password) {
-      setFormError('Please enter your email and password.');
+    if (!username.trim() || !petName.trim() || !email.trim() || !password) {
+      setFormError('Please fill out every field.');
       return;
     }
 
@@ -39,7 +47,7 @@ export function RegisterScreen({ onRegistered }: { onRegistered: () => void }) {
     setFormError(null);
 
     try {
-      await signUp(email, password);
+      await signUp(email, password, username, petName);
       onRegistered();
     } catch {
       // The provider exposes the Supabase error for display.
@@ -59,6 +67,32 @@ export function RegisterScreen({ onRegistered }: { onRegistered: () => void }) {
           <Text style={styles.title}>Register</Text>
 
           <View style={styles.form}>
+            <View style={styles.field}>
+              <Text style={styles.label}>username</Text>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="username"
+                autoCorrect={false}
+                onChangeText={setUsername}
+                returnKeyType="next"
+                style={styles.input}
+                textContentType="username"
+                value={username}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>pet name</Text>
+              <TextInput
+                autoCapitalize="words"
+                autoCorrect={false}
+                onChangeText={setPetName}
+                returnKeyType="next"
+                style={styles.input}
+                value={petName}
+              />
+            </View>
+
             <View style={styles.field}>
               <Text style={styles.label}>email</Text>
               <TextInput
@@ -105,6 +139,20 @@ export function RegisterScreen({ onRegistered }: { onRegistered: () => void }) {
                 <Text style={styles.buttonText}>Register account</Text>
               )}
             </Pressable>
+
+            <View style={styles.loginPrompt}>
+              <Text style={styles.promptText}>Have an account already?</Text>
+              <Pressable
+                disabled={submitting}
+                onPress={onLoginPress}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && !submitting && styles.buttonPressed,
+                  submitting && styles.buttonDisabled,
+                ]}>
+                <Text style={styles.secondaryButtonText}>Login</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -186,6 +234,34 @@ const styles = StyleSheet.create({
   buttonText: {
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.xl,
+    color: HavenColors.gold,
+    textAlign: 'center',
+  },
+  loginPrompt: {
+    alignItems: 'center',
+    gap: HavenSpacing.sm,
+    marginTop: HavenSpacing.md,
+  },
+  promptText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.base,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
+  },
+  secondaryButton: {
+    alignSelf: 'center',
+    minWidth: 140,
+    alignItems: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.xl,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.leatherShadow}`,
+  },
+  secondaryButtonText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
     color: HavenColors.gold,
     textAlign: 'center',
   },

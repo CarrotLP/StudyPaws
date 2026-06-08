@@ -68,7 +68,10 @@ function AuthGate() {
     return authScreen === 'login' ? (
       <LoginScreen onRegisterPress={() => setAuthScreen('register')} />
     ) : (
-      <RegisterScreen onRegistered={() => setAuthScreen('login')} />
+      <RegisterScreen
+        onLoginPress={() => setAuthScreen('login')}
+        onRegistered={() => setAuthScreen('login')}
+      />
     );
   }
 
