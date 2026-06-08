@@ -1,14 +1,13 @@
 /**
  * Tab layout. Uses Expo Router <Tabs> (not NativeTabs) so each of the six
  * chapters stays mounted with its own state — e.g. Home's running timer — while
- * switching; the default bottom bar is hidden and RibbonBar is rendered as a
- * normal-flow bottom strip below the scene, so the ribbons sit in a grounded
- * tab bar (reserving their own space) above the iOS home indicator.
+ * switching; the default bottom bar is hidden and AppMenuOverlay renders the
+ * visible hamburger menu on top of each scene.
  */
 import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { RibbonBar } from './RibbonBar';
+import { AppMenuOverlay } from './AppMenuOverlay';
 
 export default function AppTabs() {
   return (
@@ -25,7 +24,7 @@ export default function AppTabs() {
           <Tabs.Screen name="buddies" />
         </Tabs>
       </View>
-      <RibbonBar />
+      <AppMenuOverlay />
     </View>
   );
 }
