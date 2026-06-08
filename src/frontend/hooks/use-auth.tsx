@@ -8,12 +8,11 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   error: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
-const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -23,49 +22,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const initializeDemoSession = async () => {
-      if (!DEMO_EMAIL || !DEMO_PASSWORD) {
-        if (mounted) {
-          setError('Demo sign-in credentials are missing.');
-          setLoading(false);
-        }
-        return;
-      }
+    const initializeSession = async () => {
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (!mounted) return;
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      let nextSession = sessionData.session;
-
-      if (nextSession?.user.email !== DEMO_EMAIL) {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email: DEMO_EMAIL,
-          password: DEMO_PASSWORD,
-        });
-
-        if (signInError) {
-          if (mounted) {
-            setError(signInError.message);
-            setLoading(false);
-          }
-          return;
-        }
-
-        nextSession = data.session;
-      }
-
-      if (mounted) {
-        setSession(nextSession);
-        setError(nextSession ? null : 'Demo sign-in did not return a session.');
-        setLoading(false);
-      }
+      setSession(data.session);
+      setError(sessionError?.message ?? null);
+      setLoading(false);
     };
 
-    void initializeDemoSession();
+    void initializeSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return;
       setSession(nextSession);
+      setError(null);
     });
 
     return () => {
@@ -74,8 +47,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const signIn = async (email: string, password: string) => {
+    setError(null);
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (signInError) {
+      setError(signInError.message);
+      throw signInError;
+    }
+
+    setSession(data.session);
+  };
+
+  const signOut = async () => {
+    setError(null);
+    const { error: signOutError } = await supabase.auth.signOut();
+
+    if (signOutError) {
+      setError(signOutError.message);
+      throw signOutError;
+    }
+
+    setSession(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ loading, session, user: session?.user ?? null, error }}>
+    <AuthContext.Provider
+      value={{ loading, session, user: session?.user ?? null, error, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
