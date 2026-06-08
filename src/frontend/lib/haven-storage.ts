@@ -43,13 +43,15 @@ export const DEFAULT_SESSION: PersistedSession = {
 export const DEFAULT_POINTS = 245;
 export const DEFAULT_CHESTS: ChestCounts = { small: 1, ornate: 0 };
 
-// Prototype starting wardrobe: owns + wears scarf and glasses.
-export const DEFAULT_OWNED: string[] = ['scarf', 'glasses'];
+// Prototype starting wardrobe: owns + wears the new Mochi components.
+export const DEFAULT_OWNED: string[] = ['c3_body', 'c3_rarm', 'lvest'];
 export const DEFAULT_OUTFIT: Record<string, string | null> = {
-  head: null,
-  face: 'glasses',
-  neck: 'scarf',
-  body: null,
+  body: 'c3_body',
+  front_body: 'c3_rarm',
+  front_accessory: 'lvest',
+  back_body: null,
+  back_accessory: null,
+  front_accessory_alt: null, // Just in case
 };
 
 /** Daily quest photo URIs, keyed by ISO local date (YYYY-MM-DD). */

@@ -11,7 +11,13 @@ import {
 
 export type OutfitState = Record<OutfitSlot, ItemId | null>;
 
-const INITIAL_OUTFIT: OutfitState = { head: null, face: 'glasses', neck: 'scarf', body: null };
+const INITIAL_OUTFIT: OutfitState = {
+  body: 'c3_body',
+  front_body: 'c3_rarm',
+  front_accessory: 'lvest',
+  back_body: null,
+  back_accessory: null,
+};
 
 type OutfitContextValue = {
   hydrated: boolean;
@@ -39,10 +45,11 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       setOwned(loadedOwned as ItemId[]);
       setOutfit({
-        head: (loadedOutfit.head as ItemId | null) ?? null,
-        face: (loadedOutfit.face as ItemId | null) ?? null,
-        neck: (loadedOutfit.neck as ItemId | null) ?? null,
-        body: (loadedOutfit.body as ItemId | null) ?? null,
+        body: (loadedOutfit.body as ItemId | null) ?? 'c3_body',
+        front_body: (loadedOutfit.front_body as ItemId | null) ?? 'c3_rarm',
+        front_accessory: (loadedOutfit.front_accessory as ItemId | null) ?? 'lvest',
+        back_body: (loadedOutfit.back_body as ItemId | null) ?? null,
+        back_accessory: (loadedOutfit.back_accessory as ItemId | null) ?? null,
       });
       setHydrated(true);
     });

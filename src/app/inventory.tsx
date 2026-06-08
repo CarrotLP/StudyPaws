@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevResetButton } from '@/components/DevResetButton';
-import { ItemIcon } from '@/components/ItemIcon';
+import { Mochi } from '@/components/mochi';
 import { ALL_ITEMS } from '@/components/itemSprites';
 import { Toast } from '@/components/Toast';
 import {
@@ -14,7 +14,6 @@ import {
     HavenFonts,
     HavenSpacing,
     PixelFontSize,
-    PixelScale,
     ShadowOffset,
 } from '@/constants/havenTheme';
 import { useOutfit } from '@/hooks/use-outfit';
@@ -68,7 +67,7 @@ export default function InventoryScreen() {
                     onPress={() => equip(item)}
                     style={[styles.cell, !isOwned && styles.cellLocked, isWorn && styles.cellWorn]}>
                     <View style={[styles.iconBox, !isOwned && styles.iconBoxLocked]}>
-                      <ItemIcon id={item.id} scale={PixelScale.itemSmall} silhouette={!isOwned} />
+                      <Mochi id={item.id} scale={0.5} silhouette={!isOwned} />
                     </View>
                     <Text style={[styles.name, !isOwned && styles.nameLocked]}>
                       {isOwned ? item.name : '?????'}

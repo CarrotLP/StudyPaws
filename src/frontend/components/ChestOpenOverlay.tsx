@@ -19,7 +19,7 @@ import {
     PixelScale,
     ShadowOffset,
 } from '../constants/havenTheme';
-import { ItemIcon } from './ItemIcon';
+import { Mochi } from './mochi';
 import { ALL_ITEMS, type ItemId } from './itemSprites';
 import { PixelChest } from './PixelChest';
 
@@ -94,7 +94,7 @@ export function ChestOpenOverlay({ visible, stage, chestColor, rewardId, onClaim
               <Text style={styles.section}>obtained!</Text>
               {rewardId && (
                 <Animated.View style={[styles.revealItem, itemStyle]}>
-                  <ItemIcon id={rewardId} scale={PixelScale.itemLarge} />
+                  <Mochi id={rewardId} scale={0.75} />
                 </Animated.View>
               )}
               <Text style={styles.itemName}>{rewardName}</Text>
