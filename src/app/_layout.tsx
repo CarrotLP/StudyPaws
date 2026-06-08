@@ -2,12 +2,13 @@ import { NunitoSans_400Regular, NunitoSans_700Bold } from '@expo-google-fonts/nu
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, router, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { LoginScreen } from '@/components/LoginScreen';
+import { RegisterScreen } from '@/components/RegisterScreen';
 import { WinnerAnnouncementOverlay } from '@/components/WinnerAnnouncementOverlay';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { DailyQuestProvider } from '@/hooks/use-daily-quest';
@@ -47,6 +48,7 @@ export default function TabLayout() {
 function AuthGate() {
   const { loading, session } = useAuth();
   const wasLoggedInRef = useRef(false);
+  const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     if (loading) return;
@@ -63,7 +65,11 @@ function AuthGate() {
   }
 
   if (!session) {
-    return <LoginScreen />;
+    return authScreen === 'login' ? (
+      <LoginScreen onRegisterPress={() => setAuthScreen('register')} />
+    ) : (
+      <RegisterScreen onRegistered={() => setAuthScreen('login')} />
+    );
   }
 
   return (
