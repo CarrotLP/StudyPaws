@@ -15,6 +15,7 @@ export default function AppTabs() {
         <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }}>
           <Tabs.Screen name="index" />
           <Tabs.Screen name="daily_quest" />
+          <Tabs.Screen name="teams" />
           <Tabs.Screen name="dress" />
           <Tabs.Screen name="treasure" />
           <Tabs.Screen name="inventory" />
