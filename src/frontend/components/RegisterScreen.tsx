@@ -68,32 +68,6 @@ export function RegisterScreen({
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <Text style={styles.label}>username</Text>
-              <TextInput
-                autoCapitalize="none"
-                autoComplete="username"
-                autoCorrect={false}
-                onChangeText={setUsername}
-                returnKeyType="next"
-                style={styles.input}
-                textContentType="username"
-                value={username}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>pet name</Text>
-              <TextInput
-                autoCapitalize="words"
-                autoCorrect={false}
-                onChangeText={setPetName}
-                returnKeyType="next"
-                style={styles.input}
-                value={petName}
-              />
-            </View>
-
-            <View style={styles.field}>
               <Text style={styles.label}>email</Text>
               <TextInput
                 autoCapitalize="none"
@@ -120,6 +94,32 @@ export function RegisterScreen({
                 style={styles.input}
                 textContentType="newPassword"
                 value={password}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>username</Text>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="username"
+                autoCorrect={false}
+                onChangeText={setUsername}
+                returnKeyType="next"
+                style={styles.input}
+                textContentType="username"
+                value={username}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>pet name</Text>
+              <TextInput
+                autoCapitalize="words"
+                autoCorrect={false}
+                onChangeText={setPetName}
+                returnKeyType="next"
+                style={styles.input}
+                value={petName}
               />
             </View>
 
