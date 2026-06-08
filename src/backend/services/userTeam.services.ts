@@ -10,6 +10,11 @@ export type UserTeam = {
   teamName: string;
 };
 
+export type TeamUser = {
+  userId: string;
+  userName: string;
+}
+
 export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
   const { data: memberships, error: membershipError } = await supabase
     .from('users_teams')
@@ -40,14 +45,46 @@ export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
   }));
 }
 
-export async function getUsersForTeam(teamId: string) {
-  // TODO: fetch users for team from DB
-  return [];
+export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
+  const { data: memberships, error: membershipError } = await supabase
+    .from('users_teams')
+    .select('user')
+    .eq('team', teamId);
+
+  if (membershipError) {
+    throw membershipError;
+  }
+
+  const userIds = memberships.map((membership) => membership.user);
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const { data: users, error: userError } = await supabase
+    .from('users')
+    .select('user_uid, name')
+    .in('user_uid', userIds);
+
+  if (userError) {
+    throw userError;
+  }
+
+  return users.map((user) => ({
+    userId: user.user_uid,
+    userName: user.name,
+  }));
 }
 
 export async function addUserToTeam(userId: string, teamId: string) {
-  // TODO: insert into join table
-  return { userId, teamId };
+  const { data, error } = await supabase
+    .from('users_teams')
+    .insert({ user: userId, team: teamId });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }
 
 export async function removeUserFromTeam(userId: string, teamId: string) {

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFocusEffect } from 'expo-router';
@@ -14,13 +14,16 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
-import { getTeamsForUser, type UserTeam } from '@/services/userTeam.services';
+import { createTeam } from '@/services/team.services';
+import { addUserToTeam, getTeamsForUser, type UserTeam } from '@/services/userTeam.services';
 
 export default function TeamsScreen() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<UserTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -59,6 +62,33 @@ export default function TeamsScreen() {
     }, [user]),
   );
 
+  const submitTeam = useCallback(async () => {
+    if (!user) {
+      setError('You must be signed in to create a team.');
+      return;
+    }
+
+    if (!newTeamName.trim()) {
+      setError('Please enter a team name.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const teamUid = await createTeam(newTeamName.trim());
+      await addUserToTeam(user.id, teamUid);
+      const nextTeams = await getTeamsForUser(user.id);
+      setTeams(nextTeams);
+      setCreating(false);
+      setNewTeamName('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create team.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, newTeamName]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -89,10 +119,42 @@ export default function TeamsScreen() {
           style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
           <Text style={styles.joinButtonText}>Join team</Text>
         </Pressable>
+
+        {creating ? (
+          <View style={{ width: '100%' }}>
+            <Text style={styles.label}>Team name</Text>
+            <TextInput
+              value={newTeamName}
+              onChangeText={setNewTeamName}
+              placeholder="e.g. Study Buddies"
+              style={styles.input}
+            />
+            <Pressable
+              accessibilityRole="button"
+              disabled={loading || !newTeamName.trim()}
+              onPress={() => void submitTeam()}
+              style={({ pressed }) => [
+                styles.joinButton,
+                pressed && styles.buttonPressed,
+                (loading || !newTeamName.trim()) && styles.buttonDisabled,
+              ]}>
+              <Text style={styles.joinButtonText}>Create team</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setCreating(true)}
+            style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
+            <Text style={styles.joinButtonText}>Create team</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   screen: {
@@ -159,6 +221,28 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.xl,
     color: HavenColors.gold,
     textAlign: 'center',
+  },
+  input: {
+    minHeight: 48,
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    color: HavenColors.ink,
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.lg,
+    paddingHorizontal: HavenSpacing.lg,
+    paddingVertical: HavenSpacing.md,
+    marginTop: HavenSpacing.sm,
+  },
+  label: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.ink,
+    textTransform: 'lowercase',
+    marginTop: HavenSpacing.md,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonPressed: {
     transform: [{ translateX: ShadowOffset.one }, { translateY: ShadowOffset.one }],

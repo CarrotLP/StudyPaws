@@ -91,7 +91,7 @@ export default function HomeScreen() {
         {phase === 'idle' && (
           <>
             <Text style={styles.statsCaption}>
-              Earn study points from focused study and healthy breaks. Use them to dress Mochi.
+              Earn study points from focused study and healthy breaks. Use them to dress {petName ?? 'Mochi'}.
             </Text>
             <View style={styles.dialRow}>
               <Dial
