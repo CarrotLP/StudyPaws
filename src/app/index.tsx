@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DailyQuestOverlay } from '@/components/DailyQuestOverlay';
 import { DevSkipButton } from '@/components/DevSkipButton';
-import { PixelCat } from '@/components/PixelCat';
+import { Mochi } from '@/components/mochi';
 import { Toast } from '@/components/Toast';
 import {
   BodyFontSize,
@@ -70,111 +70,114 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <PixelCat outfit={outfit} scale={PixelScale.catHome} sleeping={sleeping} />
+          <Mochi outfit={outfit as any} scale={2} />
           <View style={styles.floorShadow} />
         </View>
 
-        <Text style={styles.petName}>{petName ?? 'Mochi'}</Text>
+        {/* This View wraps the rest of the contents to ensure they stack below the catStage */}
+        <View style={styles.mainContent}>
+          <Text style={styles.petName}>{petName ?? 'Mochi'}</Text>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statPill}>
-            <Text style={styles.leaf}>✦</Text>
-            <Text style={styles.statText}>{points}</Text>
-          </View>
-          <View style={[styles.statPill, styles.statPillAlt]}>
-            <Text style={styles.statText}>today · {fmtMinutes(todayMinutes)}</Text>
-          </View>
-        </View>
-
-        <PageRule />
-
-        {phase === 'idle' && (
-          <>
-            <Text style={styles.statsCaption}>
-              Earn study points from focused study and healthy breaks. Use them to dress Mochi.
-            </Text>
-            <View style={styles.dialRow}>
-              <Dial
-                label="study"
-                minutes={Math.floor(studyDuration / 60)}
-                onMinus={session.decStudy}
-                onPlus={session.incStudy}
-              />
-              <Dial
-                label="break"
-                minutes={Math.floor(breakDuration / 60)}
-                onMinus={session.decBreak}
-                onPlus={session.incBreak}
-              />
+          <View style={styles.statsRow}>
+            <View style={styles.statPill}>
+              <Text style={styles.leaf}>✦</Text>
+              <Text style={styles.statText}>{points}</Text>
             </View>
-            <InkButton label="begin focus block" variant="primary" onPress={session.startStudy} />
-          </>
-        )}
+            <View style={[styles.statPill, styles.statPillAlt]}>
+              <Text style={styles.statText}>today · {fmtMinutes(todayMinutes)}</Text>
+            </View>
+          </View>
 
-        {phase === 'studying' && (
-          <>
-            <Text style={styles.section}>studying</Text>
-            <Text style={styles.timerBig}>{fmt(secondsLeft)}</Text>
-            <BlinkingDots />
-            <InkButton label="give up" variant="small" onPress={session.stopSession} />
-          </>
-        )}
+          <PageRule />
 
-        {phase === 'break_intro' && (
-          <BreakIntroCard onStart={session.startBreak} onSkip={session.stopSession} />
-        )}
-
-        {phase === 'break_active' &&
-          (activeBreakHabit && activeBreakHabit.id !== 'dailyquest' ? (
-            <BreakActivityView
-              habit={activeBreakHabit}
-              onComplete={session.completeBreakActivity}
-              onBack={session.closeBreakActivity}
-            />
-          ) : (
+          {phase === 'idle' && (
             <>
-              <Text style={styles.section}>break · {fmt(secondsLeft)}</Text>
-              <View style={styles.habitList}>
-                {session.habits.map((habit) => (
-                  <HabitRow
-                    key={habit.id}
-                    habit={habit}
-                    done={
-                      session.completedBreakHabits.includes(habit.id) ||
-                      (habit.id === 'dailyquest' && hasSubmittedToday)
-                    }
-                    disabled={habit.id === 'dailyquest' && (!submissionOpen || hasSubmittedToday)}
-                    disabledHint={
-                      hasSubmittedToday
-                        ? 'Daily quest completed. Come back tomorrow.'
-                        : `Submissions close at ${minutesToTime(deadlines.submissionDeadlineMinutes)} UTC. Come back tomorrow.`
-                    }
-                    onPress={() => session.openBreakActivity(habit)}
-                  />
-                ))}
+              <Text style={styles.statsCaption}>
+                Earn study points from focused study and healthy breaks. Use them to dress Mochi.
+              </Text>
+              <View style={styles.dialRow}>
+                <Dial
+                  label="study"
+                  minutes={Math.floor(studyDuration / 60)}
+                  onMinus={session.decStudy}
+                  onPlus={session.incStudy}
+                />
+                <Dial
+                  label="break"
+                  minutes={Math.floor(breakDuration / 60)}
+                  onMinus={session.decBreak}
+                  onPlus={session.incBreak}
+                />
               </View>
-              <InkButton label="end break early" variant="small" onPress={session.endBreak} />
+              <InkButton label="begin focus block" variant="primary" onPress={session.startStudy} />
             </>
-          ))}
+          )}
 
-        {phase === 'break_expired_prompt' && (
-          <>
-            <Text style={styles.section}>Break's over.</Text>
-            {/* TODO: Add "Extend 5 min" button here. On tap:
-                  - Add 300 seconds to the break duration
-                  - Reset break_expired_prompt state
-                  - Transition back to break_active list view
-                  - Optionally cap the number of extensions per break (e.g. max 2) */}
-            <InkButton label="End break" variant="primary" onPress={session.endBreak} />
-          </>
-        )}
+          {phase === 'studying' && (
+            <>
+              <Text style={styles.section}>studying</Text>
+              <Text style={styles.timerBig}>{fmt(secondsLeft)}</Text>
+              <BlinkingDots />
+              <InkButton label="give up" variant="small" onPress={session.stopSession} />
+            </>
+          )}
 
-        {phase === 'finished' && (
-          <>
-            <Text style={styles.section}>complete</Text>
-            <InkButton label="begin another" variant="primary" onPress={session.startStudy} />
-          </>
-        )}
+          {phase === 'break_intro' && (
+            <BreakIntroCard onStart={session.startBreak} onSkip={session.stopSession} />
+          )}
+
+          {phase === 'break_active' &&
+            (activeBreakHabit && activeBreakHabit.id !== 'dailyquest' ? (
+              <BreakActivityView
+                habit={activeBreakHabit}
+                onComplete={session.completeBreakActivity}
+                onBack={session.closeBreakActivity}
+              />
+            ) : (
+              <>
+                <Text style={styles.section}>break · {fmt(secondsLeft)}</Text>
+                <View style={styles.habitList}>
+                  {session.habits.map((habit) => (
+                    <HabitRow
+                      key={habit.id}
+                      habit={habit}
+                      done={
+                        session.completedBreakHabits.includes(habit.id) ||
+                        (habit.id === 'dailyquest' && hasSubmittedToday)
+                      }
+                      disabled={habit.id === 'dailyquest' && (!submissionOpen || hasSubmittedToday)}
+                      disabledHint={
+                        hasSubmittedToday
+                          ? 'Daily quest completed. Come back tomorrow.'
+                          : `Submissions close at ${minutesToTime(deadlines.submissionDeadlineMinutes)} UTC. Come back tomorrow.`
+                      }
+                      onPress={() => session.openBreakActivity(habit)}
+                    />
+                  ))}
+                </View>
+                <InkButton label="end break early" variant="small" onPress={session.endBreak} />
+              </>
+            ))}
+
+          {phase === 'break_expired_prompt' && (
+            <>
+              <Text style={styles.section}>Break's over.</Text>
+              {/* TODO: Add "Extend 5 min" button here. On tap:
+                    - Add 300 seconds to the break duration
+                    - Reset break_expired_prompt state
+                    - Transition back to break_active list view
+                    - Optionally cap the number of extensions per break (e.g. max 2) */}
+              <InkButton label="End break" variant="primary" onPress={session.endBreak} />
+            </>
+          )}
+
+          {phase === 'finished' && (
+            <>
+              <Text style={styles.section}>complete</Text>
+              <InkButton label="begin another" variant="primary" onPress={session.startStudy} />
+            </>
+          )}
+        </View>
       </ScrollView>
 
       {(phase === 'studying' || (phase === 'break_active' && !activeBreakHabit)) && (
@@ -348,8 +351,15 @@ const styles = StyleSheet.create({
   },
 
   catStage: {
+    width: '100%',
     alignItems: 'center',
     paddingTop: HavenSpacing.lg,
+    paddingBottom: HavenSpacing.xl, // Ensure space below the Mochi
+  },
+  mainContent: {
+    width: '100%',
+    alignItems: 'center',
+    gap: HavenSpacing.md,
   },
   floorShadow: {
     width: '70%',
