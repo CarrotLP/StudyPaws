@@ -21,13 +21,19 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
+import { DevFillButton } from '@/components/DevFillButton';
 
-export function LoginScreen({ onRegisterPress }: { onRegisterPress: () => void }) {
+export default function LoginScreen({ onRegisterPress }: { onRegisterPress: () => void }) {
   const { error: authError, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const fillDevCreds = () => {
+    setEmail('graceliew@ic.ac.uk');
+    setPassword('graceliew');
+  };
 
   const login = async () => {
     if (!email.trim() || !password) {
@@ -121,6 +127,7 @@ export function LoginScreen({ onRegisterPress }: { onRegisterPress: () => void }
           </View>
         </View>
       </KeyboardAvoidingView>
+      <DevFillButton onPress={fillDevCreds} />
     </SafeAreaView>
   );
 }

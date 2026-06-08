@@ -22,7 +22,7 @@ import {
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
 
-export function RegisterScreen({
+export default function RegisterScreen({
   onLoginPress,
   onRegistered,
 }: {
