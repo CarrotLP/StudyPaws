@@ -184,9 +184,10 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: 'row',
+    position: 'relative',
+    minHeight: 44,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   section: {
     fontFamily: HavenFonts.pixel,
@@ -194,6 +195,7 @@ const styles = StyleSheet.create({
     color: HavenColors.leather,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   rule: {
     height: Border.thick,
@@ -201,6 +203,8 @@ const styles = StyleSheet.create({
   },
 
   statPill: {
+    position: 'absolute',
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: HavenSpacing.sm,

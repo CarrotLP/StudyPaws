@@ -332,6 +332,7 @@ const styles = StyleSheet.create({
     color: HavenColors.leather,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   rule: {
     height: Border.thick,
