@@ -1,14 +1,16 @@
 import { NunitoSans_400Regular, NunitoSans_700Bold } from '@expo-google-fonts/nunito-sans';
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { LoginScreen } from '@/components/LoginScreen';
+import { RegisterScreen } from '@/components/RegisterScreen';
 import { WinnerAnnouncementOverlay } from '@/components/WinnerAnnouncementOverlay';
-import { AuthProvider } from '@/hooks/use-auth';
+import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { DailyQuestProvider } from '@/hooks/use-daily-quest';
 import { EconomyProvider } from '@/hooks/use-economy';
 import { OutfitProvider } from '@/hooks/use-outfit';
@@ -37,20 +39,55 @@ export default function TabLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <DailyQuestProvider>
-          <EconomyProvider>
-            <StudyHistoryProvider>
-              <OutfitProvider>
-                <StudySessionProvider>
-                  <AnimatedSplashOverlay />
-                  <AppTabs />
-                  <WinnerAnnouncementOverlay />
-                </StudySessionProvider>
-              </OutfitProvider>
-            </StudyHistoryProvider>
-          </EconomyProvider>
-        </DailyQuestProvider>
+        <AuthGate />
       </AuthProvider>
     </ThemeProvider>
+  );
+}
+
+function AuthGate() {
+  const { loading, session } = useAuth();
+  const wasLoggedInRef = useRef(false);
+  const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (session && !wasLoggedInRef.current) {
+      router.replace('/');
+    }
+
+    wasLoggedInRef.current = Boolean(session);
+  }, [loading, session]);
+
+  if (loading) {
+    return null;
+  }
+
+  if (!session) {
+    return authScreen === 'login' ? (
+      <LoginScreen onRegisterPress={() => setAuthScreen('register')} />
+    ) : (
+      <RegisterScreen
+        onLoginPress={() => setAuthScreen('login')}
+        onRegistered={() => setAuthScreen('login')}
+      />
+    );
+  }
+
+  return (
+    <DailyQuestProvider>
+      <EconomyProvider>
+        <StudyHistoryProvider>
+          <OutfitProvider>
+            <StudySessionProvider>
+              <AnimatedSplashOverlay />
+              <AppTabs />
+              <WinnerAnnouncementOverlay />
+            </StudySessionProvider>
+          </OutfitProvider>
+        </StudyHistoryProvider>
+      </EconomyProvider>
+    </DailyQuestProvider>
   );
 }

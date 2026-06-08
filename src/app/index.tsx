@@ -29,11 +29,13 @@ import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useOutfit } from '@/hooks/use-outfit';
 import { useWithinWindow } from '@/hooks/use-quest-window';
 import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
+import { useUser } from '@/hooks/use-user';
 import { fmt, fmtMinutes } from '@/lib/haven-format';
 
 export default function HomeScreen() {
   const session = useStudySession();
   const { outfit } = useOutfit();
+  const { petName } = useUser();
   const { deadlines, hasSubmittedToday } = useDailyQuest();
   const {
     phase,
@@ -72,7 +74,7 @@ export default function HomeScreen() {
           <View style={styles.floorShadow} />
         </View>
 
-        <Text style={styles.petName}>Mochi</Text>
+        <Text style={styles.petName}>{petName ?? 'Mochi'}</Text>
 
         <View style={styles.statsRow}>
           <View style={styles.statPill}>

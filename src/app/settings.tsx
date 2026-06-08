@@ -12,6 +12,7 @@ import {
   PixelFontSize,
   ShadowOffset,
 } from '@/constants/havenTheme';
+import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 
 const STEP_MINUTES = 30;
@@ -19,6 +20,7 @@ const STEP_MINUTES = 30;
 // Settings chapter — replaces Buddies in the ribbon. Intentionally empty for now;
 // content TBD. (The buddies screen/file is kept, just no longer surfaced.)
 export default function SettingsScreen() {
+  const { signOut } = useAuth();
   const { deadlines, updateDeadlines } = useDailyQuest();
 
   return (
@@ -42,6 +44,9 @@ export default function SettingsScreen() {
           maxMinutes={24 * 60}
           onChange={(minutes) => updateDeadlines({ ...deadlines, votingDeadlineMinutes: minutes })}
         />
+        <Pressable style={styles.logoutButton} onPress={() => void signOut()}>
+          <Text style={styles.logoutButtonText}>logout</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -138,6 +143,7 @@ const styles = StyleSheet.create({
     color: HavenColors.leather,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   rule: {
     height: Border.thick,
@@ -199,5 +205,21 @@ const styles = StyleSheet.create({
     color: HavenColors.parchment,
     lineHeight: Control.dialButton,
     includeFontPadding: false,
+  },
+  logoutButton: {
+    alignSelf: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.lg,
+    paddingHorizontal: HavenSpacing.xxl,
+    marginTop: HavenSpacing.md,
+    boxShadow: `${ShadowOffset.three}px ${ShadowOffset.three}px 0px ${HavenColors.leatherShadow}`,
+  },
+  logoutButtonText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.xl,
+    color: HavenColors.gold,
+    textAlign: 'center',
   },
 });

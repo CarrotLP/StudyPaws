@@ -46,7 +46,7 @@ export function DailyQuestProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setQuest(null);
       setTeam(null);
-      setError(authError ?? 'Demo user is not signed in.');
+      setError(authError ?? 'User is not signed in.');
       setLoading(false);
       return;
     }
