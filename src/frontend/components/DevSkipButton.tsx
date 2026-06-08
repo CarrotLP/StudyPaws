@@ -21,8 +21,8 @@ export function DevSkipButton({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   btn: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: 56,
+    left: 8,
     width: 22,
     height: 22,
     borderRadius: 11,

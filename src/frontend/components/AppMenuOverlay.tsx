@@ -54,19 +54,21 @@ export function AppMenuOverlay() {
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-      <Pressable
-        accessibilityLabel="Open menu"
-        accessibilityRole="button"
-        onPress={() => setOpen(true)}
-        style={[
-          styles.menuButton,
-          {
-            top: insets.top + HavenSpacing.sm,
-            left: HavenSpacing.md,
-          },
-        ]}>
-        <MaterialCommunityIcons name="menu" size={MENU_ICON_SIZE} color={HavenColors.gold} />
-      </Pressable>
+      {!open && (
+        <Pressable
+          accessibilityLabel="Open menu"
+          accessibilityRole="button"
+          onPress={() => setOpen(true)}
+          style={[
+            styles.menuButton,
+            {
+              top: insets.top + HavenSpacing.sm,
+              left: HavenSpacing.md,
+            },
+          ]}>
+          <MaterialCommunityIcons name="menu" size={MENU_ICON_SIZE} color={HavenColors.gold} />
+        </Pressable>
+      )}
 
       {open && (
         <View style={styles.overlay}>
