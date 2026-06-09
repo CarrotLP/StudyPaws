@@ -62,12 +62,20 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
       if (!user) return;
 
       try {
-        const getImageSize = (uri: string): Promise<{ width: number; height: number }> => {
+        // Returns null if the image can't be loaded (e.g. the file is missing in
+        // the bucket) so the caller can SKIP that layer rather than rendering a
+        // giant 512x512 fallback box that throws off the whole composite.
+        const getImageSize = (
+          uri: string,
+        ): Promise<{ width: number; height: number } | null> => {
           return new Promise((resolve) => {
             Image.getSize(
               uri,
               (width, height) => resolve({ width, height }),
-              () => resolve({ width: 512, height: 512 }), // Fallback
+              () => {
+                console.warn('Mochi: missing/unloadable image, skipping:', uri);
+                resolve(null);
+              },
             );
           });
         };
@@ -103,14 +111,15 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
         const bodyPromises: Promise<MochiAsset | null>[] = Object.entries(MOCHI_BODY).map(async ([key, config]) => {
           const imageUrl = charData[key];
           if (imageUrl) {
-            const { width, height } = await getImageSize(imageUrl);
+            const size = await getImageSize(imageUrl);
+            if (!size) return null; // missing file → skip this layer
             return {
               source: { uri: imageUrl },
               category: config.category,
               x: config.x,
               y: config.y,
-              width,
-              height,
+              width: size.width,
+              height: size.height,
             };
           }
           return null;
@@ -158,19 +167,22 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
             console.log('DEBUG: Component metadata response:', JSON.stringify(compData), 'Error:', compDataError);
 
             if (!compDataError && compData) {
-              const accPromises = compData.map(async (c) => {
-                const { width, height } = await getImageSize(c.image);
+              const accPromises = compData.map(async (c): Promise<MochiAsset | null> => {
+                const size = await getImageSize(c.image);
+                if (!size) return null; // missing file → skip
                 console.log(`DEBUG: Accessory component ${c.image_name} - x:${c.x}, y:${c.y}, layer:${c.layer}`);
                 return {
                   source: { uri: c.image },
                   category: c.layer as MochiLayerCategory,
                   x: Number(c.x) + shiftRight,
                   y: Number(c.y) + shiftUp, // Apply the same vertical offset as body parts
-                  width,
-                  height,
+                  width: size.width,
+                  height: size.height,
                 };
               });
-              const resolvedAccLayers = await Promise.all(accPromises);
+              const resolvedAccLayers = (await Promise.all(accPromises)).filter(
+                (l): l is MochiAsset => !!l,
+              );
               accessoryLayers.push(...resolvedAccLayers);
             }
           }
@@ -190,26 +202,30 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
     return LAYER_ORDER.indexOf(a.category) - LAYER_ORDER.indexOf(b.category);
   });
 
-  // Calculate actual bounding box to prevent overlap with other UI elements
-  let maxWidth = 0;
-  let maxHeight = 0;
-
-  sortedLayers.forEach((layer) => {
-    const width = layer.width ?? 512;
-    const height = layer.height ?? 512;
-
-    const w = (width + (layer.x ?? 0)) * finalScale;
-    const h = (height + (layer.y ?? 0)) * finalScale;
-    if (w > maxWidth) maxWidth = w;
-    if (h > maxHeight) maxHeight = h;
-  });
-
   if (layers.length === 0) return null;
 
-  // Add padding for the Mochi to "grow" into without clipping
-  const padding = 40 * finalScale;
-  const containerWidth = maxWidth + padding * 2;
-  const containerHeight = maxHeight + padding * 2;
+  // Tight bounding box across ALL layers (in design pixels). Using min AND max
+  // lets us shift the artwork so it sits centered in the container with equal
+  // padding on every side — otherwise positive x/y offsets push it off-centre.
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  sortedLayers.forEach((layer) => {
+    const w = layer.width ?? 512;
+    const h = layer.height ?? 512;
+    const x = layer.x ?? 0;
+    const y = layer.y ?? 0;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x + w > maxX) maxX = x + w;
+    if (y + h > maxY) maxY = y + h;
+  });
+
+  const padding = 20 * finalScale;
+  const containerWidth = (maxX - minX) * finalScale + padding * 2;
+  const containerHeight = (maxY - minY) * finalScale + padding * 2;
 
   return (
     <View style={{ width: containerWidth, height: containerHeight }}>
@@ -217,8 +233,9 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
         const width = (layer.width ?? 512) * finalScale;
         const height = (layer.height ?? 512) * finalScale;
 
-        const x = (layer.x ?? 0) * finalScale + padding;
-        const y = (layer.y ?? 0) * finalScale + padding;
+        // Position relative to the tight bounding box's top-left, plus padding.
+        const x = ((layer.x ?? 0) - minX) * finalScale + padding;
+        const y = ((layer.y ?? 0) - minY) * finalScale + padding;
 
         return (
           <Image
