@@ -1,6 +1,9 @@
-import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, View } from 'react-native';
 
+import { supabase } from '@/backend/lib/supabase';
+
+import { useAuth } from '../hooks/use-auth';
 import { type OutfitState } from '../hooks/use-outfit';
 
 export const LAYER_ORDER = [
@@ -18,43 +21,27 @@ export interface MochiAsset {
   category: MochiLayerCategory;
   x?: number; // Offset in "design pixels"
   y?: number;
+  width?: number;
+  height?: number;
 }
 
 const shiftUp: number = 20;
 
-// Registry of all mochi-related assets
-// x and y are offsets relative to the Mochi's top-left origin.
-export const MOCHI_ASSETS: Record<string, MochiAsset> = {
-  // Body parts (Character 1 / c3)
-  c3_shadow: { source: require('./mochis/character1/c3_shadow.png'), category: 'back_body', x: 0, y: shiftUp +  0 },
-  c3_tail: { source: require('./mochis/character1/c3_tail.png'), category: 'back_body', x: 0, y: shiftUp + 0 },
-  c3_body: { source: require('./mochis/character1/c3_body.png'), category: 'body', x: 0, y: shiftUp + 0 },
-  c3_eyes: { source: require('./mochis/character1/c3_eyes.png'), category: 'front_body', x: 0, y: shiftUp + 0 },
-  c3_larm: { source: require('./mochis/character1/c3_larm.png'), category: 'front_body', x: 100, y: shiftUp + 80 },
-  c3_rarm: { source: require('./mochis/character1/c3_rarm.png'), category: 'front_body', x: 20, y: shiftUp + 100 },
-  c3_lfoot: { source: require('./mochis/character1/c3_lfoot.png'), category: 'front_body', x: 0, y: shiftUp + 0 },
-  c3_rfoot: { source: require('./mochis/character1/c3_rfoot.png'), category: 'front_body', x: 0, y: shiftUp + 0 },
-  c3_whirly_eyes: { source: require('./mochis/character1/c3_whirly_eyes.png'), category: 'front_body', x: 0, y: shiftUp + 0 },
-
-  // Accessories (PNG versions)
-  lvest: { source: require('./accessories/lvest.png'), category: 'front_accessory', x: 0, y: shiftUp + 80 },
-  rvest: { source: require('./accessories/rvest.png'), category: 'front_accessory', x: 0, y: shiftUp + 0 },
-  kid_cap: { source: require('./accessories/kid_cap.png'), category: 'front_accessory', x: 0, y: shiftUp + 0 },
-
-  // Temporary Mappings for pixel items to show on Mochi - TODO: DELETE
-  scarf: { source: require('./accessories/lvest.png'), category: 'front_accessory', x: 0, y: 0 },
-  glasses: { source: require('./accessories/kid_cap.png'), category: 'front_accessory', x: 0, y: 0 },
-  beret: { source: require('./accessories/kid_cap.png'), category: 'front_accessory', x: 0, y: 0 },
-  bowtie: { source: require('./accessories/lvest.png'), category: 'front_accessory', x: 0, y: 0 },
-  flower: { source: require('./accessories/kid_cap.png'), category: 'front_accessory', x: 0, y: 0 },
-  sweater: { source: require('./accessories/rvest.png'), category: 'front_accessory', x: 0, y: 0 },
-  monocle: { source: require('./accessories/kid_cap.png'), category: 'front_accessory', x: 0, y: 0 },
-  crown: { source: require('./accessories/kid_cap.png'), category: 'front_accessory', x: 0, y: 0 },
-  bandana: { source: require('./accessories/lvest.png'), category: 'front_accessory', x: 0, y: 0 },
+// Config for body parts - x, y, and category
+// These are used to position the images fetched from the characters table
+export const MOCHI_BODY: Record<string, { category: MochiLayerCategory; x: number; y: number }> = {
+  shadow: { category: 'back_body', x: 0, y: shiftUp + 0 },
+  tail: { category: 'back_body', x: 0, y: shiftUp + 0 },
+  body: { category: 'body', x: 0, y: shiftUp + 0 },
+  eyes: { category: 'front_body', x: 0, y: shiftUp + 0 },
+  larm: { category: 'front_body', x: 100, y: shiftUp + 80 },
+  rarm: { category: 'front_body', x: 20, y: shiftUp + 100 },
+  rfoot: { category: 'front_body', x: 0, y: shiftUp + 0 },
+  whirly_eyes: { category: 'front_body', x: 0, y: shiftUp + 0 },
 };
 
 // The base scale factor for all Mochi assets.
-const GLOBAL_MOCHI_SCALE = 0.33;
+const GLOBAL_MOCHI_SCALE = 0.8;
 
 interface MochiProps {
   id?: string; // If provided, render just this single asset (icon mode)
@@ -64,18 +51,129 @@ interface MochiProps {
 }
 
 export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps) {
+  const { user } = useAuth();
+  const [layers, setLayers] = useState<MochiAsset[]>([]);
   const finalScale = scale * GLOBAL_MOCHI_SCALE;
-  const layers: MochiAsset[] = [];
 
+  useEffect(() => {
+    async function fetchMochiData() {
+      if (!user) return;
 
-    // TODO: instead, load all of body, and chosen accessories
-    // body
-    layers.push(MOCHI_ASSETS.c3_body);
-    layers.push(MOCHI_ASSETS.c3_rarm);
+      try {
+        const getImageSize = (uri: string): Promise<{ width: number; height: number }> => {
+          return new Promise((resolve) => {
+            Image.getSize(
+              uri,
+              (width, height) => resolve({ width, height }),
+              () => resolve({ width: 512, height: 512 }), // Fallback
+            );
+          });
+        };
 
-    // accessories
-    layers.push(MOCHI_ASSETS.lvest);
+        // 1. Find the character the user has chosen
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('character')
+          .eq('user_uid', user.id)
+          .single();
 
+        if (userError || !userData) throw userError || new Error('User not found');
+
+        // 2. Get the images for that character's body component images
+        const { data: charData, error: charError } = await supabase
+          .from('characters')
+          .select('*')
+          .eq('name', userData.character)
+          .single();
+
+        if (charError || !charData) throw charError || new Error('Character not found');
+
+        const bodyLayers: MochiAsset[] = [];
+        const bodyPromises = Object.entries(MOCHI_BODY).map(async ([key, config]) => {
+          const imageUrl = charData[key];
+          if (imageUrl) {
+            const { width, height } = await getImageSize(imageUrl);
+            return {
+              source: { uri: imageUrl },
+              category: config.category,
+              x: config.x,
+              y: config.y,
+              width,
+              height,
+            };
+          }
+          return null;
+        });
+
+        const resolvedBodyLayers = (await Promise.all(bodyPromises)).filter(
+          (l): l is MochiAsset => !!l,
+        );
+        console.log('Body layers loaded:', resolvedBodyLayers.length);
+
+        // 3. Load any accessories associated with the user
+        const { data: userAccessories, error: accError } = await supabase
+          .from('users_accessories')
+          .select('accessory')
+          .eq('user', user.id)
+          .eq('chosen', true);
+
+        console.log('DEBUG: User ID:', user.id);
+        console.log('DEBUG: User accessories response:', JSON.stringify(userAccessories), 'Error:', accError);
+
+        const accessoryLayers: MochiAsset[] = [];
+        if (!accError && userAccessories && userAccessories.length > 0) {
+          const accessoryNames = userAccessories.map((ua) => ua.accessory);
+          console.log('DEBUG: Accessory names:', accessoryNames);
+
+          const { data: components, error: compError } = await supabase
+            .from('accessories_components')
+            .select('components')
+            .in('accessory_name', accessoryNames);
+
+          console.log('DEBUG: Components response:', JSON.stringify(components), 'Error:', compError);
+
+          if (!compError && components && components.length > 0) {
+            const componentNames = components
+              .map((c) => c.components)
+              .filter((c): c is string => !!c);
+
+            console.log('DEBUG: Component names to fetch:', componentNames);
+
+            const { data: compData, error: compDataError } = await supabase
+              .from('components')
+              .select('image, x, y, layer, image_name')
+              .in('image_name', componentNames);
+
+            console.log('DEBUG: Component metadata response:', JSON.stringify(compData), 'Error:', compDataError);
+
+            if (!compDataError && compData) {
+              const accPromises = compData.map(async (c) => {
+                const { width, height } = await getImageSize(c.image);
+                console.log(`DEBUG: Accessory component ${c.image_name} - x:${c.x}, y:${c.y}, layer:${c.layer}`);
+                return {
+                  source: { uri: c.image },
+                  category: c.layer as MochiLayerCategory,
+                  x: Number(c.x),
+                  y: Number(c.y) + shiftUp, // Apply the same vertical offset as body parts
+                  width,
+                  height,
+                };
+              });
+              const resolvedAccLayers = await Promise.all(accPromises);
+              accessoryLayers.push(...resolvedAccLayers);
+            }
+          }
+        }
+
+        console.log('DEBUG: Total accessory layers to render:', accessoryLayers.length);
+        setLayers([...resolvedBodyLayers, ...accessoryLayers]);
+      } catch (err) {
+        console.error('Error fetching Mochi data:', err);
+      }
+    }
+
+    fetchMochiData();
+  }, [user]);
 
   const sortedLayers = [...layers].sort((a, b) => {
     return LAYER_ORDER.indexOf(a.category) - LAYER_ORDER.indexOf(b.category);
@@ -86,26 +184,34 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
   let maxHeight = 0;
 
   sortedLayers.forEach((layer) => {
-    const resolved = Image.resolveAssetSource ? Image.resolveAssetSource(layer.source) : { width: 64, height: 64 };
-    const w = ((resolved?.width ?? 64) + (layer.x ?? 0)) * finalScale;
-    const h = ((resolved?.height ?? 64) + (layer.y ?? 0)) * finalScale;
+    const width = layer.width ?? 512;
+    const height = layer.height ?? 512;
+
+    const w = (width + (layer.x ?? 0)) * finalScale;
+    const h = (height + (layer.y ?? 0)) * finalScale;
     if (w > maxWidth) maxWidth = w;
     if (h > maxHeight) maxHeight = h;
   });
 
-  return (
-    <View style={{ width: maxWidth, height: maxHeight }}>
-      {sortedLayers.map((layer, index) => {
-        const resolved = Image.resolveAssetSource ? Image.resolveAssetSource(layer.source) : { width: 64, height: 64 };
-        const width = (resolved?.width ?? 64) * finalScale;
-        const height = (resolved?.height ?? 64) * finalScale;
+  if (layers.length === 0) return null;
 
-        const x = (layer.x ?? 0) * finalScale;
-        const y = (layer.y ?? 0) * finalScale;
+  // Add padding for the Mochi to "grow" into without clipping
+  const padding = 40 * finalScale;
+  const containerWidth = maxWidth + padding * 2;
+  const containerHeight = maxHeight + padding * 2;
+
+  return (
+    <View style={{ width: containerWidth, height: containerHeight }}>
+      {sortedLayers.map((layer, index) => {
+        const width = (layer.width ?? 512) * finalScale;
+        const height = (layer.height ?? 512) * finalScale;
+
+        const x = (layer.x ?? 0) * finalScale + padding;
+        const y = (layer.y ?? 0) * finalScale + padding;
 
         return (
           <Image
-            key={`${index}-${layer.category}-${layer.source}`}
+            key={`${index}-${layer.category}-${layer.source.uri || index}`}
             source={layer.source}
             style={{
               position: 'absolute',
