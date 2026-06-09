@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFocusEffect } from 'expo-router';
@@ -15,18 +15,28 @@ import {
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
 import { createTeam, getTeamByTeamCode } from '@/services/team.services';
-import { addUserToTeam, getTeamsForUser, type UserTeam } from '@/services/userTeam.services';
+import {
+  addUserToTeam,
+  getTeamsForUser,
+  getUsersForTeam,
+  removeUserFromTeam,
+  type TeamUser,
+  type UserTeam,
+} from '@/services/userTeam.services';
 
 export default function TeamsScreen() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<UserTeam[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [teamCode, setTeamCode] = useState('');
-  const hasTeam = teams.length > 0;
+  const currentTeam = teams[0] ?? null;
+  const hasTeam = Boolean(currentTeam);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,6 +47,7 @@ export default function TeamsScreen() {
       const loadTeams = async () => {
         if (!user) {
           setTeams([]);
+          setTeamMembers([]);
           setLoading(false);
           return;
         }
@@ -46,11 +57,14 @@ export default function TeamsScreen() {
 
         try {
           const nextTeams = await getTeamsForUser(user.id);
+          const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
           if (!active) return;
           setTeams(nextTeams);
+          setTeamMembers(nextTeamMembers);
         } catch (loadError) {
           if (!active) return;
           setTeams([]);
+          setTeamMembers([]);
           setError(loadError instanceof Error ? loadError.message : 'Could not load teams.');
         } finally {
           if (active) {
@@ -94,7 +108,9 @@ export default function TeamsScreen() {
 
       await addUserToTeam(user.id, teamUid);
       const nextTeams = await getTeamsForUser(user.id);
+      const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
       setTeams(nextTeams);
+      setTeamMembers(nextTeamMembers);
       setJoining(false);
       setTeamCode('');
     } catch (err) {
@@ -127,7 +143,9 @@ export default function TeamsScreen() {
       const teamUid = await createTeam(newTeamName.trim());
       await addUserToTeam(user.id, teamUid);
       const nextTeams = await getTeamsForUser(user.id);
+      const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
       setTeams(nextTeams);
+      setTeamMembers(nextTeamMembers);
       setCreating(false);
       setNewTeamName('');
     } catch (err) {
@@ -137,10 +155,45 @@ export default function TeamsScreen() {
     }
   }, [hasTeam, user, newTeamName]);
 
+  const leaveTeam = useCallback(async () => {
+    if (!user || !currentTeam || leaving) return;
+
+    setLeaving(true);
+    setLoading(true);
+    setError(null);
+    try {
+      await removeUserFromTeam(user.id, currentTeam.teamId);
+      const nextTeams = await getTeamsForUser(user.id);
+      const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
+      setTeams(nextTeams);
+      setTeamMembers(nextTeamMembers);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to leave team.');
+    } finally {
+      setLeaving(false);
+      setLoading(false);
+    }
+  }, [currentTeam, leaving, user]);
+
+  const confirmLeaveTeam = useCallback(() => {
+    Alert.alert(
+      'Leave team?',
+      "You will no longer see this team's daily quest gallery or members.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave team',
+          style: 'destructive',
+          onPress: () => void leaveTeam(),
+        },
+      ],
+    );
+  }, [leaveTeam]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.section}>Teams</Text>
+        <Text style={styles.section}>Team</Text>
         <View style={styles.rule} />
 
         <View style={styles.teamList}>
@@ -150,16 +203,30 @@ export default function TeamsScreen() {
             <Text style={styles.message}>You are not in any teams yet.</Text>
           ) : null}
 
-          {teams.map((team) => (
-            <Pressable
-              key={team.teamId}
-              accessibilityRole="button"
-              onPress={() => {}}
-              style={({ pressed }) => [styles.teamButton, pressed && styles.buttonPressed]}>
-              <Text style={styles.teamName}>{team.teamName}</Text>
-            </Pressable>
-          ))}
+          {currentTeam ? (
+            <View style={styles.teamCard}>
+              <Text style={styles.teamName}>{currentTeam.teamName}</Text>
+            </View>
+          ) : null}
         </View>
+
+        {currentTeam ? (
+          <View style={styles.teamDetails}>
+            <View style={styles.detailBlock}>
+              <Text style={styles.detailLabel}>team code:</Text>
+              <Text style={styles.detailValue}>{currentTeam.teamCode}</Text>
+            </View>
+
+            <View style={styles.detailBlock}>
+              <Text style={styles.detailLabel}>team members</Text>
+              {teamMembers.map((member) => (
+                <Text key={member.userId} style={styles.memberName}>
+                  {member.userName}
+                </Text>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {!hasTeam && (
           <>
@@ -225,6 +292,20 @@ export default function TeamsScreen() {
           </>
         )}
       </ScrollView>
+
+      {currentTeam ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={leaving || loading}
+          onPress={confirmLeaveTeam}
+          style={({ pressed }) => [
+            styles.leaveButton,
+            pressed && !(leaving || loading) && styles.buttonPressed,
+            (leaving || loading) && styles.buttonDisabled,
+          ]}>
+          <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave team'}</Text>
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -258,7 +339,7 @@ const styles = StyleSheet.create({
   teamList: {
     gap: HavenSpacing.md,
   },
-  teamButton: {
+  teamCard: {
     width: '100%',
     minHeight: 72,
     justifyContent: 'center',
@@ -274,6 +355,33 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.lg,
     color: HavenColors.ink,
     textAlign: 'center',
+  },
+  teamDetails: {
+    width: '100%',
+    gap: HavenSpacing.lg,
+  },
+  detailBlock: {
+    width: '100%',
+    alignItems: 'flex-start',
+    gap: HavenSpacing.sm,
+  },
+  detailLabel: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.ink,
+    textAlign: 'left',
+  },
+  detailValue: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.lg,
+    color: HavenColors.ink,
+    textAlign: 'left',
+  },
+  memberName: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.lg,
+    color: HavenColors.ink,
+    textAlign: 'left',
   },
   message: {
     fontFamily: HavenFonts.body,
@@ -294,6 +402,23 @@ const styles = StyleSheet.create({
   joinButtonText: {
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.xl,
+    color: HavenColors.gold,
+    textAlign: 'center',
+  },
+  leaveButton: {
+    position: 'absolute',
+    right: HavenSpacing.xl,
+    bottom: HavenSpacing.xl,
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.lg,
+    boxShadow: `${ShadowOffset.three}px ${ShadowOffset.three}px 0px ${HavenColors.leatherShadow}`,
+  },
+  leaveButtonText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
     color: HavenColors.gold,
     textAlign: 'center',
   },
