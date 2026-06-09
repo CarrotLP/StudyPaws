@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DailyQuestOverlay } from '@/components/DailyQuestOverlay';
 import { DevSkipButton } from '@/components/DevSkipButton';
-import { PixelCat } from '@/components/PixelCat';
+import { Mochi } from '@/components/mochi';
 import { Toast } from '@/components/Toast';
 import {
   BodyFontSize,
@@ -21,7 +21,6 @@ import {
   HavenFonts,
   HavenSpacing,
   PixelFontSize,
-  PixelScale,
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { minutesToTime, questWindowsFromDeadlines } from '@/constants/questWindows';
@@ -47,8 +46,6 @@ export default function HomeScreen() {
     activeBreakHabit,
     toast,
   } = session;
-
-  const sleeping = phase === 'break_active' && activeBreakHabit?.id === 'phoneoff';
 
   // Local-clock gate: the daily quest is only offered during the submission window.
   const submissionOpen = useWithinWindow(
@@ -351,8 +348,15 @@ const styles = StyleSheet.create({
   },
 
   catStage: {
+    width: '100%',
     alignItems: 'center',
     paddingTop: HavenSpacing.lg,
+    paddingBottom: HavenSpacing.xl,
+  },
+  mainContent: {
+    width: '100%',
+    alignItems: 'center',
+    gap: HavenSpacing.md,
   },
   floorShadow: {
     width: '70%',

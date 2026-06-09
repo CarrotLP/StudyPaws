@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { type ItemId } from '../components/itemSprites';
+
 export type SessionPhase =
   | 'idle'
   | 'studying'
@@ -44,7 +46,7 @@ export const DEFAULT_POINTS = 245;
 export const DEFAULT_CHESTS: ChestCounts = { small: 1, ornate: 0 };
 
 // Prototype starting wardrobe: owns all pixel items.
-export const DEFAULT_OWNED: string[] = [
+export const DEFAULT_OWNED: ItemId[] = [
   'scarf',
   'beret',
   'glasses',

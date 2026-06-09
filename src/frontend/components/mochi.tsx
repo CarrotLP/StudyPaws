@@ -89,7 +89,7 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
         if (charError || !charData) throw charError || new Error('Character not found');
 
         const bodyLayers: MochiAsset[] = [];
-        const bodyPromises = Object.entries(MOCHI_BODY).map(async ([key, config]) => {
+        const bodyPromises: Promise<MochiAsset | null>[] = Object.entries(MOCHI_BODY).map(async ([key, config]) => {
           const imageUrl = charData[key];
           if (imageUrl) {
             const { width, height } = await getImageSize(imageUrl);
