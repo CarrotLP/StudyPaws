@@ -29,6 +29,8 @@ export default function TeamsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setJoining(false);
+      setCreating(false);
       let active = true;
 
       const loadTeams = async () => {
