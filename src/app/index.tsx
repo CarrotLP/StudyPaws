@@ -78,10 +78,36 @@ export default function HomeScreen() {
         <View style={styles.mainContent}>
           <Text style={styles.petName}>{petName ?? 'Mochi'}</Text>
 
-          <View style={styles.statsRow}>
-            <View style={styles.statPill}>
-              <Text style={styles.leaf}>✦</Text>
-              <Text style={styles.statText}>{points}</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statPill}>
+            <Text style={styles.leaf}>✦</Text>
+            <Text style={styles.statText}>{points}</Text>
+          </View>
+          <View style={[styles.statPill, styles.statPillAlt]}>
+            <Text style={styles.statText}>today · {fmtMinutes(todayMinutes)}</Text>
+          </View>
+        </View>
+
+        <PageRule />
+
+        {phase === 'idle' && (
+          <>
+            <Text style={styles.statsCaption}>
+              Earn study points from focused study and healthy breaks. Use them to dress {petName ?? 'Mochi'}.
+            </Text>
+            <View style={styles.dialRow}>
+              <Dial
+                label="study"
+                minutes={Math.floor(studyDuration / 60)}
+                onMinus={session.decStudy}
+                onPlus={session.incStudy}
+              />
+              <Dial
+                label="break"
+                minutes={Math.floor(breakDuration / 60)}
+                onMinus={session.decBreak}
+                onPlus={session.incBreak}
+              />
             </View>
             <View style={[styles.statPill, styles.statPillAlt]}>
               <Text style={styles.statText}>today · {fmtMinutes(todayMinutes)}</Text>
