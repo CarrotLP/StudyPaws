@@ -8,6 +8,7 @@ export type UserTeamInput = {
 export type UserTeam = {
   teamId: string;
   teamName: string;
+  teamCode: string;
 };
 
 export type TeamUser = {
@@ -32,7 +33,7 @@ export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
 
   const { data: teams, error: teamError } = await supabase
     .from('teams')
-    .select('team_uid, team_name')
+    .select('team_uid, team_name, team_code')
     .in('team_uid', teamIds);
 
   if (teamError) {
@@ -42,6 +43,7 @@ export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
   return teams.map((team) => ({
     teamId: team.team_uid,
     teamName: team.team_name,
+    teamCode: team.team_code,
   }));
 }
 
