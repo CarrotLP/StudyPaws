@@ -7,8 +7,8 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
-import { LoginScreen } from '@/components/LoginScreen';
-import { RegisterScreen } from '@/components/RegisterScreen';
+import LoginScreen from './login';
+import RegisterScreen from './register';
 import { WinnerAnnouncementOverlay } from '@/components/WinnerAnnouncementOverlay';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { DailyQuestProvider } from '@/hooks/use-daily-quest';
@@ -54,7 +54,13 @@ function AuthGate() {
     if (loading) return;
 
     if (session && !wasLoggedInRef.current) {
-      router.replace('/');
+      // Defer navigation to avoid "state update on unmounted component" warnings
+      // during the initial auth state resolution.
+      const timeout = setTimeout(() => {
+        router.replace('/');
+      }, 0);
+      wasLoggedInRef.current = true;
+      return () => clearTimeout(timeout);
     }
 
     wasLoggedInRef.current = Boolean(session);

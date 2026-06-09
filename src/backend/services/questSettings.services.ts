@@ -13,8 +13,10 @@ export const DEFAULT_QUEST_DEADLINES: QuestDeadlines = {
 export async function getQuestDeadlines(teamId: string): Promise<QuestDeadlines> {
   const { data, error } = await supabase
     .from('team_quest_settings')
+    // .from('teams')
     .select('submission_deadline_minutes, voting_deadline_minutes')
     .eq('team', teamId)
+    // .eq('team_uid', teamId)
     .maybeSingle();
 
   if (error) throw error;

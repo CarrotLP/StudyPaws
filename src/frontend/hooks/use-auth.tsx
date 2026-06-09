@@ -1,7 +1,16 @@
 import type { Session, User } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { supabase } from '@/backend/lib/supabase';
+// ... (rest of imports)
 
 type AuthContextValue = {
   loading: boolean;
@@ -48,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     setError(null);
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -61,34 +70,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setSession(data.session);
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, name: string, petName: string) => {
-    setError(null);
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          name: name.trim(),
-          pet_name: petName.trim(),
+  const signUp = useCallback(
+    async (email: string, password: string, name: string, petName: string) => {
+      setError(null);
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            name: name.trim(),
+            pet_name: petName.trim(),
+          },
         },
-      },
-    });
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      throw signUpError;
-    }
+      if (signUpError) {
+        setError(signUpError.message);
+        throw signUpError;
+      }
 
-    if (data.session) {
-      await supabase.auth.signOut();
-    }
+      if (data.session) {
+        await supabase.auth.signOut();
+      }
 
-    setSession(null);
-  };
+      setSession(null);
+    },
+    [],
+  );
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setError(null);
     const { error: signOutError } = await supabase.auth.signOut();
 
@@ -98,14 +110,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setSession(null);
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{ loading, session, user: session?.user ?? null, error, signIn, signUp, signOut }}>
-      {children}
-    </AuthContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      loading,
+      session,
+      user: session?.user ?? null,
+      error,
+      signIn,
+      signUp,
+      signOut,
+    }),
+    [loading, session, error, signIn, signUp, signOut],
   );
+
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
