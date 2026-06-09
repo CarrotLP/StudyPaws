@@ -72,23 +72,32 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
           });
         };
 
-        // 1. Find the character the user has chosen
+        // 1. Find the character the user has chosen. maybeSingle() returns null
+        //    (instead of throwing) when the users row doesn't exist yet.
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('character')
           .eq('user_uid', user.id)
-          .single();
+          .maybeSingle();
 
-        if (userError || !userData) throw userError || new Error('User not found');
+        if (userError) throw userError;
+        if (!userData?.character) {
+          console.warn('Mochi: no users row / character for this user yet.');
+          return;
+        }
 
         // 2. Get the images for that character's body component images
         const { data: charData, error: charError } = await supabase
           .from('characters')
           .select('*')
           .eq('name', userData.character)
-          .single();
+          .maybeSingle();
 
-        if (charError || !charData) throw charError || new Error('Character not found');
+        if (charError) throw charError;
+        if (!charData) {
+          console.warn(`Mochi: no characters row named "${userData.character}".`);
+          return;
+        }
 
         const bodyLayers: MochiAsset[] = [];
         const bodyPromises: Promise<MochiAsset | null>[] = Object.entries(MOCHI_BODY).map(async ([key, config]) => {
