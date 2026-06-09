@@ -1,8 +1,7 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ItemIcon } from '@/components/ItemIcon';
-import { ALL_ITEMS, type Item } from '@/components/itemSprites';
 import { Mochi } from '@/components/mochi';
 import {
     BodyFontSize,
@@ -12,10 +11,10 @@ import {
     HavenFonts,
     HavenSpacing,
     PixelFontSize,
-    PixelScale,
     ShadowOffset,
 } from '@/constants/havenTheme';
-import { useOutfit } from '@/hooks/use-outfit';
+import { useAuth } from '@/frontend/hooks/use-auth';
+import { getUserAccessories, toggleAccessory, type UserAccessory } from '@/backend/services/accessory.services';
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -24,9 +23,39 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 export default function DressScreen() {
-  const { owned, outfit, equip } = useOutfit();
-  const items = ALL_ITEMS.filter((item) => owned.includes(item.id));
-  const rows = chunk(items, 3);
+  const { user } = useAuth();
+  const [accessories, setAccessories] = useState<UserAccessory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchAccessories = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await getUserAccessories(user.id);
+      setAccessories(data);
+    } catch (err) {
+      console.error('Error fetching accessories:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchAccessories();
+  }, [fetchAccessories]);
+
+  const onEquip = async (item: UserAccessory) => {
+    if (!user) return;
+    try {
+      await toggleAccessory(user.id, item.accessory, !item.chosen);
+      await fetchAccessories();
+      setRefreshKey(prev => prev + 1);
+    } catch (err) {
+      console.error('Error toggling accessory:', err);
+    }
+  };
+
+  const rows = chunk(accessories, 3);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -35,22 +64,24 @@ export default function DressScreen() {
         <View style={styles.rule} />
 
         <View style={styles.catStage}>
-          <Mochi outfit={outfit} scale={2} />
+          <Mochi key={refreshKey} scale={2} />
           <View style={styles.floorShadow} />
         </View>
 
-        {items.length === 0 ? (
-          <Text style={styles.emptyMsg}>— nothing equipped yet —</Text>
+        {loading ? (
+          <ActivityIndicator color={HavenColors.ink} style={{ marginTop: HavenSpacing.xxl }} />
+        ) : accessories.length === 0 ? (
+          <Text style={styles.emptyMsg}>— nothing owned yet —</Text>
         ) : (
           <View style={styles.grid}>
             {rows.map((row, ri) => (
               <View key={ri} style={styles.row}>
                 {row.map((item) => (
                   <DressCell
-                    key={item.id}
+                    key={item.accessory}
                     item={item}
-                    active={outfit[item.slot] === item.id}
-                    onPress={() => equip(item)}
+                    active={item.chosen}
+                    onPress={() => onEquip(item)}
                   />
                 ))}
                 {/* Pad the final row so cells keep a consistent width. */}
@@ -67,13 +98,17 @@ export default function DressScreen() {
   );
 }
 
-function DressCell({ item, active, onPress }: { item: Item; active: boolean; onPress: () => void }) {
+function DressCell({ item, active, onPress }: { item: UserAccessory; active: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[styles.cell, active && styles.cellActive]}>
       <View style={styles.iconBox}>
-        <ItemIcon id={item.id} scale={PixelScale.itemSmall} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.accessoryImage} />
+        ) : (
+          <View style={styles.placeholder} />
+        )}
       </View>
-      <Text style={styles.name}>{item.name}</Text>
+      <Text style={styles.name}>{item.accessory}</Text>
       {active && (
         <View style={styles.wornBadge}>
           <Text style={styles.wornText}>worn</Text>
@@ -129,6 +164,7 @@ const styles = StyleSheet.create({
 
   grid: {
     gap: HavenSpacing.base,
+    marginTop: HavenSpacing.base,
   },
   row: {
     flexDirection: 'row',
@@ -154,14 +190,25 @@ const styles = StyleSheet.create({
     borderColor: HavenColors.ink,
   },
   iconBox: {
-    width: Control.itemIconBox,
-    height: Control.itemIconBox,
+    width: Control.itemIconBox * 1.5,
+    height: Control.itemIconBox * 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     padding: HavenSpacing.xs,
     backgroundColor: HavenColors.cellInset,
     borderWidth: Border.base,
     borderColor: HavenColors.inkSoft,
+  },
+  accessoryImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  placeholder: {
+    width: '80%',
+    height: '80%',
+    backgroundColor: HavenColors.inkSoft,
+    opacity: 0.2,
   },
   name: {
     fontFamily: HavenFonts.pixel,

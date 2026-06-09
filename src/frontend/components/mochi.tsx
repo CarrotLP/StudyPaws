@@ -25,7 +25,7 @@ export interface MochiAsset {
   height?: number;
 }
 
-const shiftUp: number = 20;
+const shiftUp: number = 0;
 const shiftRight: number = 50;
 
 // Config for body parts - x, y, and category
@@ -43,7 +43,7 @@ export const MOCHI_BODY: Record<string, { category: MochiLayerCategory; x: numbe
 };
 
 // The base scale factor for all Mochi assets.
-const GLOBAL_MOCHI_SCALE = 0.8;
+const GLOBAL_MOCHI_SCALE = 0.7;
 
 interface MochiProps {
   id?: string; // If provided, render just this single asset (icon mode)
