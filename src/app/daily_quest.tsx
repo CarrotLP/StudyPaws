@@ -19,7 +19,9 @@ import { isWithinWindow, minutesToTime, questWindowsFromDeadlines } from '@/cons
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
+import { getCommunitySubmissionByDate, uploadSubmissionToCommunity } from '@/services/communityQuestSubmission.services';
 import { getOwnQuestSubmission } from '@/services/questSubmission.services';
+import { getCommunitiesForUser } from '@/services/userCommunities.services';
 import { getTeamGallery, submitVote, type GallerySubmission } from '@/services/vote.services';
 
 /** Rating-star glyph size (px). Fill is rendered slightly smaller so the
@@ -40,6 +42,8 @@ export default function DailyQuestScreen() {
   const [submittingVotes, setSubmittingVotes] = useState(false);
   const [galleryPageWidth, setGalleryPageWidth] = useState(0);
   const [galleryPage, setGalleryPage] = useState(0);
+  const [communityUploaded, setCommunityUploaded] = useState(false);
+  const [hasCommunity, setHasCommunity] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,6 +55,22 @@ export default function DailyQuestScreen() {
           setPhotoLoadError(false);
         })
         .catch(() => {});
+
+      getCommunitySubmissionByDate(user.id, quest.questDate)
+        .then((submissionUid) => {
+          setCommunityUploaded(submissionUid !== '');
+        })
+        .catch(() => {
+          setCommunityUploaded(false);
+        });
+
+      getCommunitiesForUser(user.id)
+        .then((nextCommunities) => {
+          setHasCommunity(nextCommunities.length > 0);
+        })
+        .catch(() => {
+          setHasCommunity(false);
+        });
     }, [quest, user]),
   );
 
@@ -77,6 +97,38 @@ export default function DailyQuestScreen() {
       setShowGallery(true);
     } catch (error) {
       Alert.alert('Gallery unavailable', error instanceof Error ? error.message : 'Please try again.');
+    }
+  };
+  
+  const uploadToCommunity = async () => {
+    // TODO: 1. need to confirm user is in community, 2. need to check user has not uploaded yet
+    if ( !quest || !user) return;
+
+    try {
+      const photoUri = await getOwnQuestSubmission(user.id, quest.questDate);
+
+      if (!photoUri) {
+        throw new Error('No photo taken.');
+      }
+
+      const community = (await getCommunitiesForUser(user.id))?.[0] ?? null;
+
+      if (!community) {
+        throw new Error('No community found.');
+      }
+
+      await uploadSubmissionToCommunity(
+        user.id,
+        community.communityId,
+        quest.questDate,
+        photoUri
+      );
+      setCommunityUploaded(true);
+    } catch (error) {
+      Alert.alert(
+        'Upload failed',
+        error instanceof Error ? error.message : 'Please try again.'
+      );
     }
   };
 
@@ -163,6 +215,25 @@ export default function DailyQuestScreen() {
               {minutesToTime(deadlines.votingDeadlineMinutes)} UTC
             </Text>
           ) : null}
+
+          <Pressable
+            disabled={communityUploaded || !hasCommunity}
+            style={({ pressed }) => [
+              styles.btn,
+              pressed && !communityUploaded && hasCommunity && styles.btnPressed,
+              (communityUploaded || !hasCommunity) && styles.btnDisabled,
+            ]}
+            onPress={uploadToCommunity}>
+            <Text style={[styles.btnText, (communityUploaded || !hasCommunity) && styles.btnTextDisabled]}>
+              Upload to Community
+            </Text>
+          </Pressable>
+          {communityUploaded && (
+            <Text style={styles.gatedHint}>Photo uploaded</Text>
+          )}
+          {!communityUploaded && !hasCommunity && (
+            <Text style={styles.gatedHint}>Join a community to upload</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -401,6 +472,7 @@ const styles = StyleSheet.create({
   centerContent: {
     alignItems: 'center',
     paddingTop: HavenSpacing.sm,
+    gap: 8
   },
   btn: {
     backgroundColor: HavenColors.ink,

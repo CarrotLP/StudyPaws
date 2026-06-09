@@ -17,6 +17,7 @@ export default function AppTabs() {
           <Tabs.Screen name="index" />
           <Tabs.Screen name="daily_quest" />
           <Tabs.Screen name="teams" />
+          <Tabs.Screen name="communities" />
           <Tabs.Screen name="dress" />
           <Tabs.Screen name="treasure" />
           <Tabs.Screen name="inventory" />

@@ -1,10 +1,5 @@
 import { supabase } from '@/backend/lib/supabase';
 
-export type UserTeamInput = {
-  userId: string;
-  teamId: string;
-};
-
 export type UserTeam = {
   teamId: string;
   teamName: string;
