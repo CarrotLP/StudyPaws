@@ -101,7 +101,7 @@ export default function RegisterScreen({
     setFormError(null);
 
     try {
-      await signUp(email, password, username, petName);
+      await signUp(email, password, username, petName, selectedModel);
       onRegistered();
     } catch {
       // The provider exposes the Supabase error for display.
