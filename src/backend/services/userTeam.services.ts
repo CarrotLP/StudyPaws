@@ -14,6 +14,7 @@ export type UserTeam = {
 export type TeamUser = {
   userId: string;
   userName: string;
+  winsCount: number;
 }
 
 export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
@@ -50,7 +51,7 @@ export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
 export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
   const { data: memberships, error: membershipError } = await supabase
     .from('users_teams')
-    .select('user')
+    .select('user, wins_count')
     .eq('team', teamId);
 
   if (membershipError) {
@@ -62,6 +63,10 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
     return [];
   }
 
+  const winsByUserId = new Map(
+    memberships.map((membership) => [membership.user, membership.wins_count ?? 0]),
+  );
+
   const { data: users, error: userError } = await supabase
     .from('users')
     .select('user_uid, name')
@@ -71,10 +76,13 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
     throw userError;
   }
 
-  return users.map((user) => ({
-    userId: user.user_uid,
-    userName: user.name,
-  }));
+  return users
+    .map((user) => ({
+      userId: user.user_uid,
+      userName: user.name,
+      winsCount: winsByUserId.get(user.user_uid) ?? 0,
+    }))
+    .sort((a, b) => b.winsCount - a.winsCount || a.userName.localeCompare(b.userName));
 }
 
 export async function addUserToTeam(userId: string, teamId: string) {
