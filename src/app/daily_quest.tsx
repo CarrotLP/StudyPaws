@@ -29,7 +29,7 @@ const STAR_FILL_SIZE = STAR_SIZE - 7;
 
 export default function DailyQuestScreen() {
   const { user } = useAuth();
-  const { loading: questLoading, quest, team, deadlines } = useDailyQuest();
+  const { loading: questLoading, quest, team: team, deadlines } = useDailyQuest();
   const [showGallery, setShowGallery] = useState(false);
   const [todayPhotoUri, setTodayPhotoUri] = useState<string | null>(null);
   const [photoLoadError, setPhotoLoadError] = useState(false);
