@@ -90,6 +90,15 @@ export async function addUserToTeam(userId: string, teamId: string) {
 }
 
 export async function removeUserFromTeam(userId: string, teamId: string) {
-  // TODO: delete from join table
+  const { error } = await supabase
+    .from('users_teams')
+    .delete()
+    .eq('user', userId)
+    .eq('team', teamId);
+
+  if (error) {
+    throw error;
+  }
+
   return { success: true };
 }
