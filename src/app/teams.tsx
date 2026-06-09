@@ -26,6 +26,7 @@ export default function TeamsScreen() {
   const [joining, setJoining] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [teamCode, setTeamCode] = useState('');
+  const hasTeam = teams.length > 0;
 
   useFocusEffect(
     useCallback(() => {
@@ -77,6 +78,12 @@ export default function TeamsScreen() {
       return;
     }
 
+    if (hasTeam) {
+      setError('You are already in a team.');
+      setJoining(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -95,7 +102,7 @@ export default function TeamsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user, teamCode]);
+  }, [hasTeam, user, teamCode]);
 
   const submitTeam = useCallback(async () => {
     if (!user) {
@@ -105,6 +112,12 @@ export default function TeamsScreen() {
 
     if (!newTeamName.trim()) {
       setError('Please enter a team name.');
+      return;
+    }
+
+    if (hasTeam) {
+      setError('You are already in a team.');
+      setCreating(false);
       return;
     }
 
@@ -122,7 +135,7 @@ export default function TeamsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user, newTeamName]);
+  }, [hasTeam, user, newTeamName]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -148,64 +161,68 @@ export default function TeamsScreen() {
           ))}
         </View>
 
-        {joining ? (
-          <View style={{ width: '100%' }}>
-            <Text style={styles.label}>Team code</Text>
-            <TextInput
-              value={teamCode}
-              onChangeText={setTeamCode}
-              placeholder="Team code"
-              style={styles.input}
-            />
-            <Pressable
-              accessibilityRole="button"
-              disabled={loading || !teamCode.trim()}
-              onPress={() => void joinTeam()}
-              style={({ pressed }) => [
-                styles.joinButton,
-                pressed && styles.buttonPressed,
-                (loading || !teamCode.trim()) && styles.buttonDisabled,
-              ]}>
-              <Text style={styles.joinButtonText}>Join team</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setJoining(true)}
-            style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
-            <Text style={styles.joinButtonText}>Join team</Text>
-          </Pressable>
-        )}
+        {!hasTeam && (
+          <>
+            {joining ? (
+              <View style={{ width: '100%' }}>
+                <Text style={styles.label}>Team code</Text>
+                <TextInput
+                  value={teamCode}
+                  onChangeText={setTeamCode}
+                  placeholder="Team code"
+                  style={styles.input}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={loading || !teamCode.trim()}
+                  onPress={() => void joinTeam()}
+                  style={({ pressed }) => [
+                    styles.joinButton,
+                    pressed && styles.buttonPressed,
+                    (loading || !teamCode.trim()) && styles.buttonDisabled,
+                  ]}>
+                  <Text style={styles.joinButtonText}>Join team</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setJoining(true)}
+                style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
+                <Text style={styles.joinButtonText}>Join team</Text>
+              </Pressable>
+            )}
 
-        {creating ? (
-          <View style={{ width: '100%' }}>
-            <Text style={styles.label}>Team name</Text>
-            <TextInput
-              value={newTeamName}
-              onChangeText={setNewTeamName}
-              placeholder="e.g. Study Buddies"
-              style={styles.input}
-            />
-            <Pressable
-              accessibilityRole="button"
-              disabled={loading || !newTeamName.trim()}
-              onPress={() => void submitTeam()}
-              style={({ pressed }) => [
-                styles.joinButton,
-                pressed && styles.buttonPressed,
-                (loading || !newTeamName.trim()) && styles.buttonDisabled,
-              ]}>
-              <Text style={styles.joinButtonText}>Create team</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setCreating(true)}
-            style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
-            <Text style={styles.joinButtonText}>Create team</Text>
-          </Pressable>
+            {creating ? (
+              <View style={{ width: '100%' }}>
+                <Text style={styles.label}>Team name</Text>
+                <TextInput
+                  value={newTeamName}
+                  onChangeText={setNewTeamName}
+                  placeholder="e.g. Study Buddies"
+                  style={styles.input}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={loading || !newTeamName.trim()}
+                  onPress={() => void submitTeam()}
+                  style={({ pressed }) => [
+                    styles.joinButton,
+                    pressed && styles.buttonPressed,
+                    (loading || !newTeamName.trim()) && styles.buttonDisabled,
+                  ]}>
+                  <Text style={styles.joinButtonText}>Create team</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setCreating(true)}
+                style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
+                <Text style={styles.joinButtonText}>Create team</Text>
+              </Pressable>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
