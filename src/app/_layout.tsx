@@ -47,24 +47,7 @@ export default function TabLayout() {
 
 function AuthGate() {
   const { loading, session } = useAuth();
-  const wasLoggedInRef = useRef(false);
   const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
-
-  useEffect(() => {
-    if (loading) return;
-
-    if (session && !wasLoggedInRef.current) {
-      // Defer navigation to avoid "state update on unmounted component" warnings
-      // during the initial auth state resolution.
-      const timeout = setTimeout(() => {
-        router.replace('/');
-      }, 0);
-      wasLoggedInRef.current = true;
-      return () => clearTimeout(timeout);
-    }
-
-    wasLoggedInRef.current = Boolean(session);
-  }, [loading, session]);
 
   if (loading) {
     return null;

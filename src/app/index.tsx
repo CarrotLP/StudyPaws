@@ -70,23 +70,25 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <PixelCat outfit={outfit} scale={PixelScale.catHome} sleeping={sleeping} />
+          <Mochi outfit={outfit as any} scale={2} />
           <View style={styles.floorShadow} />
         </View>
 
-        <Text style={styles.petName}>{petName ?? 'Mochi'}</Text>
+        {/* This View wraps the rest of the contents to ensure they stack below the catStage */}
+        <View style={styles.mainContent}>
+          <Text style={styles.petName}>{petName ?? 'Mochi'}</Text>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statPill}>
-            <Text style={styles.leaf}>✦</Text>
-            <Text style={styles.statText}>{points}</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statPill}>
+              <Text style={styles.leaf}>✦</Text>
+              <Text style={styles.statText}>{points}</Text>
+            </View>
+            <View style={[styles.statPill, styles.statPillAlt]}>
+              <Text style={styles.statText}>today · {fmtMinutes(todayMinutes)}</Text>
+            </View>
           </View>
-          <View style={[styles.statPill, styles.statPillAlt]}>
-            <Text style={styles.statText}>today · {fmtMinutes(todayMinutes)}</Text>
-          </View>
-        </View>
 
-        <PageRule />
+          <PageRule />
 
         {phase === 'idle' && (
           <>
@@ -111,70 +113,71 @@ export default function HomeScreen() {
           </>
         )}
 
-        {phase === 'studying' && (
-          <>
-            <Text style={styles.section}>studying</Text>
-            <Text style={styles.timerBig}>{fmt(secondsLeft)}</Text>
-            <BlinkingDots />
-            <InkButton label="give up" variant="small" onPress={session.stopSession} />
-          </>
-        )}
-
-        {phase === 'break_intro' && (
-          <BreakIntroCard onStart={session.startBreak} onSkip={session.stopSession} />
-        )}
-
-        {phase === 'break_active' &&
-          (activeBreakHabit && activeBreakHabit.id !== 'dailyquest' ? (
-            <BreakActivityView
-              habit={activeBreakHabit}
-              onComplete={session.completeBreakActivity}
-              onBack={session.closeBreakActivity}
-            />
-          ) : (
+          {phase === 'studying' && (
             <>
-              <Text style={styles.section}>break · {fmt(secondsLeft)}</Text>
-              <View style={styles.habitList}>
-                {session.habits.map((habit) => (
-                  <HabitRow
-                    key={habit.id}
-                    habit={habit}
-                    done={
-                      session.completedBreakHabits.includes(habit.id) ||
-                      (habit.id === 'dailyquest' && hasSubmittedToday)
-                    }
-                    disabled={habit.id === 'dailyquest' && (!submissionOpen || hasSubmittedToday)}
-                    disabledHint={
-                      hasSubmittedToday
-                        ? 'Daily quest completed. Come back tomorrow.'
-                        : `Submissions close at ${minutesToTime(deadlines.submissionDeadlineMinutes)} UTC. Come back tomorrow.`
-                    }
-                    onPress={() => session.openBreakActivity(habit)}
-                  />
-                ))}
-              </View>
-              <InkButton label="end break early" variant="small" onPress={session.endBreak} />
+              <Text style={styles.section}>studying</Text>
+              <Text style={styles.timerBig}>{fmt(secondsLeft)}</Text>
+              <BlinkingDots />
+              <InkButton label="give up" variant="small" onPress={session.stopSession} />
             </>
-          ))}
+          )}
 
-        {phase === 'break_expired_prompt' && (
-          <>
-            <Text style={styles.section}>Break's over.</Text>
-            {/* TODO: Add "Extend 5 min" button here. On tap:
-                  - Add 300 seconds to the break duration
-                  - Reset break_expired_prompt state
-                  - Transition back to break_active list view
-                  - Optionally cap the number of extensions per break (e.g. max 2) */}
-            <InkButton label="End break" variant="primary" onPress={session.endBreak} />
-          </>
-        )}
+          {phase === 'break_intro' && (
+            <BreakIntroCard onStart={session.startBreak} onSkip={session.stopSession} />
+          )}
 
-        {phase === 'finished' && (
-          <>
-            <Text style={styles.section}>complete</Text>
-            <InkButton label="begin another" variant="primary" onPress={session.startStudy} />
-          </>
-        )}
+          {phase === 'break_active' &&
+            (activeBreakHabit && activeBreakHabit.id !== 'dailyquest' ? (
+              <BreakActivityView
+                habit={activeBreakHabit}
+                onComplete={session.completeBreakActivity}
+                onBack={session.closeBreakActivity}
+              />
+            ) : (
+              <>
+                <Text style={styles.section}>break · {fmt(secondsLeft)}</Text>
+                <View style={styles.habitList}>
+                  {session.habits.map((habit) => (
+                    <HabitRow
+                      key={habit.id}
+                      habit={habit}
+                      done={
+                        session.completedBreakHabits.includes(habit.id) ||
+                        (habit.id === 'dailyquest' && hasSubmittedToday)
+                      }
+                      disabled={habit.id === 'dailyquest' && (!submissionOpen || hasSubmittedToday)}
+                      disabledHint={
+                        hasSubmittedToday
+                          ? 'Daily quest completed. Come back tomorrow.'
+                          : `Submissions close at ${minutesToTime(deadlines.submissionDeadlineMinutes)} UTC. Come back tomorrow.`
+                      }
+                      onPress={() => session.openBreakActivity(habit)}
+                    />
+                  ))}
+                </View>
+                <InkButton label="end break early" variant="small" onPress={session.endBreak} />
+              </>
+            ))}
+
+          {phase === 'break_expired_prompt' && (
+            <>
+              <Text style={styles.section}>Break's over.</Text>
+              {/* TODO: Add "Extend 5 min" button here. On tap:
+                    - Add 300 seconds to the break duration
+                    - Reset break_expired_prompt state
+                    - Transition back to break_active list view
+                    - Optionally cap the number of extensions per break (e.g. max 2) */}
+              <InkButton label="End break" variant="primary" onPress={session.endBreak} />
+            </>
+          )}
+
+          {phase === 'finished' && (
+            <>
+              <Text style={styles.section}>complete</Text>
+              <InkButton label="begin another" variant="primary" onPress={session.startStudy} />
+            </>
+          )}
+        </View>
       </ScrollView>
 
       {(phase === 'studying' || (phase === 'break_active' && !activeBreakHabit)) && (

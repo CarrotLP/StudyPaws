@@ -43,8 +43,18 @@ export const DEFAULT_SESSION: PersistedSession = {
 export const DEFAULT_POINTS = 245;
 export const DEFAULT_CHESTS: ChestCounts = { small: 1, ornate: 0 };
 
-// Prototype starting wardrobe: owns + wears scarf and glasses.
-export const DEFAULT_OWNED: string[] = ['scarf', 'glasses'];
+// Prototype starting wardrobe: owns all pixel items.
+export const DEFAULT_OWNED: string[] = [
+  'scarf',
+  'beret',
+  'glasses',
+  'bowtie',
+  'flower',
+  'sweater',
+  'monocle',
+  'crown',
+  'bandana',
+];
 export const DEFAULT_OUTFIT: Record<string, string | null> = {
   head: null,
   face: 'glasses',

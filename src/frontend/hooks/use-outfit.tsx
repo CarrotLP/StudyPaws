@@ -37,12 +37,16 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     Promise.all([loadOwned(), loadOutfit()]).then(([loadedOwned, loadedOutfit]) => {
       if (!mounted) return;
-      setOwned(loadedOwned as ItemId[]);
+
+      // Merge defaults with loaded to ensure new users (or migration) have items
+      const finalOwned = Array.from(new Set([...DEFAULT_OWNED, ...(loadedOwned as ItemId[])]));
+
+      setOwned(finalOwned);
       setOutfit({
-        head: (loadedOutfit.head as ItemId | null) ?? null,
-        face: (loadedOutfit.face as ItemId | null) ?? null,
-        neck: (loadedOutfit.neck as ItemId | null) ?? null,
-        body: (loadedOutfit.body as ItemId | null) ?? null,
+        head: (loadedOutfit.head as ItemId | null) ?? INITIAL_OUTFIT.head,
+        face: (loadedOutfit.face as ItemId | null) ?? INITIAL_OUTFIT.face,
+        neck: (loadedOutfit.neck as ItemId | null) ?? INITIAL_OUTFIT.neck,
+        body: (loadedOutfit.body as ItemId | null) ?? INITIAL_OUTFIT.body,
       });
       setHydrated(true);
     });

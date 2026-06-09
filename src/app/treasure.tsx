@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChestOpenOverlay, type ChestStage } from '@/components/ChestOpenOverlay';
 import { DevAddPointsButton } from '@/components/DevAddPointsButton';
-import { ItemIcon } from '@/components/ItemIcon';
+import { Mochi } from '@/components/mochi';
 import { ALL_ITEMS, type ItemId } from '@/components/itemSprites';
 import { PixelChest } from '@/components/PixelChest';
 import { Toast } from '@/components/Toast';
@@ -131,7 +131,7 @@ export default function TreasureScreen() {
                   <View style={styles.pool}>
                     {chest.pool.map((itemId) => (
                       <View key={itemId} style={styles.poolItem}>
-                        <ItemIcon id={itemId} scale={PixelScale.itemTiny} />
+                        <Mochi id={itemId} scale={0.25} />
                       </View>
                     ))}
                   </View>

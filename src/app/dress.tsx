@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ItemIcon } from '@/components/ItemIcon';
 import { ALL_ITEMS, type Item } from '@/components/itemSprites';
-import { PixelCat } from '@/components/PixelCat';
+import { Mochi } from '@/components/mochi';
 import {
     BodyFontSize,
     Border,
@@ -35,7 +35,7 @@ export default function DressScreen() {
         <View style={styles.rule} />
 
         <View style={styles.catStage}>
-          <PixelCat outfit={outfit} scale={PixelScale.catDress} />
+          <Mochi outfit={outfit} scale={2} />
           <View style={styles.floorShadow} />
         </View>
 

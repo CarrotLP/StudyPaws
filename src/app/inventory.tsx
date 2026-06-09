@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevResetButton } from '@/components/DevResetButton';
 import { ItemIcon } from '@/components/ItemIcon';
+import { Mochi } from '@/components/mochi';
 import { ALL_ITEMS } from '@/components/itemSprites';
 import { Toast } from '@/components/Toast';
 import {
@@ -55,12 +56,18 @@ export default function InventoryScreen() {
         <Text style={styles.section}>inventory</Text>
         <View style={styles.rule} />
 
+        {/* Character Preview with Mochi PNGs */}
+        <View style={styles.previewStage}>
+          <Mochi outfit={outfit as any} scale={2} />
+          <View style={styles.floorShadow} />
+        </View>
+
         <View style={styles.grid}>
           {rows.map((row, ri) => (
             <View key={ri} style={styles.row}>
               {row.map((item) => {
                 const isOwned = owned.includes(item.id);
-                const isWorn = isOwned && outfit[item.slot] === item.id;
+                const isWorn = isOwned && outfit[item.slot as keyof typeof outfit] === item.id;
                 return (
                   <Pressable
                     key={item.id}
@@ -68,7 +75,8 @@ export default function InventoryScreen() {
                     onPress={() => equip(item)}
                     style={[styles.cell, !isOwned && styles.cellLocked, isWorn && styles.cellWorn]}>
                     <View style={[styles.iconBox, !isOwned && styles.iconBoxLocked]}>
-                      <ItemIcon id={item.id} scale={PixelScale.itemSmall} silhouette={!isOwned} />
+                      {/* Grid icons using the Pixel Art style */}
+                      <ItemIcon id={item.id as any} scale={PixelScale.itemSmall} silhouette={!isOwned} />
                     </View>
                     <Text style={[styles.name, !isOwned && styles.nameLocked]}>
                       {isOwned ? item.name : '?????'}
@@ -112,6 +120,22 @@ const styles = StyleSheet.create({
   rule: {
     height: Border.thick,
     backgroundColor: HavenColors.ink,
+    marginBottom: HavenSpacing.md, // Add spacing below the rule
+  },
+  previewStage: {
+    alignItems: 'center',
+    paddingVertical: HavenSpacing.lg,
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    marginBottom: HavenSpacing.md, // Ensure spacing below the preview stage
+  },
+  floorShadow: {
+    width: 80,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: HavenColors.floorShadow,
+    marginTop: -4,
   },
   grid: {
     gap: HavenSpacing.base,

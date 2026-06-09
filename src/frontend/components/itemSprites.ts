@@ -1,5 +1,5 @@
-// Item data + pixel-art sprite arrays, ported verbatim from haven_prototype.html
-// (ALL_ITEMS and ItemIcon). Data only — no JSX.
+// Item data + pixel-art sprite arrays.
+// These are used for the PixelCat accessories.
 
 export type OutfitSlot = 'head' | 'face' | 'neck' | 'body';
 export type ItemId =
@@ -145,5 +145,4 @@ export const ITEM_PALETTE: Record<string, string> = {
   B: '#B73838',
 };
 
-// Single dark fill used for unowned (locked) item silhouettes.
 export const SILHOUETTE_COLOR = '#3A2418';
