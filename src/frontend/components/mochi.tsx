@@ -26,18 +26,20 @@ export interface MochiAsset {
 }
 
 const shiftUp: number = 20;
+const shiftRight: number = 50;
 
 // Config for body parts - x, y, and category
 // These are used to position the images fetched from the characters table
 export const MOCHI_BODY: Record<string, { category: MochiLayerCategory; x: number; y: number }> = {
-  shadow: { category: 'back_body', x: 0, y: shiftUp + 0 },
-  tail: { category: 'back_body', x: 0, y: shiftUp + 0 },
-  body: { category: 'body', x: 0, y: shiftUp + 0 },
-  eyes: { category: 'front_body', x: 0, y: shiftUp + 0 },
-  larm: { category: 'front_body', x: 100, y: shiftUp + 80 },
-  rarm: { category: 'front_body', x: 20, y: shiftUp + 100 },
-  rfoot: { category: 'front_body', x: 0, y: shiftUp + 0 },
-  whirly_eyes: { category: 'front_body', x: 0, y: shiftUp + 0 },
+  shadow: { category: 'back_body', x: shiftRight + 0, y: shiftUp + 150 },
+  tail: { category: 'back_body', x: shiftRight + -60, y: shiftUp + 120 },
+  body: { category: 'body', x: shiftRight + 0, y: shiftUp + 0 },
+  eyes: { category: 'front_body', x: shiftRight + 80, y: shiftUp + 50 },
+  larm: { category: 'back_body', x: shiftRight + 115, y: shiftUp + 90 },
+  rarm: { category: 'front_body', x: shiftRight + 20, y: shiftUp + 100 },
+  rfoot: { category: 'body', x: shiftRight + 20, y: shiftUp + 160 },
+  lfoot: { category: 'back_body', x: shiftRight + 90, y: shiftUp + 160 },
+//   whirly_eyes: { category: 'front_body', x: shiftRight + 0, y: shiftUp + 0 },
 };
 
 // The base scale factor for all Mochi assets.
@@ -153,7 +155,7 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
                 return {
                   source: { uri: c.image },
                   category: c.layer as MochiLayerCategory,
-                  x: Number(c.x),
+                  x: Number(c.x) + shiftRight,
                   y: Number(c.y) + shiftUp, // Apply the same vertical offset as body parts
                   width,
                   height,
