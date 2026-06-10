@@ -28,7 +28,7 @@ type DailyQuestOverlayProps = {
 
 export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestOverlayProps) {
   const { user } = useAuth();
-  const { loading: questLoading, quest, deadlines, hasSubmittedToday, markSubmittedToday } =
+  const { loading: questLoading, quest, deadlines, hasSubmittedToday, refresh, markSubmittedToday } =
     useDailyQuest();
   const [completed, setCompleted] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
@@ -44,8 +44,11 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
       setTakingPhoto(false);
       setPhotoUri(null);
       setPhotoError(false);
+      return;
     }
-  }, [visible]);
+
+    void refresh();
+  }, [visible, refresh]);
 
   // We're not using <Modal>, so wire Android's back button manually.
   useEffect(() => {
