@@ -22,7 +22,9 @@ export async function getUserAccessories(userUid: string): Promise<UserAccessory
         )
       )
     `)
-    .eq('user', userUid);
+    .eq('user', userUid)
+    // Stable, deterministic order so the dress grid doesn't reshuffle on toggle.
+    .order('accessory', { ascending: true });
 
   if (error) {
     console.error('Error in getUserAccessories:', error);
