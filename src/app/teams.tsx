@@ -23,6 +23,23 @@ import {
   type TeamUser,
   type UserTeam,
 } from '@/services/userTeam.services';
+import {
+  getThemeForWeek,
+  submitTeamQuestSuggestion,
+} from '@/services/weeklyTheme.services';
+
+function getNextWeekStartUtc(): string {
+  const today = new Date();
+  const utcDay = today.getUTCDay();
+  const daysUntilNextMonday = ((8 - utcDay) % 7) || 7;
+  const nextMonday = new Date(Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate() + daysUntilNextMonday,
+  ));
+
+  return nextMonday.toISOString().slice(0, 10);
+}
 
 export default function TeamsScreen() {
   const { user } = useAuth();
@@ -33,10 +50,16 @@ export default function TeamsScreen() {
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [submittingSuggestion, setSubmittingSuggestion] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [teamCode, setTeamCode] = useState('');
+  const [nextWeekTheme, setNextWeekTheme] = useState<string | null>(null);
+  const [themeLoading, setThemeLoading] = useState(true);
+  const [questSuggestion, setQuestSuggestion] = useState('');
+  const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null);
   const currentTeam = teams[0] ?? null;
   const hasTeam = Boolean(currentTeam);
+  const nextWeekStart = getNextWeekStartUtc();
 
   useFocusEffect(
     useCallback(() => {
@@ -48,27 +71,37 @@ export default function TeamsScreen() {
         if (!user) {
           setTeams([]);
           setTeamMembers([]);
+          setNextWeekTheme(null);
+          setThemeLoading(false);
           setLoading(false);
           return;
         }
 
         setLoading(true);
+        setThemeLoading(true);
         setError(null);
+        setSuggestionMessage(null);
 
         try {
-          const nextTeams = await getTeamsForUser(user.id);
+          const [nextTeams, nextThemeResult] = await Promise.all([
+            getTeamsForUser(user.id),
+            getThemeForWeek(`${nextWeekStart}T12:00:00.000Z`),
+          ]);
           const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
           if (!active) return;
           setTeams(nextTeams);
           setTeamMembers(nextTeamMembers);
+          setNextWeekTheme(nextThemeResult[0] ?? null);
         } catch (loadError) {
           if (!active) return;
           setTeams([]);
           setTeamMembers([]);
+          setNextWeekTheme(null);
           setError(loadError instanceof Error ? loadError.message : 'Could not load teams.');
         } finally {
           if (active) {
             setLoading(false);
+            setThemeLoading(false);
           }
         }
       };
@@ -78,7 +111,7 @@ export default function TeamsScreen() {
       return () => {
         active = false;
       };
-    }, [user]),
+    }, [nextWeekStart, user]),
   );
 
   const joinTeam = useCallback(async () => {
@@ -190,6 +223,28 @@ export default function TeamsScreen() {
     );
   }, [leaveTeam]);
 
+  const submitSuggestion = useCallback(async () => {
+    if (!currentTeam || !nextWeekTheme) return;
+
+    const description = questSuggestion.trim();
+    if (!description) {
+      setSuggestionMessage('Please enter a quest suggestion.');
+      return;
+    }
+
+    setSubmittingSuggestion(true);
+    setSuggestionMessage(null);
+    try {
+      await submitTeamQuestSuggestion(currentTeam.teamId, nextWeekStart, description);
+      setQuestSuggestion('');
+      setSuggestionMessage('Quest suggestion submitted.');
+    } catch (err) {
+      setSuggestionMessage(err instanceof Error ? err.message : 'Could not submit suggestion.');
+    } finally {
+      setSubmittingSuggestion(false);
+    }
+  }, [currentTeam, nextWeekStart, nextWeekTheme, questSuggestion]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -234,6 +289,48 @@ export default function TeamsScreen() {
                   </View>
                 ))}
               </View>
+            </View>
+
+            <View style={styles.suggestionBox}>
+              <Text style={styles.suggestionLabel}>Next week's theme will be:</Text>
+              <Text style={styles.themeText}>
+                {themeLoading
+                  ? 'Loading...'
+                  : nextWeekTheme ?? "Next week's theme is not available yet"}
+              </Text>
+
+              {nextWeekTheme ? (
+                <>
+                  <Text style={styles.suggestionLabel}>Make a quest suggestion:</Text>
+                  <TextInput
+                    value={questSuggestion}
+                    onChangeText={(text) => {
+                      setQuestSuggestion(text);
+                      setSuggestionMessage(null);
+                    }}
+                    placeholder="Write your quest idea"
+                    multiline
+                    style={[styles.input, styles.suggestionInput]}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={submittingSuggestion || !questSuggestion.trim()}
+                    onPress={() => void submitSuggestion()}
+                    style={({ pressed }) => [
+                      styles.submitSuggestionButton,
+                      pressed && !submittingSuggestion && styles.buttonPressed,
+                      (submittingSuggestion || !questSuggestion.trim()) && styles.buttonDisabled,
+                    ]}>
+                    <Text style={styles.submitSuggestionButtonText}>
+                      {submittingSuggestion ? 'Submitting...' : 'Submit'}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
+
+              {suggestionMessage ? (
+                <Text style={styles.suggestionMessage}>{suggestionMessage}</Text>
+              ) : null}
             </View>
           </View>
         ) : null}
@@ -420,6 +517,54 @@ const styles = StyleSheet.create({
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
     color: HavenColors.ink,
+    textAlign: 'left',
+  },
+  suggestionBox: {
+    width: '100%',
+    gap: HavenSpacing.md,
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    paddingVertical: HavenSpacing.lg,
+    paddingHorizontal: HavenSpacing.lg,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.parchmentShadow}`,
+  },
+  suggestionLabel: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.ink,
+    textAlign: 'left',
+  },
+  themeText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.lg,
+    color: HavenColors.ink,
+    textAlign: 'left',
+  },
+  suggestionInput: {
+    minHeight: 96,
+    marginTop: 0,
+    textAlignVertical: 'top',
+  },
+  submitSuggestionButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.lg,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.leatherShadow}`,
+  },
+  submitSuggestionButtonText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.gold,
+    textAlign: 'center',
+  },
+  suggestionMessage: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.md,
+    color: HavenColors.inkSoft,
     textAlign: 'left',
   },
   winsColumn: {
