@@ -43,7 +43,7 @@ export function HallOfFameView({ currentCommunity, user, onBack }: HallOfFameVie
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
             <View style={{ width: postWidth }}>
             
             <View style={styles.communityCard}> 
@@ -53,9 +53,23 @@ export function HallOfFameView({ currentCommunity, user, onBack }: HallOfFameVie
             {/* Image (main content like Instagram post) */}
             <Image
                 source={{ uri: getPublicImageUrl(item.imagePath) }}
-                style={{ width: screenWidth, height: 400 }}
+                style={{ width: postWidth, height: 400 }}
                 resizeMode="cover"
             />
+
+            {/* LEFT arrow */}
+            {index > 0 && (
+            <View style={[styles.swipeArrow, styles.swipeArrowLeft]}>
+                <View style={styles.swipeArrowLeftHead} />
+            </View>
+            )}
+
+            {/* RIGHT arrow */}
+            {index < submissions.length - 1 && (
+                <View style={[styles.swipeArrow, styles.swipeArrowRight]}>
+                <View style={styles.swipeArrowRightHead} />
+                </View>
+            )}
 
             {/* Info section (like caption area) */}
             <View style={{ padding: 12 }}>
@@ -253,5 +267,40 @@ const styles = StyleSheet.create({
   buttonPressed: {
     transform: [{ translateX: ShadowOffset.one }, { translateY: ShadowOffset.one }],
   },
+  swipeArrow: {
+  position: 'absolute',
+  top: '50%',
+  marginTop: -12,
+  opacity: 0.36,
+},
 
+swipeArrowLeft: {
+  left: HavenSpacing.sm,
+},
+
+swipeArrowRight: {
+  right: HavenSpacing.sm,
+},
+
+swipeArrowLeftHead: {
+  width: 0,
+  height: 0,
+  borderTopWidth: 12,
+  borderBottomWidth: 12,
+  borderRightWidth: 14,
+  borderTopColor: 'transparent',
+  borderBottomColor: 'transparent',
+  borderRightColor: HavenColors.ink,
+},
+
+swipeArrowRightHead: {
+  width: 0,
+  height: 0,
+  borderTopWidth: 12,
+  borderBottomWidth: 12,
+  borderLeftWidth: 14,
+  borderTopColor: 'transparent',
+  borderBottomColor: 'transparent',
+  borderLeftColor: HavenColors.ink,
+},
 });
