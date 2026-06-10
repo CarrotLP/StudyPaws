@@ -26,6 +26,7 @@ import {
 
 import { CommunityView } from '@/components/CommunityView';
 import { GalleryView } from '@/components/GalleryView';
+import { getThemeForWeek } from '@/services/weeklyTheme.services';
 
 export default function CommunitiesScreen() {
   const [view, setView] = useState<'community' | 'gallery'>('community');
@@ -41,6 +42,7 @@ export default function CommunitiesScreen() {
   const [communityCode, setCommunityCode] = useState('');
   const currentCommunity = communities[0] ?? null;
   const hasCommunity = Boolean(currentCommunity);
+  const [theme, setTheme] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -78,6 +80,21 @@ export default function CommunitiesScreen() {
       };
 
       void loadCommunities();
+
+      const loadTheme = async () => {
+        try {
+          const themeResult = await getThemeForWeek(
+                    new Date().toISOString()
+                  );
+          
+          if (!active) return;
+          setTheme(themeResult[0] ?? '');
+        } catch (e) {
+          console.log('theme load error', e);
+        }
+      };
+
+      void loadTheme();
 
       return () => {
         active = false;
@@ -210,7 +227,7 @@ export default function CommunitiesScreen() {
         ) : (
           <GalleryView 
             currentCommunity={currentCommunity}
-            theme='Nature'
+            theme={theme}
             onBack={() => setView('community')}/>
         )}
         
