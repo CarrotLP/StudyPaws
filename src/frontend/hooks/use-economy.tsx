@@ -1,78 +1,59 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 
-import {
-    DEFAULT_CHESTS,
-    DEFAULT_POINTS,
-    loadChests,
-    loadPoints,
-    saveChests,
-    savePoints,
-    type ChestCounts,
-    type ChestId,
-} from '../lib/haven-storage';
+import { getUserDetails, addPointsToUser } from '@/backend/services/user.services';
+import { useAuth } from './use-auth';
 
-type EconomyContextValue = {
-  hydrated: boolean;
-  points: number;
-  chests: ChestCounts;
-  /** Add (or subtract, with a negative delta) points; never goes below 0. */
-  addPoints: (delta: number) => void;
-  /** Add or remove (negative n) earned chests of a type; never below 0. */
-  addChest: (id: ChestId, n?: number) => void;
-  /** Reset points + chests to first-launch defaults (dev reset). */
-  resetEconomy: () => void;
-};
-
-const EconomyContext = createContext<EconomyContextValue | null>(null);
-
-export function EconomyProvider({ children }: { children: ReactNode }) {
-  const [hydrated, setHydrated] = useState(false);
-  const [points, setPoints] = useState(DEFAULT_POINTS);
-  const [chests, setChests] = useState<ChestCounts>(DEFAULT_CHESTS);
+/**
+ * Hook to manage user points directly from the database.
+ * No Provider required.
+ */
+export function useEconomy() {
+  const { user } = useAuth();
+  const [points, setPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const isMounted = useRef(false);
 
   useEffect(() => {
-    let mounted = true;
-    Promise.all([loadPoints(), loadChests()]).then(([p, c]) => {
-      if (!mounted) return;
-      setPoints(p);
-      setChests(c);
-      setHydrated(true);
-    });
+    isMounted.current = true;
     return () => {
-      mounted = false;
+      isMounted.current = false;
     };
   }, []);
 
-  useEffect(() => {
-    if (hydrated) savePoints(points);
-  }, [hydrated, points]);
+  const refreshPoints = useCallback(async () => {
+    if (!user) {
+      if (isMounted.current) setPoints(0);
+      return;
+    }
+    try {
+      const details = await getUserDetails(user.id);
+      if (isMounted.current && details) {
+        setPoints(details.points);
+      }
+    } catch (err) {
+      console.error('Failed to fetch points:', err);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (hydrated) saveChests(chests);
-  }, [hydrated, chests]);
+    void refreshPoints();
+  }, [refreshPoints]);
 
-  const addPoints = useCallback((delta: number) => {
-    setPoints((p) => Math.max(0, p + delta));
-  }, []);
+  const addPoints = useCallback(async (delta: number) => {
+    if (!user) return;
+    try {
+      const newTotal = await addPointsToUser(user.id, delta);
+      if (isMounted.current) {
+        setPoints(newTotal);
+      }
+      return newTotal;
+    } catch (err) {
+      console.error('Failed to update points in DB:', err);
+      throw err;
+    }
+  }, [user]);
 
-  const addChest = useCallback((id: ChestId, n = 1) => {
-    setChests((c) => ({ ...c, [id]: Math.max(0, c[id] + n) }));
-  }, []);
-
-  const resetEconomy = useCallback(() => {
-    setPoints(DEFAULT_POINTS);
-    setChests(DEFAULT_CHESTS);
-  }, []);
-
-  return (
-    <EconomyContext.Provider value={{ hydrated, points, chests, addPoints, addChest, resetEconomy }}>
-      {children}
-    </EconomyContext.Provider>
-  );
-}
-
-export function useEconomy() {
-  const ctx = useContext(EconomyContext);
-  if (!ctx) throw new Error('useEconomy must be used within EconomyProvider');
-  return ctx;
+  return { points, addPoints, refreshPoints, loading };
 }

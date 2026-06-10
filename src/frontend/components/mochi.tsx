@@ -12,7 +12,6 @@ import Animated, {
 import { supabase } from '@/backend/lib/supabase';
 
 import { useAuth } from '../hooks/use-auth';
-import { type OutfitState } from '../hooks/use-outfit';
 
 export const LAYER_ORDER = [
   'back_body',
@@ -56,7 +55,6 @@ export const MOCHI_BODY: Record<string, { category: MochiLayerCategory; x: numbe
   rarm: { category: 'front_body', x: shiftRight + 20, y: shiftUp + 100 },
   rfoot: { category: 'body', x: shiftRight + 20, y: shiftUp + 160 },
   lfoot: { category: 'back_body', x: shiftRight + 90, y: shiftUp + 160 },
-//   whirly_eyes: { category: 'front_body', x: shiftRight + 0, y: shiftUp + 0 },
 };
 
 // The base scale factor for all Mochi assets.
@@ -64,7 +62,6 @@ const GLOBAL_MOCHI_SCALE = 0.7;
 
 interface MochiProps {
   id?: string; // If provided, render just this single asset (icon mode)
-  outfit?: OutfitState; // If provided, render the full layered character
   scale?: number;
   silhouette?: boolean;
   // Increment this (e.g. on every cat tap) to make the cat walk for WALK_MS.
@@ -73,20 +70,26 @@ interface MochiProps {
   animate?: boolean;
 }
 
-// How long the cat walks after a tap.
-const WALK_MS = 2500;
-
 export function Mochi({
   id,
-  outfit,
   scale = 1,
   silhouette = false,
   walkSignal,
   animate = false,
 }: MochiProps) {
+  // How long the cat walks after a tap.
+  const WALK_MS = 2500;
   const { user } = useAuth();
   const [layers, setLayers] = useState<MochiAsset[]>([]);
   const finalScale = scale * GLOBAL_MOCHI_SCALE;
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Walk for WALK_MS whenever `walkSignal` changes (i.e. the cat is tapped).
   const [isWalking, setIsWalking] = useState(false);
@@ -94,8 +97,10 @@ export function Mochi({
   useEffect(() => {
     if (!walkSignal) return; // ignore initial 0/undefined
     if (walkTimer.current) clearTimeout(walkTimer.current);
-    setIsWalking(true);
-    walkTimer.current = setTimeout(() => setIsWalking(false), WALK_MS);
+    if (isMounted.current) setIsWalking(true);
+    walkTimer.current = setTimeout(() => {
+      if (isMounted.current) setIsWalking(false);
+    }, WALK_MS);
   }, [walkSignal]);
   useEffect(() => () => {
     if (walkTimer.current) clearTimeout(walkTimer.current);
@@ -104,8 +109,7 @@ export function Mochi({
   // Continuous `animate` OR the timed tap walk.
   const walking = animate || isWalking;
 
-  // Tier 2 walk cycle: a single phase 0 → 2π driving every limb. sin(2π)=sin(0)
-  // so the linear loop is seamless. Hooks run unconditionally (before early returns).
+  // Tier 2 walk cycle: a single phase 0 → 2π driving every limb.
   const phase = useSharedValue(0);
   useEffect(() => {
     if (!walking) {
@@ -120,10 +124,10 @@ export function Mochi({
     );
   }, [phase, walking]);
 
-  const LIFT = 6; // px a foot rises at the top of its step
-  const STRIDE = 7; // px a foot travels forward/back through its step
-  const SWING = 8; // deg the arms swing
-  const TAIL = 6; // deg the tail sways
+  const LIFT = 6;
+  const STRIDE = 7;
+  const SWING = 8;
+  const TAIL = 6;
 
   const bodyStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: bobY(phase.value) }, { translateX: 1.5 * Math.sin(phase.value) }],
@@ -155,177 +159,95 @@ export function Mochi({
     transform: [{ translateY: bobY(phase.value) }, { rotate: `${TAIL * Math.sin(phase.value * 1.5)}deg` }],
   }));
 
-  // Shadow stays planted; unmapped parts (accessories) just bob with the body.
   const styleForPart = (part?: string) => {
     switch (part) {
-      case 'lfoot':
-        return footLeftStyle;
-      case 'rfoot':
-        return footRightStyle;
-      case 'larm':
-        return armLeftStyle;
-      case 'rarm':
-        return armRightStyle;
-      case 'tail':
-        return tailStyle;
-      default:
-        return bodyStyle;
+      case 'lfoot': return footLeftStyle;
+      case 'rfoot': return footRightStyle;
+      case 'larm': return armLeftStyle;
+      case 'rarm': return armRightStyle;
+      case 'tail': return tailStyle;
+      default: return bodyStyle;
     }
   };
 
-  // Refetch on focus (not just on mount/login) so outfit changes made on the
-  // Dress tab show up when returning to a screen whose Mochi stayed mounted.
+  const fetchMochiData = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const getImageSize = (uri: string): Promise<{ width: number; height: number } | null> => {
+        return new Promise((resolve) => {
+          Image.getSize(uri, (width, height) => resolve({ width, height }), () => resolve({ width: 512, height: 512 }));
+        });
+      };
+
+      const { data: userData } = await supabase.from('users').select('character').eq('user_uid', user.id).maybeSingle();
+      if (!userData?.character) return;
+
+      const { data: charData } = await supabase.from('characters').select('*').eq('name', userData.character).maybeSingle();
+      if (!charData) return;
+
+      const bodyPromises = Object.entries(MOCHI_BODY).map(async ([key, config]): Promise<MochiAsset | null> => {
+        const imageUrl = charData[key];
+        if (imageUrl) {
+          const size = await getImageSize(imageUrl);
+          return {
+            source: { uri: imageUrl },
+            category: config.category,
+            x: config.x,
+            y: config.y,
+            width: size?.width,
+            height: size?.height,
+            part: key,
+          };
+        }
+        return null;
+      });
+
+      const bodyResults = await Promise.all(bodyPromises);
+      const resolvedBodyLayers = bodyResults.filter((l): l is MochiAsset => l !== null);
+
+      const { data: userAccessories } = await supabase.from('users_accessories').select('accessory').eq('user', user.id).eq('chosen', true);
+      const accessoryLayers: MochiAsset[] = [];
+      if (userAccessories && userAccessories.length > 0) {
+        const accessoryNames = userAccessories.map((ua) => ua.accessory);
+        const { data: components } = await supabase.from('accessories_components').select('components').in('accessory_name', accessoryNames);
+        if (components && components.length > 0) {
+          const componentNames = components.map((c) => c.components).filter((c): c is string => !!c);
+          const { data: compData } = await supabase.from('components').select('image, x, y, layer, image_name').in('image_name', componentNames);
+          if (compData) {
+            const accPromises = compData.map(async (c): Promise<MochiAsset | null> => {
+              const size = await getImageSize(c.image);
+              return { source: { uri: c.image }, category: c.layer as MochiLayerCategory, x: Number(c.x) + shiftRight, y: Number(c.y) + shiftUp, width: size?.width, height: size?.height };
+            });
+            const accResults = await Promise.all(accPromises);
+            const resolvedAcc = accResults.filter((l): l is MochiAsset => l !== null);
+            accessoryLayers.push(...resolvedAcc);
+          }
+        }
+      }
+
+      if (isMounted.current) {
+        setLayers([...resolvedBodyLayers, ...accessoryLayers]);
+      }
+    } catch (err) {
+      console.error('Error fetching Mochi data:', err);
+    }
+  }, [user]);
+
   useFocusEffect(
     useCallback(() => {
-    async function fetchMochiData() {
-      if (!user) return;
-
-      try {
-        // Returns null if the image can't be loaded (e.g. the file is missing in
-        // the bucket) so the caller can SKIP that layer rather than rendering a
-        // giant 512x512 fallback box that throws off the whole composite.
-        const getImageSize = (
-          uri: string,
-        ): Promise<{ width: number; height: number } | null> => {
-          return new Promise((resolve) => {
-            Image.getSize(
-              uri,
-              (width, height) => resolve({ width, height }),
-              () => resolve({ width: 512, height: 512 }), // Fallback
-            );
-          });
-        };
-
-        // 1. Find the character the user has chosen. maybeSingle() returns null
-        //    (instead of throwing) when the users row doesn't exist yet.
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('character')
-          .eq('user_uid', user.id)
-          .maybeSingle();
-
-        if (userError) throw userError;
-        if (!userData?.character) {
-          console.warn('Mochi: no users row / character for this user yet.');
-          return;
-        }
-
-        // 2. Get the images for that character's body component images
-        const { data: charData, error: charError } = await supabase
-          .from('characters')
-          .select('*')
-          .eq('name', userData.character)
-          .maybeSingle();
-
-        if (charError) throw charError;
-        if (!charData) {
-          console.warn(`Mochi: no characters row named "${userData.character}".`);
-          return;
-        }
-
-        const bodyLayers: MochiAsset[] = [];
-        const bodyPromises: Promise<MochiAsset | null>[] = Object.entries(MOCHI_BODY).map(async ([key, config]) => {
-          const imageUrl = charData[key];
-          if (imageUrl) {
-            const size = await getImageSize(imageUrl);
-            if (!size) return null; // missing file → skip this layer
-            return {
-              source: { uri: imageUrl },
-              category: config.category,
-              x: config.x,
-              y: config.y,
-              width: size.width,
-              height: size.height,
-              part: key,
-            };
-          }
-          return null;
-        });
-
-        const resolvedBodyLayers = (await Promise.all(bodyPromises)).filter(
-          (l): l is MochiAsset => !!l,
-        );
-
-        // 3. Load any accessories associated with the user
-        const { data: userAccessories, error: accError } = await supabase
-          .from('users_accessories')
-          .select('accessory')
-          .eq('user', user.id)
-          .eq('chosen', true);
-
-        const accessoryLayers: MochiAsset[] = [];
-        if (!accError && userAccessories && userAccessories.length > 0) {
-          const accessoryNames = userAccessories.map((ua) => ua.accessory);
-
-          const { data: components, error: compError } = await supabase
-            .from('accessories_components')
-            .select('components')
-            .in('accessory_name', accessoryNames);
-
-          if (!compError && components && components.length > 0) {
-            const componentNames = components
-              .map((c) => c.components)
-              .filter((c): c is string => !!c);
-
-            const { data: compData, error: compDataError } = await supabase
-              .from('components')
-              .select('image, x, y, layer, image_name')
-              .in('image_name', componentNames);
-
-            if (!compDataError && compData) {
-              const accPromises = compData.map(async (c): Promise<MochiAsset | null> => {
-                const size = await getImageSize(c.image);
-                if (!size) return null; // missing file → skip
-                return {
-                  source: { uri: c.image },
-                  category: c.layer as MochiLayerCategory,
-                  x: Number(c.x) + shiftRight,
-                  y: Number(c.y) + shiftUp, // Apply the same vertical offset as body parts
-                  width: size.width,
-                  height: size.height,
-                };
-              });
-              const resolvedAccLayers = (await Promise.all(accPromises)).filter(
-                (l): l is MochiAsset => !!l,
-              );
-              accessoryLayers.push(...resolvedAccLayers);
-            }
-          }
-        }
-
-        setLayers([...resolvedBodyLayers, ...accessoryLayers]);
-      } catch (err) {
-        console.error('Error fetching Mochi data:', err);
-      }
-    }
-
-      fetchMochiData();
-    }, [user]),
+      void fetchMochiData();
+    }, [fetchMochiData]),
   );
 
-  const sortedLayers = [...layers].sort((a, b) => {
-    return LAYER_ORDER.indexOf(a.category) - LAYER_ORDER.indexOf(b.category);
-  });
-
+  const sortedLayers = [...layers].sort((a, b) => LAYER_ORDER.indexOf(a.category) - LAYER_ORDER.indexOf(b.category));
   if (layers.length === 0) return null;
 
-  // Tight bounding box across ALL layers (in design pixels). Using min AND max
-  // lets us shift the artwork so it sits centered in the container with equal
-  // padding on every side — otherwise positive x/y offsets push it off-centre.
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   sortedLayers.forEach((layer) => {
-    const w = layer.width ?? 512;
-    const h = layer.height ?? 512;
-    const x = layer.x ?? 0;
-    const y = layer.y ?? 0;
-    if (x < minX) minX = x;
-    if (y < minY) minY = y;
-    if (x + w > maxX) maxX = x + w;
-    if (y + h > maxY) maxY = y + h;
+    const w = layer.width ?? 512, h = layer.height ?? 512, x = layer.x ?? 0, y = layer.y ?? 0;
+    if (x < minX) minX = x; if (y < minY) minY = y;
+    if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
   });
 
   const padding = 20 * finalScale;
@@ -337,34 +259,16 @@ export function Mochi({
       {sortedLayers.map((layer, index) => {
         const width = (layer.width ?? 512) * finalScale;
         const height = (layer.height ?? 512) * finalScale;
-
-        // Position relative to the tight bounding box's top-left, plus padding.
         const x = ((layer.x ?? 0) - minX) * finalScale + padding;
         const y = ((layer.y ?? 0) - minY) * finalScale + padding;
+        const imageStyle = { width, height, tintColor: silhouette ? '#3A2418' : undefined } as const;
 
-        const imageStyle = {
-          width,
-          height,
-          tintColor: silhouette ? '#3A2418' : undefined,
-        } as const;
-
-        // Static when not walking, and the shadow is always static (stays planted).
         if (!walking || layer.part === 'shadow') {
-          return (
-            <Image
-              key={`${index}-${layer.category}-${layer.source.uri || index}`}
-              source={layer.source}
-              style={{ position: 'absolute', left: x, top: y, ...imageStyle }}
-            />
-          );
+          return <Image key={`${index}-${layer.category}-${layer.source.uri || index}`} source={layer.source} style={{ position: 'absolute', left: x, top: y, ...imageStyle }} />;
         }
 
-        // Each moving part sits in an Animated.View at its own position, so its
-        // transform pivots around the limb, not the whole cat.
         return (
-          <Animated.View
-            key={`${index}-${layer.category}-${layer.source.uri || index}`}
-            style={[{ position: 'absolute', left: x, top: y, width, height }, styleForPart(layer.part)]}>
+          <Animated.View key={`${index}-${layer.category}-${layer.source.uri || index}`} style={[{ position: 'absolute', left: x, top: y, width, height }, styleForPart(layer.part)]}>
             <Image source={layer.source} style={imageStyle} />
           </Animated.View>
         );

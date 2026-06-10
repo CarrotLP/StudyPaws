@@ -12,8 +12,6 @@ import RegisterScreen from './register';
 import { WinnerAnnouncementOverlay } from '@/components/WinnerAnnouncementOverlay';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { DailyQuestProvider } from '@/hooks/use-daily-quest';
-import { EconomyProvider } from '@/hooks/use-economy';
-import { OutfitProvider } from '@/hooks/use-outfit';
 import { StudyHistoryProvider } from '@/hooks/use-study-history';
 import { StudySessionProvider } from '@/hooks/use-study-session';
 
@@ -66,17 +64,13 @@ function AuthGate() {
 
   return (
     <DailyQuestProvider>
-      <EconomyProvider>
-        <StudyHistoryProvider>
-          <OutfitProvider>
-            <StudySessionProvider>
-              <AnimatedSplashOverlay />
-              <AppTabs />
-              <WinnerAnnouncementOverlay />
-            </StudySessionProvider>
-          </OutfitProvider>
-        </StudyHistoryProvider>
-      </EconomyProvider>
+      <StudyHistoryProvider>
+        <StudySessionProvider>
+          <AnimatedSplashOverlay />
+          <AppTabs />
+          <WinnerAnnouncementOverlay />
+        </StudySessionProvider>
+      </StudyHistoryProvider>
     </DailyQuestProvider>
   );
 }

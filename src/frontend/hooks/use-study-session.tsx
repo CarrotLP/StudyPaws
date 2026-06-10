@@ -96,7 +96,6 @@ const BREAK_MAX = 30 * 60;
 
 type SessionState = {
   hydrated: boolean;
-  points: number;
   todayMinutes: number;
   phase: SessionPhase;
   studyDuration: number;
@@ -134,7 +133,7 @@ const ActionsContext = createContext<SessionActions | null>(null);
 
 export function StudySessionProvider({ children }: { children: ReactNode }) {
   const { todayMinutes, addMinutesToday } = useStudyHistory();
-  const { points, addPoints, addChest } = useEconomy();
+  const { addPoints } = useEconomy();
 
   const [hydrated, setHydrated] = useState(false);
   const [phase, setPhase] = useState<SessionPhase>('idle');
@@ -242,12 +241,18 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     if (phase === 'studying') {
       const studiedMinutes = Math.ceil((intendedDuration ?? studyDuration) / 60);
       addMinutesToday(studiedMinutes);
-      addPoints(STUDY_REWARD_POINTS);
-      addChest('small');
-      showToast(`Focus complete · +${STUDY_REWARD_POINTS} ✦ · +1 chest`);
-      setPhase('break_intro');
+
+      // Stop the timer immediately
       setStartedAt(null);
       setIntendedDuration(null);
+
+      // Await point update before triggering the phase transition/UI refresh
+      const handleCompletion = async () => {
+        await addPoints(STUDY_REWARD_POINTS);
+        showToast(`Focus complete · +${STUDY_REWARD_POINTS} ✦`);
+        setPhase('break_intro');
+      };
+      handleCompletion();
     } else {
       // break_active timer hit zero.
       setStartedAt(null);
@@ -258,7 +263,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         setPhase('break_expired_prompt');
       }
     }
-  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday, addPoints, addChest]);
+  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday, addPoints]);
 
   useEffect(() => {
     return () => {
@@ -325,9 +330,12 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     if (!breakHabitId) return;
     const habit = HABITS.find((h) => h.id === breakHabitId);
     if (habit && !completedBreakHabits.includes(habit.id)) {
-      addPoints(habit.pts);
-      setCompletedBreakHabits((prev) => [...prev, habit.id]);
-      showToast(`${habit.name} · +${habit.pts} ✦`);
+      const finishActivity = async () => {
+        await addPoints(habit.pts);
+        setCompletedBreakHabits((prev) => [...prev, habit.id]);
+        showToast(`${habit.name} · +${habit.pts} ✦`);
+      };
+      finishActivity();
     }
     setBreakHabitId(null);
     if (breakExpiredWhileInActivity) {
@@ -364,7 +372,6 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
 
   const state: SessionState = {
     hydrated,
-    points,
     todayMinutes,
     phase,
     studyDuration,

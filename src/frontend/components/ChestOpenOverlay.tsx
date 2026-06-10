@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -29,11 +29,11 @@ type ChestOpenOverlayProps = {
   visible: boolean;
   stage: ChestStage;
   chestColor: string;
-  rewardId: ItemId | null;
+  reward: { name: string; image: string } | null;
   onClaim: () => void;
 };
 
-export function ChestOpenOverlay({ visible, stage, chestColor, rewardId, onClaim }: ChestOpenOverlayProps) {
+export function ChestOpenOverlay({ visible, stage, chestColor, reward, onClaim }: ChestOpenOverlayProps) {
   const chestScale = useSharedValue(1);
   const itemScale = useSharedValue(0);
   const dots = useSharedValue(0.4);
@@ -70,7 +70,7 @@ export function ChestOpenOverlay({ visible, stage, chestColor, rewardId, onClaim
   const itemStyle = useAnimatedStyle(() => ({ transform: [{ scale: itemScale.value }] }));
   const dotsStyle = useAnimatedStyle(() => ({ opacity: dots.value }));
 
-  const rewardName = rewardId ? (ALL_ITEMS.find((i) => i.id === rewardId)?.name ?? '') : '';
+  const rewardName = reward?.name ?? '';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClaim}>
@@ -92,9 +92,9 @@ export function ChestOpenOverlay({ visible, stage, chestColor, rewardId, onClaim
                 <PixelChest color={chestColor} scale={PixelScale.chestOverlay} open />
               </Animated.View>
               <Text style={styles.section}>obtained!</Text>
-              {rewardId && (
+              {reward && (
                 <Animated.View style={[styles.revealItem, itemStyle]}>
-                  <Mochi id={rewardId} scale={0.75} />
+                  <Image source={{ uri: reward.image }} style={{ width: 120, height: 120 }} />
                 </Animated.View>
               )}
               <Text style={styles.itemName}>{rewardName}</Text>
