@@ -1,12 +1,21 @@
 import { supabase } from '@/backend/lib/supabase';
 import { findWeekStart } from '@/lib/storage';
 import { Alert } from 'react-native';
+import { getThemeForWeek } from './weeklyTheme.services';
 
 const GALLERY_BUCKET = 'gallery';
 export type Submission = {
   userId: string,
   photoUri: string
   submissionId: string
+}
+
+export type CommunityWinner = {
+  weekStart: string,
+  imagePath: string,
+  user: string,
+  votes: number,
+  theme: string
 }
 
 export async function uploadSubmissionToCommunity(
@@ -104,3 +113,51 @@ export async function getUserCommunityQuestLikes(userId: string): Promise<string
   return (submissions ?? []).map((row) => row.submission);
 
 }
+
+export async function getSubmissionById(submissionId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('community_quest_submissions')
+    .select('image_path')
+    .eq('submission_uid', submissionId)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data.image_path;
+}
+
+export async function getCommunityWinners(communityId: string): Promise<CommunityWinner[]> {
+  const { data, error } = await supabase
+    .from('community_quest_winners')
+    .select('week_start, submission, user, votes')
+    .eq('community', communityId);
+  if (error) throw error;
+
+  const winners = await Promise.all(
+    (data ?? []).map(async (row) => {
+      const photoUri = await getSubmissionById(row.submission);
+      const theme = await getThemeForWeek(row.week_start);
+
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('user_uid', row.user)
+        .single();
+
+      if (userError) throw userError;
+
+      return {
+        weekStart: row.week_start,
+        user: userData.name,
+        votes: row.votes,
+        imagePath: photoUri,
+        theme,
+      };
+    })
+);
+
+  return winners
+}
+

@@ -17,9 +17,10 @@ type CommunityViewProps = {
   leaving: boolean;
   confirmLeaveCommunity: () => void;
   onOpenGallery: () => void;
+  onOpenHallOfFame: () => void;
 };
 
-export function CommunityView({ currentCommunity, loading, leaving, confirmLeaveCommunity, onOpenGallery }: CommunityViewProps) {
+export function CommunityView({ currentCommunity, loading, leaving, confirmLeaveCommunity, onOpenGallery, onOpenHallOfFame }: CommunityViewProps) {
   return (
     <>
     <View style={styles.communityList}>    
@@ -49,7 +50,7 @@ export function CommunityView({ currentCommunity, loading, leaving, confirmLeave
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
-                      onPress={() => {}}
+                      onPress={onOpenHallOfFame}
                       style={({ pressed }) => [
                         styles.joinButton,
                         pressed && styles.buttonPressed,

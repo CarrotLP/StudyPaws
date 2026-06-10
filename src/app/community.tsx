@@ -26,10 +26,11 @@ import {
 
 import { CommunityView } from '@/components/CommunityView';
 import { GalleryView } from '@/components/GalleryView';
+import { HallOfFameView } from '@/components/HallOfFameView';
 import { getThemeForWeek } from '@/services/weeklyTheme.services';
 
 export default function CommunitiesScreen() {
-  const [view, setView] = useState<'community' | 'gallery'>('community');
+  const [view, setView] = useState<'community' | 'gallery' | 'hallOfFame'>('community');
   const { user } = useAuth();
   const [communities, setCommunities] = useState<UserCommunity[]>([]);
   const [communityMembers, setCommunityMembers] = useState<CommunityUser[]>([]);
@@ -88,7 +89,7 @@ export default function CommunitiesScreen() {
                   );
           
           if (!active) return;
-          setTheme(themeResult[0] ?? '');
+          setTheme(themeResult ?? '');
         } catch (e) {
           console.log('theme load error', e);
         }
@@ -223,13 +224,20 @@ export default function CommunitiesScreen() {
             loading={loading}
             leaving={leaving}
             confirmLeaveCommunity={confirmLeaveCommunity}
-            onOpenGallery={() => setView('gallery')}/>
-        ) : (
+            onOpenGallery={() => setView('gallery')}
+            onOpenHallOfFame={() => setView('hallOfFame')}/>
+        ) : view === 'gallery' ? (
           <GalleryView 
             currentCommunity={currentCommunity}
             theme={theme}
             user={user}
             onBack={() => setView('community')}/>
+        ) : (
+          <HallOfFameView
+            currentCommunity={currentCommunity}
+            user={user}
+            onBack={() => setView('community')}
+          />
         )}
         
 
