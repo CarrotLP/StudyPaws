@@ -1,59 +1,60 @@
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 
 import { getUserDetails } from '@/backend/services/user.services';
+import type { MochiPersonality } from '@/services/mochiQuotes.services';
 import { useAuth } from './use-auth';
 
 type UseUserResult = {
   petName: string | null;
+  personality: MochiPersonality | null;
   loading: boolean;
   error: Error | null;
+  refresh: () => Promise<void>;
 };
 
 /**
- * Hook to fetch the current user's pet name from the users table.
- * Returns "Mochi" (default) if not yet loaded or if the user is not authenticated.
+ * Hook to fetch the current user's details (pet name, personality) from the
+ * users table.
+ *
+ * Re-fetches whenever the screen using it gains focus. This matters because the
+ * tabs stay mounted, so a plain mount-only effect would never pick up changes
+ * made on another tab (e.g. choosing a new personality in Settings).
  */
 export function useUser(): UseUserResult {
   const { user } = useAuth();
   const [petName, setPetName] = useState<string | null>(null);
+  const [personality, setPersonality] = useState<MochiPersonality | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-
+  const refresh = useCallback(async () => {
     if (!user?.id) {
       setPetName(null);
+      setPersonality(null);
       setLoading(false);
       return;
     }
 
-    const fetchUserDetails = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const details = await getUserDetails(user.id);
-        if (mounted) {
-          setPetName(details?.pet_name ?? null);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch user details'));
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void fetchUserDetails();
-
-    return () => {
-      mounted = false;
-    };
+    setLoading(true);
+    setError(null);
+    try {
+      const details = await getUserDetails(user.id);
+      setPetName(details?.pet_name ?? null);
+      setPersonality(details?.personality ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch user details'));
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id]);
 
-  return { petName, loading, error };
+  // Refetch on every focus (and on first focus / user change).
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
+  return { petName, personality, loading, error, refresh };
 }
