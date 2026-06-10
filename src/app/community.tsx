@@ -228,6 +228,7 @@ export default function CommunitiesScreen() {
           <GalleryView 
             currentCommunity={currentCommunity}
             theme={theme}
+            user={user}
             onBack={() => setView('community')}/>
         )}
         
