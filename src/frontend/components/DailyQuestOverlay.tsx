@@ -99,8 +99,11 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
       await saveQuestSubmission(user.id, quest.questDate, capturedUri);
       markSubmittedToday();
       setCompleted(true);
-    } catch {
-      Alert.alert('Photo could not be saved', 'Please try again.');
+    } catch (saveError) {
+      Alert.alert(
+        'Photo could not be saved',
+        saveError instanceof Error ? saveError.message : 'Please try again.',
+      );
     } finally {
       setTakingPhoto(false);
     }

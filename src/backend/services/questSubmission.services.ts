@@ -3,6 +3,17 @@ import { supabase } from '@/backend/lib/supabase';
 
 const GALLERY_BUCKET = 'gallery';
 
+function formatSupabaseError(error: { message: string; details?: string; hint?: string; code?: string }) {
+  return [
+    error.message,
+    error.details ? `Details: ${error.details}` : null,
+    error.hint ? `Hint: ${error.hint}` : null,
+    error.code ? `Code: ${error.code}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export async function saveQuestSubmission(
   userId: string,
   questDate: string,
@@ -16,7 +27,7 @@ export async function saveQuestSubmission(
     .upload(imagePath, imageData, { contentType: 'image/jpeg' });
 
   if (uploadError) {
-    throw uploadError;
+    throw new Error(formatSupabaseError(uploadError));
   }
 
   const { error: submissionError } = await supabase.from('quest_submissions').insert({
@@ -26,7 +37,7 @@ export async function saveQuestSubmission(
   });
 
   if (submissionError) {
-    throw submissionError;
+    throw new Error(formatSupabaseError(submissionError));
   }
 
   return getPublicImageUrl(imagePath);
