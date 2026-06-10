@@ -186,16 +186,25 @@ export function Mochi({
       const { data: charData } = await supabase.from('characters').select('*').eq('name', userData.character).maybeSingle();
       if (!charData) return;
 
-      const bodyPromises = Object.entries(MOCHI_BODY).map(async ([key, config]) => {
+      const bodyPromises = Object.entries(MOCHI_BODY).map(async ([key, config]): Promise<MochiAsset | null> => {
         const imageUrl = charData[key];
         if (imageUrl) {
           const size = await getImageSize(imageUrl);
-          return { source: { uri: imageUrl }, category: config.category, x: config.x, y: config.y, width: size?.width, height: size?.height, part: key };
+          return {
+            source: { uri: imageUrl },
+            category: config.category,
+            x: config.x,
+            y: config.y,
+            width: size?.width,
+            height: size?.height,
+            part: key,
+          };
         }
         return null;
       });
 
-      const resolvedBodyLayers = (await Promise.all(bodyPromises)).filter((l): l is MochiAsset => !!l);
+      const bodyResults = await Promise.all(bodyPromises);
+      const resolvedBodyLayers = bodyResults.filter((l): l is MochiAsset => l !== null);
 
       const { data: userAccessories } = await supabase.from('users_accessories').select('accessory').eq('user', user.id).eq('chosen', true);
       const accessoryLayers: MochiAsset[] = [];
@@ -210,7 +219,9 @@ export function Mochi({
               const size = await getImageSize(c.image);
               return { source: { uri: c.image }, category: c.layer as MochiLayerCategory, x: Number(c.x) + shiftRight, y: Number(c.y) + shiftUp, width: size?.width, height: size?.height };
             });
-            accessoryLayers.push(...(await Promise.all(accPromises)).filter((l): l is MochiAsset => !!l));
+            const accResults = await Promise.all(accPromises);
+            const resolvedAcc = accResults.filter((l): l is MochiAsset => l !== null);
+            accessoryLayers.push(...resolvedAcc);
           }
         }
       }
