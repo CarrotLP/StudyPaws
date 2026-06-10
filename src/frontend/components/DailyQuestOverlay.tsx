@@ -28,7 +28,7 @@ type DailyQuestOverlayProps = {
 
 export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestOverlayProps) {
   const { user } = useAuth();
-  const { loading: questLoading, quest, deadlines, hasSubmittedToday, markSubmittedToday } =
+  const { loading: questLoading, quest, deadlines, hasSubmittedToday, error, refresh, markSubmittedToday } =
     useDailyQuest();
   const [completed, setCompleted] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
@@ -44,8 +44,11 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
       setTakingPhoto(false);
       setPhotoUri(null);
       setPhotoError(false);
+      return;
     }
-  }, [visible]);
+
+    void refresh();
+  }, [visible, refresh]);
 
   // We're not using <Modal>, so wire Android's back button manually.
   useEffect(() => {
@@ -96,8 +99,11 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
       await saveQuestSubmission(user.id, quest.questDate, capturedUri);
       markSubmittedToday();
       setCompleted(true);
-    } catch {
-      Alert.alert('Photo could not be saved', 'Please try again.');
+    } catch (saveError) {
+      Alert.alert(
+        'Photo could not be saved',
+        saveError instanceof Error ? saveError.message : 'Please try again.',
+      );
     } finally {
       setTakingPhoto(false);
     }
@@ -172,7 +178,7 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
             <Text style={styles.description}>
               {questLoading
                 ? 'Loading today’s quest...'
-                : quest?.description ?? 'No daily quest is available today.'}
+                : quest?.description ?? error ?? 'No daily quest is available today.'}
             </Text>
             <Pressable
               accessibilityLabel="Take photo"

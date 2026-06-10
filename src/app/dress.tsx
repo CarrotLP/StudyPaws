@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 
 import { Mochi } from '@/components/mochi';
 import {
@@ -40,9 +41,12 @@ export default function DressScreen() {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchAccessories();
-  }, [fetchAccessories]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchAccessories();
+      setRefreshKey(prev => prev + 1);
+    }, [fetchAccessories])
+  );
 
   const onEquip = async (item: UserAccessory) => {
     if (!user) return;

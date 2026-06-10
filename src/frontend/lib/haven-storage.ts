@@ -1,7 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { type ItemId } from '../components/itemSprites';
-
 export type SessionPhase =
   | 'idle'
   | 'studying'
@@ -11,15 +9,12 @@ export type SessionPhase =
   | 'finished';
 export type HabitId = 'phoneoff' | 'stretch' | 'steps' | 'water' | 'dailyquest';
 export type StudyHistory = Record<string, number>; // YYYY-MM-DD -> study minutes
-export type ChestId = 'small' | 'ornate';
-export type ChestCounts = { small: number; ornate: number };
 
 /**
  * The persisted study session. `startedAt` is wall-clock epoch ms and
  * `intendedDuration` is the timer length in seconds, so remaining time is always
  * recomputed from the clock — never from a counter that pauses when the app is
- * suspended. Points, chests, history, owned, and outfit each live under their
- * own keys (below) so they can be shared across screens via context.
+ * suspended.
  */
 export type PersistedSession = {
   phase: SessionPhase;
@@ -42,11 +37,8 @@ export const DEFAULT_SESSION: PersistedSession = {
   breakDuration: DEFAULT_BREAK_DURATION,
 };
 
-export const DEFAULT_POINTS = 245;
-export const DEFAULT_CHESTS: ChestCounts = { small: 1, ornate: 0 };
-
 // Prototype starting wardrobe: owns all pixel items.
-export const DEFAULT_OWNED: ItemId[] = [
+export const DEFAULT_OWNED: string[] = [
   'scarf',
   'beret',
   'glasses',
@@ -69,8 +61,6 @@ export type QuestPhotoMap = Record<string, string>;
 
 // Every AsyncStorage key is defined here once and imported elsewhere.
 const SESSION_KEY = 'haven.session';
-const POINTS_KEY = 'haven.points';
-const CHESTS_KEY = 'haven.chests';
 const STUDY_HISTORY_KEY = 'haven.studyHistory';
 const FIRST_LAUNCH_KEY = 'haven.firstLaunchDone';
 const OWNED_KEY = 'haven.owned';
@@ -101,23 +91,6 @@ export async function loadSession(): Promise<PersistedSession> {
 
 export function saveSession(session: PersistedSession): Promise<void> {
   return writeJSON(SESSION_KEY, session);
-}
-
-export async function loadPoints(): Promise<number> {
-  return readJSON<number>(POINTS_KEY, DEFAULT_POINTS);
-}
-
-export function savePoints(points: number): Promise<void> {
-  return writeJSON(POINTS_KEY, points);
-}
-
-export async function loadChests(): Promise<ChestCounts> {
-  const parsed = await readJSON<Partial<ChestCounts>>(CHESTS_KEY, {});
-  return { ...DEFAULT_CHESTS, ...parsed };
-}
-
-export function saveChests(chests: ChestCounts): Promise<void> {
-  return writeJSON(CHESTS_KEY, chests);
 }
 
 export async function loadStudyHistory(): Promise<StudyHistory> {

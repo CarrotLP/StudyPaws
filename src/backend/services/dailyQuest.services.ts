@@ -5,23 +5,35 @@ export type DailyQuestRecord = {
   description: string;
 };
 
-export async function getQuestForDate(questDate: string): Promise<DailyQuestRecord | null> {
-  const { data, error } = await supabase
-    .from('daily_quests')
-    .select('quest_date, description')
-    .eq('quest_date', questDate)
-    .maybeSingle();
+export async function getQuestForTeamDate(
+  teamId: string,
+  questDate: string,
+): Promise<DailyQuestRecord | null> {
+  const { data, error } = await supabase.rpc('get_or_create_team_daily_quest', {
+    p_team: teamId,
+    p_quest_date: questDate,
+  });
 
   if (error) {
-    throw error;
+    throw new Error(
+      [
+        error.message,
+        error.details ? `Details: ${error.details}` : null,
+        error.hint ? `Hint: ${error.hint}` : null,
+        error.code ? `Code: ${error.code}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
   }
 
-  if (!data) {
+  const quest = data?.[0];
+  if (!quest) {
     return null;
   }
 
   return {
-    questDate: data.quest_date,
-    description: data.description,
+    questDate: quest.quest_date,
+    description: quest.description,
   };
 }

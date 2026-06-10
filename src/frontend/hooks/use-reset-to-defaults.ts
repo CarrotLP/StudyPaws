@@ -1,26 +1,32 @@
 import { useCallback } from 'react';
 
 import { useEconomy } from './use-economy';
-import { useOutfit } from './use-outfit';
 import { useStudyHistory } from './use-study-history';
 import { useStudySessionActions } from './use-study-session';
+import { updateUserPoints } from '@/backend/services/user.services';
+import { useAuth } from './use-auth';
 
 /**
- * DEV reset: restore first-launch defaults for points, chests, owned items,
- * outfit, and TODAY's study minutes. Every prior day in the history map and the
- * "first launch" sentinel are left untouched. Each provider persists its own
- * slice via its save-on-change effect, so the reset survives a relaunch.
+ * DEV reset: restore defaults for TODAY's study minutes and points.
  */
 export function useResetToDefaults() {
-  const { resetEconomy } = useEconomy();
-  const { resetOutfit } = useOutfit();
+  const { user } = useAuth();
+  const { refreshPoints } = useEconomy();
   const { resetToday } = useStudyHistory();
   const { stopSession } = useStudySessionActions();
 
-  return useCallback(() => {
-    stopSession(); // cancel any in-progress session like "give up" — no award
-    resetEconomy(); // points -> 245, chests -> { small: 1, ornate: 0 }
-    resetOutfit(); // owned -> [scarf, glasses], outfit -> default
-    resetToday(); // today's minutes -> 0 (prior days preserved)
-  }, [stopSession, resetEconomy, resetOutfit, resetToday]);
+  return useCallback(async () => {
+    stopSession(); // cancel any in-progress session
+    resetToday(); // today's minutes -> 0
+
+    if (user) {
+      const DEFAULT_POINTS = 300;
+      try {
+        await updateUserPoints(user.id, DEFAULT_POINTS);
+        await refreshPoints();
+      } catch (err) {
+        console.error('Failed to reset points:', err);
+      }
+    }
+  }, [stopSession, resetToday, user, refreshPoints]);
 }

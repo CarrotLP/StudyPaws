@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChestOpenOverlay, type ChestStage } from '@/components/ChestOpenOverlay';
 import { DevAddPointsButton } from '@/components/DevAddPointsButton';
-import { Mochi } from '@/components/mochi';
-import { ALL_ITEMS, type ItemId } from '@/components/itemSprites';
+import { DevRemoveCrownButton } from '@/components/DevRemoveCrownButton';
+import { type ItemId } from '@/components/itemSprites';
 import { PixelChest } from '@/components/PixelChest';
 import { Toast } from '@/components/Toast';
 import {
@@ -22,36 +22,45 @@ import {
     ShadowOffset,
 } from '@/constants/havenTheme';
 import { useEconomy } from '@/hooks/use-economy';
-import { useOutfit } from '@/hooks/use-outfit';
-import { type ChestId } from '@/lib/haven-storage';
+import { useAccessories } from '@/hooks/use-accessories';
+import { useAuth } from '@/hooks/use-auth';
+import { getChests, type ChestReward } from '@/backend/services/chest.services';
+import { removeAccessoryFromUser } from '@/backend/services/accessory.services';
 
 type Chest = {
-  id: ChestId;
   name: string;
   cost: number;
   color: string;
-  pool: ItemId[];
+  pool: ChestReward[];
 };
-
-// Defined in the prototype's CHESTS array. The pool is fully visible (hard rule 2).
-const CHESTS: Chest[] = [
-  { id: 'small', name: 'Small Chest', cost: 100, color: ChestColors.small, pool: ['scarf', 'bowtie', 'glasses', 'bandana'] },
-  { id: 'ornate', name: 'Ornate Chest', cost: 250, color: ChestColors.ornate, pool: ['beret', 'flower', 'sweater', 'monocle', 'crown'] },
-];
 
 const DUPLICATE_REFUND = 25;
 
-type Opening = { chest: Chest; stage: ChestStage; reward: ItemId };
+type Opening = { chest: Chest; stage: ChestStage; reward: ChestReward };
 
 export default function TreasureScreen() {
-  const { points, chests, addPoints, addChest } = useEconomy();
-  const { owned, addOwned } = useOutfit();
+  const { user } = useAuth();
+  const { points, addPoints, refreshPoints } = useEconomy();
+  const { owned, addOwned, refreshOwned } = useAccessories();
 
   const [opening, setOpening] = useState<Opening | null>(null);
+  const [chestList, setChestList] = useState<Chest[]>([]);
   const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
 
   const stageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    getChests().then(data => {
+      const mapped = data.map(c => ({
+        name: c.name,
+        cost: c.price,
+        color: ChestColors.small,
+        pool: c.pool
+      }));
+      setChestList(mapped);
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -66,19 +75,14 @@ export default function TreasureScreen() {
     toastTimer.current = setTimeout(() => setToast(null), Durations.toastVisible);
   };
 
-  const openChest = (chest: Chest, source: 'earned' | 'purchase') => {
+  const openChest = (chest: Chest) => {
     if (opening) return;
-    if (source === 'earned') {
-      if ((chests[chest.id] ?? 0) <= 0) return;
-      addChest(chest.id, -1);
-    } else {
-      if (points < chest.cost) return;
-      addPoints(-chest.cost);
-    }
+    if (points < chest.cost) return;
+    addPoints(-chest.cost);
 
     // Roll: prefer unowned items; only fall back to the full pool if the user
     // already owns everything in it. Uniform pick — no weighting (hard rule 2).
-    const unowned = chest.pool.filter((id) => !owned.includes(id));
+    const unowned = chest.pool.filter((item) => !owned.includes(item.name));
     const pickFrom = unowned.length ? unowned : chest.pool;
     const reward = pickFrom[Math.floor(Math.random() * pickFrom.length)];
 
@@ -89,17 +93,28 @@ export default function TreasureScreen() {
     }, Durations.chestOpenToReveal);
   };
 
-  const claimReward = () => {
+  const claimReward = async () => {
     if (!opening) return;
     const { reward } = opening;
-    if (!owned.includes(reward)) {
-      addOwned(reward);
-      showToast(`Obtained · ${ALL_ITEMS.find((i) => i.id === reward)?.name ?? ''}`);
+    if (!owned.includes(reward.name)) {
+      await addOwned(reward.name);
+      showToast(`Obtained · ${reward.name}`);
     } else {
-      addPoints(DUPLICATE_REFUND);
+      await addPoints(DUPLICATE_REFUND);
       showToast(`Duplicate · +${DUPLICATE_REFUND} ✦ refund`);
     }
     setOpening(null);
+  };
+
+  const onRemoveCrown = async () => {
+    if (!user) return;
+    try {
+      await removeAccessoryFromUser(user.id, 'crown');
+      await refreshOwned();
+      showToast('Crown removed from database');
+    } catch (err) {
+      console.error('Failed to remove crown:', err);
+    }
   };
 
   return (
@@ -116,11 +131,10 @@ export default function TreasureScreen() {
         </View>
         <View style={styles.rule} />
 
-        {CHESTS.map((chest) => {
-          const earned = chests[chest.id] ?? 0;
+        {chestList.map((chest) => {
           const canBuy = points >= chest.cost;
           return (
-            <View key={chest.id} style={styles.chestCard}>
+            <View key={chest.name} style={styles.chestCard}>
               <View style={styles.chestRow}>
                 <View style={styles.chestArt}>
                   <PixelChest color={chest.color} scale={PixelScale.chestCard} />
@@ -129,9 +143,9 @@ export default function TreasureScreen() {
                   <Text style={styles.chestName}>{chest.name}</Text>
                   <Text style={styles.poolLabel}>contains one of:</Text>
                   <View style={styles.pool}>
-                    {chest.pool.map((itemId) => (
-                      <View key={itemId} style={styles.poolItem}>
-                        <Mochi id={itemId} scale={0.25} />
+                    {chest.pool.map((item) => (
+                      <View key={item.name} style={styles.poolItem}>
+                        <Image source={{ uri: item.image }} style={{ width: 40, height: 40 }} />
                       </View>
                     ))}
                   </View>
@@ -139,17 +153,10 @@ export default function TreasureScreen() {
               </View>
 
               <View style={styles.actions}>
-                {earned > 0 && (
-                  <Pressable
-                    style={({ pressed }) => [styles.btn, styles.btnEarned, pressed && styles.btnPressed]}
-                    onPress={() => openChest(chest, 'earned')}>
-                    <Text style={styles.btnText}>open ({earned})</Text>
-                  </Pressable>
-                )}
                 <Pressable
                   disabled={!canBuy}
                   style={({ pressed }) => [styles.btn, !canBuy && styles.btnMuted, pressed && styles.btnPressed]}
-                  onPress={() => openChest(chest, 'purchase')}>
+                  onPress={() => openChest(chest)}>
                   <Text style={styles.btnText}>✦ {chest.cost}</Text>
                 </Pressable>
               </View>
@@ -162,11 +169,12 @@ export default function TreasureScreen() {
         visible={opening !== null}
         stage={opening?.stage ?? 'opening'}
         chestColor={opening?.chest.color ?? ChestColors.small}
-        rewardId={opening?.reward ?? null}
+        reward={opening?.reward ?? null}
         onClaim={claimReward}
       />
 
       <DevAddPointsButton onPress={() => addPoints(100)} />
+      <DevRemoveCrownButton onPress={onRemoveCrown} />
     </SafeAreaView>
   );
 }

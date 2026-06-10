@@ -33,7 +33,11 @@ const STEP_MINUTES = 30;
 // content TBD. (The buddies screen/file is kept, just no longer surfaced.)
 export default function SettingsScreen() {
   const { signOut } = useAuth();
-  const { deadlines: providerDeadlines } = useDailyQuest();
+  const {
+    deadlines: providerDeadlines,
+    team: providerTeam,
+    updateDeadlines,
+  } = useDailyQuest();
 
   const { user } = useAuth();
   const { personality: loadedPersonality } = useUser();
@@ -121,7 +125,11 @@ export default function SettingsScreen() {
     setLoadingDeadlines(true);
     setSettingsError(null);
     try {
-      await saveQuestDeadlines(selectedTeamId, nextDeadlines);
+      if (providerTeam?.teamId === selectedTeamId) {
+        await updateDeadlines(nextDeadlines);
+      } else {
+        await saveQuestDeadlines(selectedTeamId, nextDeadlines);
+      }
       setLocalDeadlines(nextDeadlines);
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : 'Failed to save deadlines');

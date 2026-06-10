@@ -21,8 +21,8 @@ export function DevAddPointsButton({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   btn: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: 70,
+    right: 16,
     width: 22,
     height: 22,
     borderRadius: 11,

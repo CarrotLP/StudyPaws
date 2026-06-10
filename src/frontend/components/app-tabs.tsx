@@ -17,10 +17,9 @@ export default function AppTabs() {
           <Tabs.Screen name="index" />
           <Tabs.Screen name="daily_quest" />
           <Tabs.Screen name="teams" />
-          <Tabs.Screen name="communities" />
+          <Tabs.Screen name="community" />
           <Tabs.Screen name="dress" />
           <Tabs.Screen name="treasure" />
-          <Tabs.Screen name="inventory" />
           <Tabs.Screen name="settings" />
           {/* Buddies kept registered (not deleted) though it's no longer in the ribbon. */}
           <Tabs.Screen name="buddies" />
