@@ -81,7 +81,9 @@ export default function HomeScreen() {
                 ? 'study'
                 : phase === 'break_active' || phase === 'break_intro'
                   ? 'break'
-                  : null
+                  : phase === 'idle'
+                    ? 'idle'
+                    : null
             }
           />
         </View>

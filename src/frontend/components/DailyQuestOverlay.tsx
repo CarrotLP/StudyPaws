@@ -12,6 +12,7 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { isWithinWindow, questWindowsFromDeadlines } from '@/constants/questWindows';
+import { Mochi } from '@/components/mochi';
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { saveQuestSubmission } from '@/services/questSubmission.services';
@@ -159,6 +160,15 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
               <Text style={styles.closeText}>X</Text>
             </Pressable>
             <Text style={styles.title}>Complete Daily Quest</Text>
+
+            {/* Small walking Mochi with a speech bubble at its top-left. */}
+            <View style={styles.mochiStage}>
+              <Mochi scale={0.9} animate />
+              <View style={styles.speechBubble}>
+                <Text style={styles.speechText}>I want to go on a walk!</Text>
+              </View>
+            </View>
+
             <Text style={styles.description}>
               {questLoading
                 ? 'Loading today’s quest...'
@@ -243,6 +253,31 @@ const styles = StyleSheet.create({
     lineHeight: PixelFontSize.xl * 1.8,
     textAlign: 'center',
     textTransform: 'uppercase',
+  },
+  mochiStage: {
+    alignSelf: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    marginTop: HavenSpacing.xl,
+  },
+  speechBubble: {
+    position: 'absolute',
+    top: -28,
+    left: -24,
+    maxWidth: 130,
+    zIndex: 2,
+    paddingVertical: HavenSpacing.xs,
+    paddingHorizontal: HavenSpacing.sm,
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.leatherShadow}`,
+  },
+  speechText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.base,
+    color: HavenColors.ink,
+    textAlign: 'center',
   },
   description: {
     fontFamily: HavenFonts.body,

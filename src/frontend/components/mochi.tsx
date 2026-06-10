@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, View } from 'react-native';
 import Animated, {
   Easing,
@@ -68,12 +69,21 @@ interface MochiProps {
   silhouette?: boolean;
   // Increment this (e.g. on every cat tap) to make the cat walk for WALK_MS.
   walkSignal?: number;
+  // Walk continuously (until unmounted), independent of taps.
+  animate?: boolean;
 }
 
 // How long the cat walks after a tap.
 const WALK_MS = 2500;
 
-export function Mochi({ id, outfit, scale = 1, silhouette = false, walkSignal }: MochiProps) {
+export function Mochi({
+  id,
+  outfit,
+  scale = 1,
+  silhouette = false,
+  walkSignal,
+  animate = false,
+}: MochiProps) {
   const { user } = useAuth();
   const [layers, setLayers] = useState<MochiAsset[]>([]);
   const finalScale = scale * GLOBAL_MOCHI_SCALE;
@@ -91,11 +101,14 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false, walkSignal }:
     if (walkTimer.current) clearTimeout(walkTimer.current);
   }, []);
 
+  // Continuous `animate` OR the timed tap walk.
+  const walking = animate || isWalking;
+
   // Tier 2 walk cycle: a single phase 0 → 2π driving every limb. sin(2π)=sin(0)
   // so the linear loop is seamless. Hooks run unconditionally (before early returns).
   const phase = useSharedValue(0);
   useEffect(() => {
-    if (!isWalking) {
+    if (!walking) {
       phase.value = withTiming(0, { duration: 300 }); // ease back to rest pose
       return;
     }
@@ -105,7 +118,7 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false, walkSignal }:
       -1,
       false,
     );
-  }, [phase, isWalking]);
+  }, [phase, walking]);
 
   const LIFT = 6; // px a foot rises at the top of its step
   const STRIDE = 7; // px a foot travels forward/back through its step
@@ -160,7 +173,10 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false, walkSignal }:
     }
   };
 
-  useEffect(() => {
+  // Refetch on focus (not just on mount/login) so outfit changes made on the
+  // Dress tab show up when returning to a screen whose Mochi stayed mounted.
+  useFocusEffect(
+    useCallback(() => {
     async function fetchMochiData() {
       if (!user) return;
 
@@ -283,8 +299,9 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false, walkSignal }:
       }
     }
 
-    fetchMochiData();
-  }, [user]);
+      fetchMochiData();
+    }, [user]),
+  );
 
   const sortedLayers = [...layers].sort((a, b) => {
     return LAYER_ORDER.indexOf(a.category) - LAYER_ORDER.indexOf(b.category);
@@ -332,7 +349,7 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false, walkSignal }:
         } as const;
 
         // Static when not walking, and the shadow is always static (stays planted).
-        if (!isWalking || layer.part === 'shadow') {
+        if (!walking || layer.part === 'shadow') {
           return (
             <Image
               key={`${index}-${layer.category}-${layer.source.uri || index}`}

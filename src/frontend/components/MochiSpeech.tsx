@@ -15,13 +15,16 @@ import { getStudyQuotes, type MochiPersonality } from '@/services/mochiQuotes.se
 const BREAK_LINE =
   'Oh, paws for a second… you’re not gonna leave that daily quest undone, are you? I’d be fur-ious';
 
+// Fixed supportive line shown while the user is setting up a focus block (idle).
+const IDLE_LINE = 'Time to study!';
+
 // How often a fresh study quote pops up (cosmetic only — not a source of truth
 // for time, so a plain interval is fine here).
 const REPEAT_MS = 25000;
 // Every bubble auto-closes after this long.
 const AUTO_CLOSE_MS = 15000;
 
-type Mode = 'study' | 'break' | null;
+type Mode = 'study' | 'break' | 'idle' | null;
 
 export function MochiSpeech({
   mode,
@@ -48,9 +51,11 @@ export function MochiSpeech({
     };
   }, [personality]);
 
-  // Break: show the fixed daily-quest nudge. Leaving break clears it.
+  // Fixed-line modes: break shows the daily-quest nudge, idle shows the
+  // "Time to study!" prompt. Study has its own periodic effect; null clears.
   useEffect(() => {
     if (mode === 'break') setText(BREAK_LINE);
+    else if (mode === 'idle') setText(IDLE_LINE);
     else if (mode !== 'study') setText(null);
   }, [mode]);
 
