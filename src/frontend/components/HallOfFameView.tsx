@@ -64,6 +64,10 @@ export function HallOfFameView({ currentCommunity, user, onBack }: HallOfFameVie
                 </Text>
 
                 <Text style={styles.detailValue}>
+                Week starting: {item.weekStart}
+                </Text>
+
+                <Text style={styles.detailValue}>
                 Votes: {item.votes}
                 </Text>
             </View>
