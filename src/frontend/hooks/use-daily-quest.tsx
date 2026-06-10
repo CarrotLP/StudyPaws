@@ -46,6 +46,8 @@ export function DailyQuestProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setQuest(null);
       setTeam(null);
+      setDeadlines(DEFAULT_QUEST_DEADLINES);
+      setHasSubmittedToday(false);
       setError(authError ?? 'User is not signed in.');
       setLoading(false);
       return;
@@ -57,20 +59,33 @@ export function DailyQuestProvider({ children }: { children: ReactNode }) {
     try {
       const teams = await getTeamsForUser(user.id);
       const firstTeam = teams[0] ?? null;
-      const todaysQuest = firstTeam
-        ? await getQuestForTeamDate(firstTeam.teamId, utcDateKey())
-        : null;
 
       setTeam(firstTeam);
-      setQuest(todaysQuest);
       setDeadlines(firstTeam ? await getQuestDeadlines(firstTeam.teamId) : DEFAULT_QUEST_DEADLINES);
-      setHasSubmittedToday(
-        todaysQuest ? (await getOwnQuestSubmission(user.id, todaysQuest.questDate)) !== null : false,
-      );
+
+      if (!firstTeam) {
+        setQuest(null);
+        setHasSubmittedToday(false);
+        return;
+      }
+
+      try {
+        const todaysQuest = await getQuestForTeamDate(firstTeam.teamId, utcDateKey());
+        setQuest(todaysQuest);
+        setHasSubmittedToday(
+          todaysQuest ? (await getOwnQuestSubmission(user.id, todaysQuest.questDate)) !== null : false,
+        );
+      } catch (questError) {
+        setQuest(null);
+        setHasSubmittedToday(false);
+        setError(questError instanceof Error ? questError.message : "Could not load today's quest.");
+      }
     } catch (loadError) {
       setTeam(null);
       setQuest(null);
-      setError(loadError instanceof Error ? loadError.message : 'Could not load today’s quest.');
+      setDeadlines(DEFAULT_QUEST_DEADLINES);
+      setHasSubmittedToday(false);
+      setError(loadError instanceof Error ? loadError.message : "Could not load today's quest.");
     } finally {
       setLoading(false);
     }
