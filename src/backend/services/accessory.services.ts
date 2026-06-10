@@ -44,7 +44,7 @@ export async function getUserAccessories(userUid: string): Promise<UserAccessory
 }
 
 export async function toggleAccessory(userUid: string, accessoryName: string, chosen: boolean): Promise<void> {
-  console.log(`DEBUG: Toggling accessory "${accessoryName}" to ${chosen} for user ${userUid}`);
+
 
   // Using upsert as it's often more robust against RLS issues
   // and handles the "user" reserved word well via the object key.
@@ -67,6 +67,5 @@ export async function toggleAccessory(userUid: string, accessoryName: string, ch
   if (!data || data.length === 0) {
     console.error('DEBUG: Toggle failed. This is likely a Supabase RLS Policy issue.');
   } else {
-    console.log(`DEBUG: Toggle successful! New state:`, data[0]);
   }
 }

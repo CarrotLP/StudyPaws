@@ -125,7 +125,6 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
         const resolvedBodyLayers = (await Promise.all(bodyPromises)).filter(
           (l): l is MochiAsset => !!l,
         );
-        console.log('Body layers loaded:', resolvedBodyLayers.length);
 
         // 3. Load any accessories associated with the user
         const { data: userAccessories, error: accError } = await supabase
@@ -134,40 +133,29 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
           .eq('user', user.id)
           .eq('chosen', true);
 
-        console.log('DEBUG: User ID:', user.id);
-        console.log('DEBUG: User accessories response:', JSON.stringify(userAccessories), 'Error:', accError);
-
         const accessoryLayers: MochiAsset[] = [];
         if (!accError && userAccessories && userAccessories.length > 0) {
           const accessoryNames = userAccessories.map((ua) => ua.accessory);
-          console.log('DEBUG: Accessory names:', accessoryNames);
 
           const { data: components, error: compError } = await supabase
             .from('accessories_components')
             .select('components')
             .in('accessory_name', accessoryNames);
 
-          console.log('DEBUG: Components response:', JSON.stringify(components), 'Error:', compError);
-
           if (!compError && components && components.length > 0) {
             const componentNames = components
               .map((c) => c.components)
               .filter((c): c is string => !!c);
-
-            console.log('DEBUG: Component names to fetch:', componentNames);
 
             const { data: compData, error: compDataError } = await supabase
               .from('components')
               .select('image, x, y, layer, image_name')
               .in('image_name', componentNames);
 
-            console.log('DEBUG: Component metadata response:', JSON.stringify(compData), 'Error:', compDataError);
-
             if (!compDataError && compData) {
               const accPromises = compData.map(async (c): Promise<MochiAsset | null> => {
                 const size = await getImageSize(c.image);
                 if (!size) return null; // missing file → skip
-                console.log(`DEBUG: Accessory component ${c.image_name} - x:${c.x}, y:${c.y}, layer:${c.layer}`);
                 return {
                   source: { uri: c.image },
                   category: c.layer as MochiLayerCategory,
@@ -185,7 +173,6 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
           }
         }
 
-        console.log('DEBUG: Total accessory layers to render:', accessoryLayers.length);
         setLayers([...resolvedBodyLayers, ...accessoryLayers]);
       } catch (err) {
         console.error('Error fetching Mochi data:', err);
