@@ -1,3 +1,4 @@
+import { getPublicImageUrl } from '@/backend/lib/storage';
 import { supabase } from '@/backend/lib/supabase';
 
 const GALLERY_BUCKET = 'gallery';
@@ -47,8 +48,4 @@ export async function getOwnQuestSubmission(
   }
 
   return data ? getPublicImageUrl(data.image_path) : null;
-}
-
-function getPublicImageUrl(imagePath: string): string {
-  return supabase.storage.from(GALLERY_BUCKET).getPublicUrl(imagePath).data.publicUrl;
 }

@@ -24,6 +24,7 @@ import {
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
 import { getPetPreviews, type PetPreview } from '@/services/petPreview.services';
+import { MOCHI_PERSONALITIES, type MochiPersonality } from '@/services/mochiQuotes.services';
 
 export default function RegisterScreen({
   onLoginPress,
@@ -44,6 +45,9 @@ export default function RegisterScreen({
   const [petOptions, setPetOptions] = useState<PetPreview[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [loadingModels, setLoadingModels] = useState(true);
+
+  // Cat personality picker (defaults to philosophical).
+  const [selectedPersonality, setSelectedPersonality] = useState<MochiPersonality>('philosophical');
 
   // Two-step form: 1 = account details, 2 = pet name + cat choice.
   const [step, setStep] = useState<1 | 2>(1);
@@ -101,7 +105,7 @@ export default function RegisterScreen({
     setFormError(null);
 
     try {
-      await signUp(email, password, username, petName, selectedModel);
+      await signUp(email, password, username, petName, selectedModel, selectedPersonality);
       onRegistered();
     } catch {
       // The provider exposes the Supabase error for display.
@@ -252,6 +256,29 @@ export default function RegisterScreen({
                   )}
                 </View>
 
+                <View style={styles.field}>
+                  <Text style={styles.label}>personality</Text>
+                  <View style={styles.personalityRow}>
+                    {MOCHI_PERSONALITIES.map((p) => {
+                      const selected = p === selectedPersonality;
+                      return (
+                        <Pressable
+                          key={p}
+                          onPress={() => setSelectedPersonality(p)}
+                          style={[styles.personalityChip, selected && styles.personalityChipSelected]}>
+                          <Text
+                            style={[
+                              styles.personalityChipText,
+                              selected && styles.personalityChipTextSelected,
+                            ]}>
+                            {p}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
                 {message ? <Text style={styles.error}>{message}</Text> : null}
 
                 <Pressable
@@ -374,6 +401,30 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: HavenColors.gold,
     opacity: 1,
+  },
+  personalityRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: HavenSpacing.sm,
+  },
+  personalityChip: {
+    paddingVertical: HavenSpacing.sm,
+    paddingHorizontal: HavenSpacing.md,
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+  },
+  personalityChipSelected: {
+    backgroundColor: HavenColors.wornCell,
+    borderColor: HavenColors.gold,
+  },
+  personalityChipText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.base,
+    color: HavenColors.inkSoft,
+  },
+  personalityChipTextSelected: {
+    color: HavenColors.ink,
   },
   button: {
     alignSelf: 'center',

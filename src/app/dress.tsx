@@ -50,8 +50,20 @@ export default function DressScreen() {
 
   const onEquip = async (item: UserAccessory) => {
     if (!user) return;
+    const equipping = !item.chosen;
     try {
-      await toggleAccessory(user.id, item.accessory, !item.chosen);
+      // Mutual exclusion: when putting something on, take off anything already
+      // worn in the SAME category (only one item per category at a time).
+      if (equipping && item.category) {
+        const sameCategoryWorn = accessories.filter(
+          (a) => a.chosen && a.category === item.category && a.accessory !== item.accessory,
+        );
+        for (const worn of sameCategoryWorn) {
+          await toggleAccessory(user.id, worn.accessory, false);
+        }
+      }
+
+      await toggleAccessory(user.id, item.accessory, equipping);
       await fetchAccessories();
       setRefreshKey(prev => prev + 1);
     } catch (err) {

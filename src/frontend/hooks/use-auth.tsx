@@ -25,6 +25,7 @@ type AuthContextValue = {
     name: string,
     petName: string,
     character: string,
+    personality: string,
   ) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -38,31 +39,33 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  * past sign-up time. Idempotent: only writes when the row isn't set yet.
  */
 async function backfillCharacter(session: Session | null): Promise<void> {
-  const character = session?.user?.user_metadata?.character as string | undefined;
+  const meta = session?.user?.user_metadata ?? {};
+  const character = meta.character as string | undefined;
+  const personality = meta.personality as string | undefined;
   if (!session || !character) return;
 
   try {
     const { data: existing } = await supabase
       .from('users')
-      .select('character')
+      .select('character, personality')
       .eq('user_uid', session.user.id)
       .maybeSingle();
 
-    // Skip only if it already matches the chosen model. (Don't treat the column's
-    // DEFAULT 'character3' as "already chosen" — that would block the real choice.)
-    if (existing?.character === character) return;
+    // Skip only if BOTH already match the chosen values. (Don't treat the
+    // column DEFAULTs as "already chosen" — that would block the real choice.)
+    if (existing?.character === character && existing?.personality === personality) return;
 
     await ensureCharacter(character);
 
     // Upsert (not update) so this also creates the public.users row if no DB
     // trigger has made one yet. name/pet_name come from the sign-up metadata.
-    const meta = session.user.user_metadata ?? {};
     const { error: upsertError } = await supabase.from('users').upsert(
       {
         user_uid: session.user.id,
         name: (meta.name as string) ?? '',
         pet_name: (meta.pet_name as string) ?? null,
         character,
+        ...(personality ? { personality } : {}),
       },
       { onConflict: 'user_uid' },
     );
@@ -129,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: string,
       petName: string,
       character: string,
+      personality: string,
     ) => {
       setError(null);
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -138,8 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             name: name.trim(),
             pet_name: petName.trim(),
-            // Fallback for a DB trigger that copies metadata → users.character.
+            // Fallback for a DB trigger that copies metadata → users columns.
             character,
+            personality,
           },
         },
       });
@@ -151,14 +156,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // While a session exists right after sign-up (email confirmation off), we're
       // authenticated as the new user: create the shared character row and set the
-      // user's chosen character before signing out.
+      // user's chosen character + personality before signing out.
       if (data.session && data.user) {
         try {
           await ensureCharacter(character);
-          await supabase.from('users').update({ character }).eq('user_uid', data.user.id);
+          await supabase
+            .from('users')
+            .update({ character, personality })
+            .eq('user_uid', data.user.id);
         } catch (writeError) {
           // Non-fatal: account is created; surface but don't block registration.
-          console.warn('Failed to persist character on sign-up:', writeError);
+          console.warn('Failed to persist character/personality on sign-up:', writeError);
         }
         await supabase.auth.signOut();
       }

@@ -218,12 +218,22 @@ export default function TeamsScreen() {
             </View>
 
             <View style={styles.detailBlock}>
-              <Text style={styles.detailLabel}>team members</Text>
-              {teamMembers.map((member) => (
-                <Text key={member.userId} style={styles.memberName}>
-                  {member.userName}
-                </Text>
-              ))}
+              <View style={styles.leaderboardTable}>
+                <View style={[styles.leaderboardRow, styles.leaderboardHeaderRow]}>
+                  <Text style={styles.leaderboardHeaderText}>team members</Text>
+                  <Text style={[styles.leaderboardHeaderText, styles.winsColumn]}>
+                    number of wins
+                  </Text>
+                </View>
+                {teamMembers.map((member) => (
+                  <View key={member.userId} style={styles.leaderboardRow}>
+                    <Text style={styles.memberName}>{member.userName}</Text>
+                    <Text style={[styles.memberWins, styles.winsColumn]}>
+                      {member.winsCount}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
         ) : null}
@@ -291,21 +301,21 @@ export default function TeamsScreen() {
             )}
           </>
         )}
-      </ScrollView>
 
-      {currentTeam ? (
-        <Pressable
-          accessibilityRole="button"
-          disabled={leaving || loading}
-          onPress={confirmLeaveTeam}
-          style={({ pressed }) => [
-            styles.leaveButton,
-            pressed && !(leaving || loading) && styles.buttonPressed,
-            (leaving || loading) && styles.buttonDisabled,
-          ]}>
-          <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave team'}</Text>
-        </Pressable>
-      ) : null}
+        {currentTeam ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={leaving || loading}
+            onPress={confirmLeaveTeam}
+            style={({ pressed }) => [
+              styles.leaveButton,
+              pressed && !(leaving || loading) && styles.buttonPressed,
+              (leaving || loading) && styles.buttonDisabled,
+            ]}>
+            <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave team'}</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -378,10 +388,44 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   memberName: {
+    flex: 1,
     fontFamily: HavenFonts.body,
     fontSize: BodyFontSize.lg,
     color: HavenColors.ink,
     textAlign: 'left',
+  },
+  memberWins: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.lg,
+    color: HavenColors.ink,
+    textAlign: 'right',
+  },
+  leaderboardTable: {
+    width: '100%',
+    gap: HavenSpacing.sm,
+  },
+  leaderboardRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: HavenSpacing.md,
+  },
+  leaderboardHeaderRow: {
+    paddingBottom: HavenSpacing.xs,
+    borderBottomWidth: Border.base,
+    borderBottomColor: HavenColors.inkSoft,
+  },
+  leaderboardHeaderText: {
+    flex: 1,
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.ink,
+    textAlign: 'left',
+  },
+  winsColumn: {
+    width: 120,
+    flex: 0,
+    textAlign: 'right',
   },
   message: {
     fontFamily: HavenFonts.body,
@@ -406,14 +450,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   leaveButton: {
-    position: 'absolute',
-    right: HavenSpacing.xl,
-    bottom: HavenSpacing.xl,
+    alignSelf: 'flex-end',
     backgroundColor: HavenColors.ink,
     borderWidth: Border.base,
     borderColor: HavenColors.ink,
     paddingVertical: HavenSpacing.md,
     paddingHorizontal: HavenSpacing.lg,
+    marginTop: HavenSpacing.xl,
+    marginBottom: HavenSpacing.xxl * 2,
     boxShadow: `${ShadowOffset.three}px ${ShadowOffset.three}px 0px ${HavenColors.leatherShadow}`,
   },
   leaveButtonText: {

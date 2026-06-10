@@ -1,10 +1,13 @@
 import { supabase } from '@/backend/lib/supabase';
 
+import type { MochiPersonality } from '@/services/mochiQuotes.services';
+
 export type UserDetails = {
   name: string;
   pet_name: string;
   points: number;
   user_uid: string;
+  personality: MochiPersonality | null;
 };
 
 /**
@@ -15,7 +18,7 @@ export type UserDetails = {
 export async function getUserDetails(userUid: string): Promise<UserDetails | null> {
   const { data, error } = await supabase
     .from('users')
-    .select('name, pet_name, points, user_uid')
+    .select('name, pet_name, points, user_uid, personality')
     .eq('user_uid', userUid)
     .maybeSingle();
 
@@ -33,6 +36,7 @@ export async function getUserDetails(userUid: string): Promise<UserDetails | nul
     pet_name: data.pet_name,
     points: data.points,
     user_uid: data.user_uid,
+    personality: (data.personality as MochiPersonality) ?? null,
   };
 }
 
@@ -69,4 +73,27 @@ export async function addPointsToUser(userUid: string, delta: number): Promise<n
 
   if (updateError) throw updateError;
   return newPoints;
+}
+
+/**
+ * Updates the user's chosen cat personality. Upserts so it also creates the
+ * `users` row if one doesn't exist yet (`name` is required on insert).
+ */
+export async function updateUserPersonality(
+  userUid: string,
+  personality: MochiPersonality,
+  name: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('users')
+    .upsert({ user_uid: userUid, name, personality }, { onConflict: 'user_uid' })
+    .select('user_uid');
+  // Supabase returns a plain PostgrestError object (not an Error instance), so
+  // wrap it so callers can read `.message`.
+  if (error) throw new Error(`${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+  // A row-level-security block returns no error but 0 rows written — surface it
+  // so the change isn't silently lost.
+  if (!data || data.length === 0) {
+    throw new Error('No row written — check the users insert/update RLS policy.');
+  }
 }
