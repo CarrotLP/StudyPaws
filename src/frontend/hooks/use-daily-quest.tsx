@@ -9,7 +9,7 @@ import {
 
 import { useAuth } from '@/hooks/use-auth';
 import { utcDateKey } from '@/lib/haven-format';
-import { getQuestForDate, type DailyQuestRecord } from '@/services/dailyQuest.services';
+import { getQuestForTeamDate, type DailyQuestRecord } from '@/services/dailyQuest.services';
 import {
   DEFAULT_QUEST_DEADLINES,
   getQuestDeadlines,
@@ -55,11 +55,11 @@ export function DailyQuestProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const [teams, todaysQuest] = await Promise.all([
-        getTeamsForUser(user.id),
-        getQuestForDate(utcDateKey()),
-      ]);
+      const teams = await getTeamsForUser(user.id);
       const firstTeam = teams[0] ?? null;
+      const todaysQuest = firstTeam
+        ? await getQuestForTeamDate(firstTeam.teamId, utcDateKey())
+        : null;
 
       setTeam(firstTeam);
       setQuest(todaysQuest);
