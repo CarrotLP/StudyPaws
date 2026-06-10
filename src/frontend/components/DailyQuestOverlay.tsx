@@ -28,7 +28,7 @@ type DailyQuestOverlayProps = {
 
 export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestOverlayProps) {
   const { user } = useAuth();
-  const { loading: questLoading, quest, deadlines, hasSubmittedToday, refresh, markSubmittedToday } =
+  const { loading: questLoading, quest, deadlines, hasSubmittedToday, error, refresh, markSubmittedToday } =
     useDailyQuest();
   const [completed, setCompleted] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
@@ -175,7 +175,7 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
             <Text style={styles.description}>
               {questLoading
                 ? 'Loading today’s quest...'
-                : quest?.description ?? 'No daily quest is available today.'}
+                : quest?.description ?? error ?? 'No daily quest is available today.'}
             </Text>
             <Pressable
               accessibilityLabel="Take photo"
