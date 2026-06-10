@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -37,7 +36,6 @@ import { fmt, fmtMinutes } from '@/lib/haven-format';
 export default function HomeScreen() {
   const session = useStudySession();
   const { points, refreshPoints } = useEconomy();
-  const { petName } = useUser();
   const [refreshKey, setRefreshKey] = useState(0);
 
   useFocusEffect(
@@ -47,7 +45,6 @@ export default function HomeScreen() {
     }, [refreshPoints])
   );
   const [catTaps, setCatTaps] = useState(0);
-  const { outfit } = useOutfit();
   const { petName, personality } = useUser();
   const { deadlines, hasSubmittedToday } = useDailyQuest();
   const {
@@ -86,9 +83,8 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <Mochi key={refreshKey} scale={2} />
           <Pressable onPress={() => setCatTaps((c) => c + 1)}>
-            <Mochi outfit={outfit as any} scale={2} walkSignal={catTaps} />
+            <Mochi key={refreshKey} scale={2} walkSignal={catTaps} />
           </Pressable>
           <View style={styles.floorShadow} />
           <MochiSpeech

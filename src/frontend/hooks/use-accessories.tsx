@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 
 import { addAccessoryToUser, getUserAccessories } from '@/backend/services/accessory.services';
 import { useAuth } from './use-auth';
@@ -11,21 +11,34 @@ export function useAccessories() {
   const { user } = useAuth();
   const [owned, setOwned] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const refreshOwned = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      if (isMounted.current) setOwned([]);
+      return;
+    }
     try {
       const data = await getUserAccessories(user.id);
-      setOwned(data.map(item => item.accessory));
+      if (isMounted.current) {
+        setOwned(data.map(item => item.accessory));
+      }
     } catch (err) {
       console.error('Failed to fetch accessories:', err);
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    refreshOwned();
+    void refreshOwned();
   }, [refreshOwned]);
 
   const addOwned = async (accessoryName: string) => {

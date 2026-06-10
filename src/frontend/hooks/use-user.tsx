@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 
 import { getUserDetails } from '@/backend/services/user.services';
 import type { MochiPersonality } from '@/services/mochiQuotes.services';
@@ -16,10 +16,6 @@ type UseUserResult = {
 /**
  * Hook to fetch the current user's details (pet name, personality) from the
  * users table.
- *
- * Re-fetches whenever the screen using it gains focus. This matters because the
- * tabs stay mounted, so a plain mount-only effect would never pick up changes
- * made on another tab (e.g. choosing a new personality in Settings).
  */
 export function useUser(): UseUserResult {
   const { user } = useAuth();
@@ -28,31 +24,54 @@ export function useUser(): UseUserResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   const refresh = useCallback(async () => {
     if (!user?.id) {
-      setPetName(null);
-      setPersonality(null);
-      setLoading(false);
+      if (isMounted.current) {
+        setPetName(null);
+        setPersonality(null);
+      }
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (isMounted.current) setLoading(true);
+    if (isMounted.current) setError(null);
+
     try {
       const details = await getUserDetails(user.id);
-      setPetName(details?.pet_name ?? null);
-      setPersonality(details?.personality ?? null);
+      if (isMounted.current) {
+        setPetName(details?.pet_name ?? null);
+        setPersonality(details?.personality ?? null);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch user details'));
+      if (isMounted.current) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch user details'));
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   }, [user?.id]);
 
-  // Refetch on every focus (and on first focus / user change).
+  // Initial load
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  // Refetch on focus
   useFocusEffect(
     useCallback(() => {
-      void refresh();
+      // Only refetch if we are already mounted (to avoid the "not mounted yet" error on first focus)
+      if (isMounted.current) {
+        void refresh();
+      }
     }, [refresh]),
   );
 
