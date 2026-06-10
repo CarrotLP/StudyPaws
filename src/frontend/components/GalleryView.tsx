@@ -11,7 +11,7 @@ import { getPublicImageUrl } from '@/lib/storage';
 import { getCommunityImagesOfWeek, Submission } from '@/services/communityQuestSubmission.services';
 import { type UserCommunity } from '@/services/userCommunities.services';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type GalleryViewProps = {
   currentCommunity: UserCommunity;
@@ -28,7 +28,7 @@ export function HeartButton({
 }) {
   return (
     <Pressable onPress={onPress} hitSlop={10}>
-      <Text style={{ fontSize: 30 }}>
+      <Text style={{ fontSize: 25 }}>
         {liked ? "❤️" : "🤍"}
       </Text>
     </Pressable>
@@ -74,9 +74,9 @@ export function GalleryView({ currentCommunity, theme, onBack }: GalleryViewProp
       </View>
     </View>
 
-    <View style={{ flex: 1 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: "3%" }}>
       {submissions.map((submission, index) => (
-        <View key={index} style={{ marginBottom: 12 }}>
+        <View key={index} style={{ width: "31%", marginBottom: 10 }}>
           <Pressable 
             onPress={() =>
               setSelectedImage(getPublicImageUrl(submission.photoUri))
@@ -84,15 +84,34 @@ export function GalleryView({ currentCommunity, theme, onBack }: GalleryViewProp
             <Image
             key={index}
             source={{ uri: getPublicImageUrl(submission.photoUri) }}
-            style={{ width: 120, height: 120 }}
+            style={{ width: "100%", height: 110 }}
             />
           </Pressable>
-          <HeartButton
-            liked={likes[index]}
-            onPress={() => toggleLike(index)}
-          />
+          <View style={{ alignItems: "flex-end" }}>
+            <HeartButton
+              liked={likes[index]}
+              onPress={() => toggleLike(index)}
+            />
+          </View>
         </View>
       ))}
+      <Modal visible={!!selectedImage} transparent>
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.9)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          onPress={() => setSelectedImage(null)}
+        >
+          <Image
+            source={{ uri: selectedImage ?? "" }}
+            style={{ width: "90%", height: "70%" }}
+            resizeMode="contain"
+          />
+        </Pressable>
+      </Modal>
     </View>
   
     <View style={styles.detailBlock}>
