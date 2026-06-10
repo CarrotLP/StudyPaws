@@ -12,3 +12,17 @@ export async function getThemeForWeek(quest_date: string): Promise<string[]> {
 
   return (memberships ?? []).map((row) => row.theme);
 }
+
+export async function submitTeamQuestSuggestion(
+  teamId: string,
+  weekStart: string,
+  description: string,
+): Promise<void> {
+  const { error } = await supabase.from('team_quest_suggestions').insert({
+    team: teamId,
+    week_start: weekStart,
+    description,
+  });
+
+  if (error) throw error;
+}
