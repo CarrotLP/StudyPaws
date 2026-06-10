@@ -11,7 +11,7 @@ export const DEFAULT_QUEST_DEADLINES: QuestDeadlines = {
 };
 
 export async function getQuestDeadlines(teamId: string): Promise<QuestDeadlines> {
-ole.log('[getQuestDeadlines] teamId:', teamId);
+  console.log('[getQuestDeadlines] teamId:', teamId);
   const { data, error } = await supabase
     .from('teams')
     .select('submission_deadline_minutes, voting_deadline_minutes')
@@ -69,5 +69,5 @@ export async function saveQuestDeadlines(
     console.log('[saveQuestDeadlines] Team existence check (respects RLS):', teamCheck);
   } else {
     console.log('[saveQuestDeadlines] Success');
-  }  if (error) throw error;
+  }
 }
