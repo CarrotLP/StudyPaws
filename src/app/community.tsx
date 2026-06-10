@@ -5,26 +5,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 
 import {
-    BodyFontSize,
-    Border,
-    HavenColors,
-    HavenFonts,
-    HavenSpacing,
-    PixelFontSize,
-    ShadowOffset,
+  BodyFontSize,
+  Border,
+  HavenColors,
+  HavenFonts,
+  HavenSpacing,
+  PixelFontSize,
+  ShadowOffset,
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
 import { createCommunity, getCommunityByCode } from '@/services/community.services';
 import {
-    addUserToCommunity,
-    getCommunitiesForUser,
-    getUsersForCommunity,
-    removeUserFromCommunity,
-    type CommunityUser,
-    type UserCommunity,
+  addUserToCommunity,
+  getCommunitiesForUser,
+  getUsersForCommunity,
+  removeUserFromCommunity,
+  type CommunityUser,
+  type UserCommunity,
 } from '@/services/userCommunities.services';
 
+import { CommunityView } from '@/components/CommunityView';
+import { GalleryView } from '@/components/GalleryView';
+
 export default function CommunitiesScreen() {
+  const [view, setView] = useState<'community' | 'gallery'>('community');
   const { user } = useAuth();
   const [communities, setCommunities] = useState<UserCommunity[]>([]);
   const [communityMembers, setCommunityMembers] = useState<CommunityUser[]>([]);
@@ -196,49 +200,20 @@ export default function CommunitiesScreen() {
         <Text style={styles.section}>Community</Text>
         <View style={styles.rule} />
 
-        <View style={styles.communityList}>
-          {loading ? <Text style={styles.message}>Loading communities...</Text> : null}
-          {error ? <Text style={styles.message}>{error}</Text> : null}
-          {!loading && !error && communities.length === 0 ? (
-            <Text style={styles.message}>You are not in any communities yet.</Text>
-          ) : null}
-
-          {currentCommunity ? (
-            <View style={styles.communityCard}>
-              <Text style={styles.communityName}>{currentCommunity.communityName}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {currentCommunity ? (
-          <View style={styles.communityDetails}>
-            <View style={styles.detailBlock}>
-              <Text style={styles.detailLabel}>community code:</Text>
-              <Text style={styles.detailValue}>{currentCommunity.communityCode}</Text>
-            </View>
-
-            <View style={styles.detailBlock}>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {}}
-                  style={({ pressed }) => [
-                    styles.joinButton,
-                    pressed && styles.buttonPressed,
-                    ]}>
-                  <Text style={styles.joinButtonText}>Gallery</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {}}
-                  style={({ pressed }) => [
-                    styles.joinButton,
-                    pressed && styles.buttonPressed,
-                  ]}>
-                  <Text style={styles.joinButtonText}>Hall of Fame</Text>
-                </Pressable>
-            </View>
-          </View>
-        ) : null}
+        {view === 'community' ? (
+          <CommunityView 
+            currentCommunity={currentCommunity}
+            loading={loading}
+            leaving={leaving}
+            confirmLeaveCommunity={confirmLeaveCommunity}
+            onOpenGallery={() => setView('gallery')}/>
+        ) : (
+          <GalleryView 
+            currentCommunity={currentCommunity}
+            theme='Nature'
+            onBack={() => setView('community')}/>
+        )}
+        
 
         {!hasCommunity && (
           <>
@@ -304,19 +279,6 @@ export default function CommunitiesScreen() {
           </>
         )}
 
-        {currentCommunity ? (
-          <Pressable
-            accessibilityRole="button"
-            disabled={leaving || loading}
-            onPress={confirmLeaveCommunity}
-            style={({ pressed }) => [
-              styles.leaveButton,
-              pressed && !(leaving || loading) && styles.buttonPressed,
-              (leaving || loading) && styles.buttonDisabled,
-            ]}>
-            <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave community'}</Text>
-          </Pressable>
-        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

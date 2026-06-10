@@ -19,7 +19,7 @@ import { isWithinWindow, minutesToTime, questWindowsFromDeadlines } from '@/cons
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
-import { getCommunitySubmissionByDate, uploadSubmissionToCommunity } from '@/services/communityQuestSubmission.services';
+import { getCommunitySubmissionOfDate, uploadSubmissionToCommunity } from '@/services/communityQuestSubmission.services';
 import { getOwnQuestSubmission } from '@/services/questSubmission.services';
 import { getCommunitiesForUser } from '@/services/userCommunities.services';
 import { getTeamGallery, submitVote, type GallerySubmission } from '@/services/vote.services';
@@ -56,7 +56,7 @@ export default function DailyQuestScreen() {
         })
         .catch(() => {});
 
-      getCommunitySubmissionByDate(user.id, quest.questDate)
+      getCommunitySubmissionOfDate(user.id, quest.questDate)
         .then((submissionUid) => {
           setCommunityUploaded(submissionUid !== '');
         })
