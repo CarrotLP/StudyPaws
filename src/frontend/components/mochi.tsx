@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, View } from 'react-native';
 
 import { supabase } from '@/backend/lib/supabase';
@@ -9,6 +9,7 @@ import { type OutfitState } from '../hooks/use-outfit';
 export const LAYER_ORDER = [
   'back_body',
   'back_accessory',
+  'headgear',
   'body',
   'front_accessory',
   'front_body',
