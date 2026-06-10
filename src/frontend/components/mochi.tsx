@@ -72,10 +72,7 @@ export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps)
             Image.getSize(
               uri,
               (width, height) => resolve({ width, height }),
-              () => {
-                console.warn('Mochi: missing/unloadable image, skipping:', uri);
-                resolve(null);
-              },
+              () => resolve({ width: 512, height: 512 }), // Fallback
             );
           });
         };
