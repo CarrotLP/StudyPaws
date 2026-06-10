@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DailyQuestOverlay } from '@/components/DailyQuestOverlay';
 import { DevSkipButton } from '@/components/DevSkipButton';
 import { Mochi } from '@/components/mochi';
+import { MochiSpeech } from '@/components/MochiSpeech';
 import { Toast } from '@/components/Toast';
 import {
   BodyFontSize,
@@ -33,6 +34,7 @@ import { fmt, fmtMinutes } from '@/lib/haven-format';
 
 export default function HomeScreen() {
   const session = useStudySession();
+  const [catTaps, setCatTaps] = useState(0);
   const { outfit } = useOutfit();
   const { petName } = useUser();
   const { deadlines, hasSubmittedToday } = useDailyQuest();
@@ -67,8 +69,20 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <Mochi outfit={outfit as any} scale={2} />
+          <Pressable onPress={() => setCatTaps((c) => c + 1)}>
+            <Mochi outfit={outfit as any} scale={2} />
+          </Pressable>
           <View style={styles.floorShadow} />
+          <MochiSpeech
+            tapSignal={catTaps}
+            mode={
+              phase === 'studying'
+                ? 'study'
+                : phase === 'break_active' || phase === 'break_intro'
+                  ? 'break'
+                  : null
+            }
+          />
         </View>
 
         {/* This View wraps the rest of the contents to ensure they stack below the catStage */}
