@@ -15,7 +15,16 @@ export async function getQuestForTeamDate(
   });
 
   if (error) {
-    throw error;
+    throw new Error(
+      [
+        error.message,
+        error.details ? `Details: ${error.details}` : null,
+        error.hint ? `Hint: ${error.hint}` : null,
+        error.code ? `Code: ${error.code}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
   }
 
   const quest = data?.[0];
