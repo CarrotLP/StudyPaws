@@ -44,11 +44,7 @@ export async function getUserAccessories(userUid: string): Promise<UserAccessory
 }
 
 export async function toggleAccessory(userUid: string, accessoryName: string, chosen: boolean): Promise<void> {
-
-
-  // Using upsert as it's often more robust against RLS issues
-  // and handles the "user" reserved word well via the object key.
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('users_accessories')
     .upsert({
       user: userUid,
@@ -56,16 +52,38 @@ export async function toggleAccessory(userUid: string, accessoryName: string, ch
       chosen: chosen
     }, {
       onConflict: 'user,accessory'
-    })
-    .select();
+    });
 
   if (error) {
-    console.error('DEBUG: Supabase toggle error:', error);
+    console.error('Error in toggleAccessory:', error);
     throw error;
   }
+}
 
-  if (!data || data.length === 0) {
-    console.error('DEBUG: Toggle failed. This is likely a Supabase RLS Policy issue.');
-  } else {
+export async function addAccessoryToUser(userUid: string, accessoryName: string): Promise<void> {
+  const { error } = await supabase
+    .from('users_accessories')
+    .insert({
+      user: userUid,
+      accessory: accessoryName,
+      chosen: false
+    });
+
+  if (error && error.code !== '23505') { // Ignore unique constraint violation (already owned)
+    console.error('Error in addAccessoryToUser:', error);
+    throw error;
+  }
+}
+
+export async function removeAccessoryFromUser(userUid: string, accessoryName: string): Promise<void> {
+  const { error } = await supabase
+    .from('users_accessories')
+    .delete()
+    .eq('user', userUid)
+    .eq('accessory', accessoryName);
+
+  if (error) {
+    console.error('Error in removeAccessoryFromUser:', error);
+    throw error;
   }
 }

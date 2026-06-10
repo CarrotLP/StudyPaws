@@ -2,16 +2,7 @@
 // These are used for the PixelCat accessories.
 
 export type OutfitSlot = 'head' | 'face' | 'neck' | 'body';
-export type ItemId =
-  | 'scarf'
-  | 'beret'
-  | 'glasses'
-  | 'bowtie'
-  | 'flower'
-  | 'sweater'
-  | 'monocle'
-  | 'crown'
-  | 'bandana';
+export type ItemId = string;
 
 export type Item = {
   id: ItemId;

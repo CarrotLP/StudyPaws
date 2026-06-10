@@ -4,7 +4,6 @@ import { Image, View } from 'react-native';
 import { supabase } from '@/backend/lib/supabase';
 
 import { useAuth } from '../hooks/use-auth';
-import { type OutfitState } from '../hooks/use-outfit';
 
 export const LAYER_ORDER = [
   'back_body',
@@ -47,12 +46,11 @@ const GLOBAL_MOCHI_SCALE = 0.7;
 
 interface MochiProps {
   id?: string; // If provided, render just this single asset (icon mode)
-  outfit?: OutfitState; // If provided, render the full layered character
   scale?: number;
   silhouette?: boolean;
 }
 
-export function Mochi({ id, outfit, scale = 1, silhouette = false }: MochiProps) {
+export function Mochi({ id, scale = 1, silhouette = false }: MochiProps) {
   const { user } = useAuth();
   const [layers, setLayers] = useState<MochiAsset[]>([]);
   const finalScale = scale * GLOBAL_MOCHI_SCALE;

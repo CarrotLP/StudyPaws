@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 
 import { DailyQuestOverlay } from '@/components/DailyQuestOverlay';
 import { DevSkipButton } from '@/components/DevSkipButton';
@@ -25,7 +26,7 @@ import {
 } from '@/constants/havenTheme';
 import { minutesToTime, questWindowsFromDeadlines } from '@/constants/questWindows';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
-import { useOutfit } from '@/hooks/use-outfit';
+import { useEconomy } from '@/hooks/use-economy';
 import { useWithinWindow } from '@/hooks/use-quest-window';
 import { type BreakHabit, useStudySession } from '@/hooks/use-study-session';
 import { useUser } from '@/hooks/use-user';
@@ -33,19 +34,32 @@ import { fmt, fmtMinutes } from '@/lib/haven-format';
 
 export default function HomeScreen() {
   const session = useStudySession();
-  const { outfit } = useOutfit();
+  const { points, refreshPoints } = useEconomy();
   const { petName } = useUser();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshPoints();
+      setRefreshKey(prev => prev + 1);
+    }, [refreshPoints])
+  );
   const { deadlines, hasSubmittedToday } = useDailyQuest();
   const {
     phase,
-    points,
     todayMinutes,
     studyDuration,
     breakDuration,
     secondsLeft,
     activeBreakHabit,
+    completedBreakHabits,
     toast,
   } = session;
+
+  // Sync points display whenever the session state indicates points were earned.
+  useEffect(() => {
+    refreshPoints();
+  }, [phase, completedBreakHabits.length, refreshPoints]);
 
   // Local-clock gate: the daily quest is only offered during the submission window.
   const submissionOpen = useWithinWindow(
@@ -67,7 +81,7 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <Mochi outfit={outfit as any} scale={2} />
+          <Mochi key={refreshKey} scale={2} />
           <View style={styles.floorShadow} />
         </View>
 
