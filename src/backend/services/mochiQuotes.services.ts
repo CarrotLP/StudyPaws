@@ -4,7 +4,7 @@ import { supabase } from '@/backend/lib/supabase';
 export const MOCHI_PERSONALITIES = [
   'supportive',
   'strict',
-  'friendly',
+  'philosophical',
   'cutesy',
   'funny',
 ] as const;
@@ -19,7 +19,7 @@ export type MochiPersonality = (typeof MOCHI_PERSONALITIES)[number];
  *   create table public.mochi_quotes (
  *     id uuid primary key default gen_random_uuid(),
  *     personality text not null
- *       check (personality in ('supportive','strict','friendly','cutesy','funny')),
+ *       check (personality in ('supportive','strict','philosophical','cutesy','funny')),
  *     text text not null
  *   );
  *
