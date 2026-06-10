@@ -4,6 +4,7 @@ export type UserAccessory = {
   accessory: string;
   chosen: boolean;
   image: string;
+  category: string; // the component `layer` — used for one-per-category equip rules
 };
 
 export async function getUserAccessories(userUid: string): Promise<UserAccessory[]> {
@@ -15,7 +16,8 @@ export async function getUserAccessories(userUid: string): Promise<UserAccessory
       accessories:accessory (
         accessories_components (
           components:components (
-            image
+            image,
+            layer
           )
         )
       )
@@ -31,14 +33,16 @@ export async function getUserAccessories(userUid: string): Promise<UserAccessory
     const accessoryData = item.accessories;
     const components = accessoryData?.accessories_components || [];
 
-    // Get the first component's image
+    // Get the first component's image + layer (its category)
     const firstComp = Array.isArray(components) ? components[0] : components;
     const image = firstComp?.components?.image || '';
+    const category = firstComp?.components?.layer || '';
 
     return {
       accessory: item.accessory,
       chosen: item.chosen,
       image,
+      category,
     };
   });
 }
