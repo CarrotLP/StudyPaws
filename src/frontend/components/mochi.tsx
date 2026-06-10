@@ -71,7 +71,7 @@ interface MochiProps {
 }
 
 // How long the cat walks after a tap.
-const WALK_MS = 5000;
+const WALK_MS = 2500;
 
 export function Mochi({ id, outfit, scale = 1, silhouette = false, walkSignal }: MochiProps) {
   const { user } = useAuth();

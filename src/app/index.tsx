@@ -36,7 +36,7 @@ export default function HomeScreen() {
   const session = useStudySession();
   const [catTaps, setCatTaps] = useState(0);
   const { outfit } = useOutfit();
-  const { petName } = useUser();
+  const { petName, personality } = useUser();
   const { deadlines, hasSubmittedToday } = useDailyQuest();
   const {
     phase,
@@ -75,6 +75,7 @@ export default function HomeScreen() {
           <View style={styles.floorShadow} />
           <MochiSpeech
             tapSignal={catTaps}
+            personality={personality ?? undefined}
             mode={
               phase === 'studying'
                 ? 'study'

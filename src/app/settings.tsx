@@ -14,11 +14,14 @@ import {
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
+import { useUser } from '@/hooks/use-user';
+import { MOCHI_PERSONALITIES, type MochiPersonality } from '@/services/mochiQuotes.services';
 import {
   getQuestDeadlines,
   saveQuestDeadlines,
   type QuestDeadlines,
 } from '@/services/questSettings.services';
+import { updateUserPersonality } from '@/services/user.services';
 import {
   getTeamsForUser,
   type UserTeam,
@@ -33,6 +36,34 @@ export default function SettingsScreen() {
   const { deadlines: providerDeadlines } = useDailyQuest();
 
   const { user } = useAuth();
+  const { personality: loadedPersonality } = useUser();
+
+  // Personality picker — initialised from the user's saved value. Falls back to
+  // the default if it's unset or a value no longer offered, so a chip is always
+  // shown selected.
+  const [personality, setPersonality] = useState<MochiPersonality>('philosophical');
+  useEffect(() => {
+    if (loadedPersonality && (MOCHI_PERSONALITIES as readonly string[]).includes(loadedPersonality)) {
+      setPersonality(loadedPersonality);
+    } else {
+      setPersonality('philosophical');
+    }
+  }, [loadedPersonality]);
+
+  const onPickPersonality = async (next: MochiPersonality) => {
+    if (!user) return;
+    const prev = personality;
+    setPersonality(next); // optimistic
+    setSettingsError(null);
+    try {
+      const name = (user.user_metadata?.name as string) ?? '';
+      await updateUserPersonality(user.id, next, name);
+    } catch (err) {
+      setPersonality(prev); // revert on failure
+      setSettingsError(err instanceof Error ? err.message : 'Failed to update personality');
+    }
+  };
+
   const [teams, setTeams] = useState<UserTeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
@@ -104,6 +135,32 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.section}>settings</Text>
         <View style={styles.rule} />
+
+        {/* Cat personality */}
+        <View style={styles.deadlineCard}>
+          <Text style={styles.deadlineLabel}>Cat personality</Text>
+          <View style={styles.personalityRow}>
+            {MOCHI_PERSONALITIES.map((p) => {
+              const selected = p === personality;
+              return (
+                <Pressable
+                  key={p}
+                  onPress={() => onPickPersonality(p)}
+                  style={[styles.personalityChip, selected && styles.personalityChipSelected]}>
+                  <Text
+                    style={[
+                      styles.personalityChipText,
+                      selected && styles.personalityChipTextSelected,
+                    ]}>
+                    {p}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {settingsError ? <Text style={styles.message}>{settingsError}</Text> : null}
+        </View>
+
         {/* Team selector */}
         <View style={styles.deadlineCard}>
           <Text style={styles.deadlineLabel}>Team</Text>
@@ -286,6 +343,31 @@ const styles = StyleSheet.create({
     backgroundColor: HavenColors.cellFill,
     borderWidth: Border.base,
     borderColor: HavenColors.inkSoft,
+  },
+  personalityRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: HavenSpacing.sm,
+  },
+  personalityChip: {
+    paddingVertical: HavenSpacing.sm,
+    paddingHorizontal: HavenSpacing.md,
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+  },
+  personalityChipSelected: {
+    backgroundColor: HavenColors.wornCell,
+    borderColor: HavenColors.gold,
+  },
+  personalityChipText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.base,
+    color: HavenColors.inkSoft,
+  },
+  personalityChipTextSelected: {
+    color: HavenColors.ink,
   },
   deadlineLabel: {
     fontFamily: HavenFonts.pixel,
