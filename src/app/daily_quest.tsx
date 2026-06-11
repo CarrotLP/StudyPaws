@@ -23,11 +23,13 @@ import { getCommunitySubmissionOfDate, removeSubmissionFromCommunity, uploadSubm
 import { getOwnQuestSubmission } from '@/services/questSubmission.services';
 import { getCommunitiesForUser } from '@/services/userCommunities.services';
 import { getTeamGallery, submitVote, type GallerySubmission } from '@/services/vote.services';
+import { getThemeForWeek } from '@/services/weeklyTheme.services';
 
 /** Rating-star glyph size (px). Fill is rendered slightly smaller so the
  *  black outline stays visible underneath when a star is selected. */
 const STAR_SIZE = 32;
 const STAR_FILL_SIZE = STAR_SIZE - 7;
+const BOTTOM_BUTTON_SCROLL_PADDING = 96;
 
 export default function DailyQuestScreen() {
   const { user } = useAuth();
@@ -44,6 +46,8 @@ export default function DailyQuestScreen() {
   const [galleryPage, setGalleryPage] = useState(0);
   const [communityUploaded, setCommunityUploaded] = useState(false);
   const [hasCommunity, setHasCommunity] = useState(false);
+  const [weeklyTheme, setWeeklyTheme] = useState<string | null>(null);
+  const [weeklyThemeLoading, setWeeklyThemeLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,6 +82,35 @@ export default function DailyQuestScreen() {
           setHasCommunity(false);
         });
     }, [quest, user]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!quest) {
+        setWeeklyTheme(null);
+        setWeeklyThemeLoading(false);
+        return;
+      }
+
+      let active = true;
+      setWeeklyThemeLoading(true);
+      getThemeForWeek(quest.questDate)
+        .then((theme) => {
+          if (!active) return;
+          setWeeklyTheme(theme || null);
+        })
+        .catch(() => {
+          if (!active) return;
+          setWeeklyTheme(null);
+        })
+        .finally(() => {
+          if (active) setWeeklyThemeLoading(false);
+        });
+
+      return () => {
+        active = false;
+      };
+    }, [quest]),
   );
 
   const allRated = gallerySubmissions.length > 0 && ratings.every((r) => r > 0);
@@ -177,6 +210,13 @@ export default function DailyQuestScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.section}>daily quest</Text>
         <View style={styles.rule} />
+
+        {weeklyTheme && (
+          <View style={styles.weeklyThemeBlock}>
+            <Text style={styles.weeklyThemeLabel}>The weekly theme is:</Text>
+            <Text style={styles.weeklyThemeText}>{weeklyTheme}</Text>
+          </View>
+        )}
 
         {/* ── Submission panel ── */}
         <Text style={styles.submissionLabel}>Your submission for today</Text>
@@ -410,7 +450,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: HavenSpacing.xxl,
     paddingTop: HavenSpacing.xl,
-    paddingBottom: HavenSpacing.xxl,
+    paddingBottom: HavenSpacing.xxl + BOTTOM_BUTTON_SCROLL_PADDING,
     backgroundColor: HavenColors.parchment,
     gap: HavenSpacing.lg,
   },
@@ -425,6 +465,22 @@ const styles = StyleSheet.create({
   rule: {
     height: Border.thick,
     backgroundColor: HavenColors.ink,
+  },
+  weeklyThemeBlock: {
+    alignItems: 'center',
+    gap: HavenSpacing.xs,
+  },
+  weeklyThemeLabel: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.ink,
+    textAlign: 'center',
+  },
+  weeklyThemeText: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.lg,
+    color: RibbonColors.calendar,
+    textAlign: 'center',
   },
 
   // ── Submission panel ──────────────────────────────────────────────────────
