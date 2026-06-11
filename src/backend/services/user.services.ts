@@ -2,6 +2,8 @@ import { supabase } from '@/backend/lib/supabase';
 
 import type { MochiPersonality } from '@/services/mochiQuotes.services';
 
+export type ActivityStatus = 'studying' | 'on a break' | 'not studying';
+
 export type UserDetails = {
   name: string;
   pet_name: string;
@@ -48,6 +50,21 @@ export async function updateUserPoints(userUid: string, points: number): Promise
 
   if (error) {
     console.error('Error updating points:', error);
+    throw error;
+  }
+}
+
+export async function updateUserActivityStatus(
+  userUid: string,
+  activityStatus: ActivityStatus,
+): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .update({ activity_status: activityStatus })
+    .eq('user_uid', userUid);
+
+  if (error) {
+    console.error('Error updating activity status:', error);
     throw error;
   }
 }

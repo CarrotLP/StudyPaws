@@ -10,6 +10,10 @@ import {
 } from 'react';
 import { AppState } from 'react-native';
 
+import {
+    updateUserActivityStatus,
+    type ActivityStatus,
+} from '@/backend/services/user.services';
 import { HabitColors } from '../constants/havenTheme';
 import {
     DEFAULT_SESSION,
@@ -18,6 +22,7 @@ import {
     type HabitId,
     type SessionPhase,
 } from '../lib/haven-storage';
+import { useAuth } from './use-auth';
 import { useEconomy } from './use-economy';
 import { useStudyHistory } from './use-study-history';
 
@@ -132,6 +137,7 @@ const StateContext = createContext<SessionState | null>(null);
 const ActionsContext = createContext<SessionActions | null>(null);
 
 export function StudySessionProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const { todayMinutes, addMinutesToday } = useStudyHistory();
   const { addPoints } = useEconomy();
 
@@ -167,6 +173,16 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2400);
   }, []);
+
+  const setActivityStatus = useCallback(
+    (status: ActivityStatus) => {
+      if (!user?.id) return;
+      void updateUserActivityStatus(user.id, status).catch((error) => {
+        console.warn('Failed to update activity status:', error);
+      });
+    },
+    [user?.id],
+  );
 
   // Hydrate from storage once. A timer that already elapsed while the app was
   // killed will resume here and be completed by the effect below.
@@ -241,6 +257,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     if (phase === 'studying') {
       const studiedMinutes = Math.ceil((intendedDuration ?? studyDuration) / 60);
       addMinutesToday(studiedMinutes);
+      setActivityStatus('not studying');
 
       // Stop the timer immediately
       setStartedAt(null);
@@ -255,6 +272,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       handleCompletion();
     } else {
       // break_active timer hit zero.
+      setActivityStatus('not studying');
       setStartedAt(null);
       setIntendedDuration(null);
       if (breakHabitId) {
@@ -263,7 +281,18 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         setPhase('break_expired_prompt');
       }
     }
-  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday, addPoints]);
+  }, [
+    hydrated,
+    phase,
+    secondsLeft,
+    intendedDuration,
+    studyDuration,
+    breakHabitId,
+    showToast,
+    addMinutesToday,
+    addPoints,
+    setActivityStatus,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -273,6 +302,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
 
   const startStudy = useCallback(() => {
     firedRef.current = false;
+    setActivityStatus('studying');
     setBreakHabitId(null);
     setCompletedBreakHabits([]);
     setBreakExpiredWhileInActivity(false);
@@ -280,22 +310,24 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     setStartedAt(Date.now());
     setNow(Date.now());
     setPhase('studying');
-  }, [studyDuration]);
+  }, [studyDuration, setActivityStatus]);
 
   // "Give up" (studying) and dev reset. Returns fully to idle.
   const stopSession = useCallback(() => {
     firedRef.current = false;
+    setActivityStatus('not studying');
     setPhase('idle');
     setStartedAt(null);
     setIntendedDuration(null);
     setBreakHabitId(null);
     setCompletedBreakHabits([]);
     setBreakExpiredWhileInActivity(false);
-  }, []);
+  }, [setActivityStatus]);
 
   // break_intro CTA: kick off the wall-clock break timer and enter the list.
   const startBreak = useCallback(() => {
     firedRef.current = false;
+    setActivityStatus('on a break');
     setBreakHabitId(null);
     setCompletedBreakHabits([]);
     setBreakExpiredWhileInActivity(false);
@@ -303,7 +335,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     setStartedAt(Date.now());
     setNow(Date.now());
     setPhase('break_active');
-  }, [breakDuration]);
+  }, [breakDuration, setActivityStatus]);
 
   // Tap a habit in the list — open its sub-activity view. No timer is started.
   const openBreakActivity = useCallback(
@@ -319,10 +351,11 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   const closeBreakActivity = useCallback(() => {
     setBreakHabitId(null);
     if (breakExpiredWhileInActivity) {
+      setActivityStatus('not studying');
       setBreakExpiredWhileInActivity(false);
       setPhase('break_expired_prompt');
     }
-  }, [breakExpiredWhileInActivity]);
+  }, [breakExpiredWhileInActivity, setActivityStatus]);
 
   // Finish a sub-activity: award its points, mark it done, return to the list
   // (or to the expired prompt if the parent timer expired while inside).
@@ -339,21 +372,30 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     }
     setBreakHabitId(null);
     if (breakExpiredWhileInActivity) {
+      setActivityStatus('not studying');
       setBreakExpiredWhileInActivity(false);
       setPhase('break_expired_prompt');
     }
-  }, [breakHabitId, completedBreakHabits, breakExpiredWhileInActivity, addPoints, showToast]);
+  }, [
+    breakHabitId,
+    completedBreakHabits,
+    breakExpiredWhileInActivity,
+    addPoints,
+    showToast,
+    setActivityStatus,
+  ]);
 
   // "End break early" (list) and "End break" (expired prompt) → finished.
   const endBreak = useCallback(() => {
     firedRef.current = false;
+    setActivityStatus('not studying');
     setPhase('finished');
     setStartedAt(null);
     setIntendedDuration(null);
     setBreakHabitId(null);
     setBreakExpiredWhileInActivity(false);
     // `completedBreakHabits` is reset on the next session start.
-  }, []);
+  }, [setActivityStatus]);
 
   // DEV ONLY: rewind the start time so the wall clock leaves ~2s on the active
   // timer; it then completes through the normal transition logic.
