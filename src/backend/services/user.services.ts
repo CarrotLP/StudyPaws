@@ -3,6 +3,8 @@ import { supabase } from '@/backend/lib/supabase';
 import { ensureCharacter } from '@/services/character.services';
 import type { MochiPersonality } from '@/services/mochiQuotes.services';
 
+export type ActivityStatus = 'studying' | 'on a break' | 'not studying';
+
 export type UserDetails = {
   name: string;
   pet_name: string;
@@ -72,6 +74,26 @@ export async function updateUserPoints(userUid: string, points: number): Promise
   if (error) {
     console.error('Error updating points:', error);
     throw error;
+  }
+}
+
+export async function updateUserActivityStatus(
+  userUid: string,
+  activityStatus: ActivityStatus,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('users')
+    .update({ activity_status: activityStatus })
+    .eq('user_uid', userUid)
+    .select('user_uid');
+
+  if (error) {
+    console.error('Error updating activity status:', error);
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No row written - check the users update RLS policy or current user id.');
   }
 }
 

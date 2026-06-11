@@ -8,8 +8,12 @@ import {
     useState,
     type ReactNode,
 } from 'react';
-import { AppState } from 'react-native';
+import { Alert, AppState } from 'react-native';
 
+import {
+    updateUserActivityStatus,
+    type ActivityStatus,
+} from '@/backend/services/user.services';
 import { HabitColors } from '../constants/havenTheme';
 import {
     DEFAULT_SESSION,
@@ -18,6 +22,7 @@ import {
     type HabitId,
     type SessionPhase,
 } from '../lib/haven-storage';
+import { useAuth } from './use-auth';
 import { useEconomy } from './use-economy';
 import { useStudyHistory } from './use-study-history';
 
@@ -131,7 +136,19 @@ type SessionActions = {
 const StateContext = createContext<SessionState | null>(null);
 const ActionsContext = createContext<SessionActions | null>(null);
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return 'Unknown error';
+  }
+}
+
 export function StudySessionProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const { todayMinutes, addMinutesToday } = useStudyHistory();
   const { addPoints } = useEconomy();
 
@@ -155,6 +172,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
 
   // Guards completion from firing more than once per started timer.
   const firedRef = useRef(false);
+  const lastActivityStatusRef = useRef<{ userId: string; status: ActivityStatus } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const secondsLeft =
@@ -167,6 +185,46 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2400);
   }, []);
+
+  const setActivityStatus = useCallback(
+    (status: ActivityStatus) => {
+      if (!user?.id) {
+        Alert.alert('Activity status update failed', 'No signed-in user was available.');
+        return;
+      }
+
+      const lastActivityStatus = lastActivityStatusRef.current;
+      if (lastActivityStatus?.userId === user.id && lastActivityStatus.status === status) return;
+
+      lastActivityStatusRef.current = { userId: user.id, status };
+      void updateUserActivityStatus(user.id, status).catch((error) => {
+        console.warn('Failed to update activity status:', error);
+        if (
+          lastActivityStatusRef.current?.userId === user.id &&
+          lastActivityStatusRef.current.status === status
+        ) {
+          lastActivityStatusRef.current = null;
+        }
+        Alert.alert(
+          'Activity status update failed',
+          `Tried to set "${status}" for user ${user.id}.\n\n${getErrorMessage(error)}`,
+        );
+      });
+    },
+    [user?.id],
+  );
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (phase === 'studying') {
+      setActivityStatus('studying');
+    } else if (phase === 'break_active') {
+      setActivityStatus('on a break');
+    } else {
+      setActivityStatus('not studying');
+    }
+  }, [hydrated, phase, setActivityStatus]);
 
   // Hydrate from storage once. A timer that already elapsed while the app was
   // killed will resume here and be completed by the effect below.
@@ -241,6 +299,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     if (phase === 'studying') {
       const studiedMinutes = Math.ceil((intendedDuration ?? studyDuration) / 60);
       addMinutesToday(studiedMinutes);
+      setActivityStatus('not studying');
 
       // Stop the timer immediately
       setStartedAt(null);
@@ -255,6 +314,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       handleCompletion();
     } else {
       // break_active timer hit zero.
+      setActivityStatus('not studying');
       setStartedAt(null);
       setIntendedDuration(null);
       if (breakHabitId) {
@@ -263,7 +323,18 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         setPhase('break_expired_prompt');
       }
     }
-  }, [hydrated, phase, secondsLeft, intendedDuration, studyDuration, breakHabitId, showToast, addMinutesToday, addPoints]);
+  }, [
+    hydrated,
+    phase,
+    secondsLeft,
+    intendedDuration,
+    studyDuration,
+    breakHabitId,
+    showToast,
+    addMinutesToday,
+    addPoints,
+    setActivityStatus,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -342,7 +413,13 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       setBreakExpiredWhileInActivity(false);
       setPhase('break_expired_prompt');
     }
-  }, [breakHabitId, completedBreakHabits, breakExpiredWhileInActivity, addPoints, showToast]);
+  }, [
+    breakHabitId,
+    completedBreakHabits,
+    breakExpiredWhileInActivity,
+    addPoints,
+    showToast,
+  ]);
 
   // "End break early" (list) and "End break" (expired prompt) → finished.
   const endBreak = useCallback(() => {
