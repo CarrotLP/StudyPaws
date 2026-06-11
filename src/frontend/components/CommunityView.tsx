@@ -1,5 +1,5 @@
 import { type UserCommunity } from '@/services/userCommunities.services';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BodyFontSize,
@@ -14,15 +14,26 @@ import { getCommunityMemberCount } from '@/services/community.services';
 import { useEffect, useState } from 'react';
 
 type CommunityViewProps = {
-  currentCommunity: UserCommunity;
+  currentCommunity: UserCommunity | null;
   loading: boolean;
   leaving: boolean;
   confirmLeaveCommunity: () => void;
   onOpenGallery: () => void;
   onOpenHallOfFame: () => void;
+  joining: boolean;
+  setJoining: (value: boolean) => void;
+  creating: boolean;
+  setCreating: (value: boolean) => void;
+  communityCode: string;
+  setCommunityCode: (value: string) => void;
+  newCommunityName: string;
+  setNewCommunityName: (value: string) => void;
+  joinCommunity: () => Promise<void>;
+  createNewCommunity: () => Promise<void>;
 };
 
-export function CommunityView({ currentCommunity, loading, leaving, confirmLeaveCommunity, onOpenGallery, onOpenHallOfFame }: CommunityViewProps) {
+export function CommunityView({ currentCommunity, loading, leaving, confirmLeaveCommunity, onOpenGallery, onOpenHallOfFame, joining, setJoining, creating, setCreating, communityCode, setCommunityCode, newCommunityName, setNewCommunityName, joinCommunity, createNewCommunity }: CommunityViewProps) {
+  const hasCommunity = Boolean(currentCommunity);
   const [memberCount, setMemberCount] = useState(0);
   useEffect(() => {
       if (!currentCommunity) return;
@@ -34,6 +45,8 @@ export function CommunityView({ currentCommunity, loading, leaving, confirmLeave
   
   return (
     <>
+    <Text style={styles.section}>Community</Text>
+    <View style={styles.rule} />
     <View style={styles.communityList}>    
               {currentCommunity ? (
                 <View style={styles.communityCard}>
@@ -91,6 +104,70 @@ export function CommunityView({ currentCommunity, loading, leaving, confirmLeave
                         <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave community'}</Text>
                       </Pressable>
                     ) : null}
+
+        {!hasCommunity && (
+          <>
+            {joining ? (
+              <View style={{ width: '100%' }}>
+                <Text style={styles.label}>Community code</Text>
+                <TextInput
+                  value={communityCode}
+                  onChangeText={setCommunityCode}
+                  placeholder="Community code"
+                  style={styles.input}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={loading || !communityCode.trim()}
+                  onPress={() => void joinCommunity()}
+                  style={({ pressed }) => [
+                    styles.joinButton,
+                    pressed && styles.buttonPressed,
+                    (loading || !communityCode.trim()) && styles.buttonDisabled,
+                  ]}>
+                  <Text style={styles.joinButtonText}>Join community</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setJoining(true)}
+                style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
+                <Text style={styles.joinButtonText}>Join community</Text>
+              </Pressable>
+            )}
+
+            {creating ? (
+              <View style={{ width: '100%' }}>
+                <Text style={styles.label}>Community name</Text>
+                <TextInput
+                  value={newCommunityName}
+                  onChangeText={setNewCommunityName}
+                  placeholder="e.g. Study Group"
+                  style={styles.input}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={loading || !newCommunityName.trim()}
+                  onPress={() => void createNewCommunity()}
+                  style={({ pressed }) => [
+                    styles.joinButton,
+                    pressed && styles.buttonPressed,
+                    (loading || !newCommunityName.trim()) && styles.buttonDisabled,
+                  ]}>
+                  <Text style={styles.joinButtonText}>Create community</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setCreating(true)}
+                style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
+                <Text style={styles.joinButtonText}>Create community</Text>
+              </Pressable>
+            )}
+          </>
+        )}
     </>
   );
 }

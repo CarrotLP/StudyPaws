@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFocusEffect } from 'expo-router';
@@ -215,9 +215,6 @@ export default function CommunitiesScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.section}>Community</Text>
-        <View style={styles.rule} />
-
         {view === 'community' ? (
           <CommunityView 
             currentCommunity={currentCommunity}
@@ -225,7 +222,18 @@ export default function CommunitiesScreen() {
             leaving={leaving}
             confirmLeaveCommunity={confirmLeaveCommunity}
             onOpenGallery={() => setView('gallery')}
-            onOpenHallOfFame={() => setView('hallOfFame')}/>
+            onOpenHallOfFame={() => setView('hallOfFame')}
+            joining={joining}
+            setJoining={setJoining}
+            creating={creating}
+            setCreating={setCreating}
+            communityCode={communityCode}
+            setCommunityCode={setCommunityCode}
+            newCommunityName={newCommunityName}
+            setNewCommunityName={setNewCommunityName}
+            joinCommunity={joinCommunity}
+            createNewCommunity={createNewCommunity}
+          />
         ) : view === 'gallery' ? (
           <GalleryView 
             currentCommunity={currentCommunity}
@@ -239,72 +247,6 @@ export default function CommunitiesScreen() {
             onBack={() => setView('community')}
           />
         )}
-        
-
-        {!hasCommunity && (
-          <>
-            {joining ? (
-              <View style={{ width: '100%' }}>
-                <Text style={styles.label}>Community code</Text>
-                <TextInput
-                  value={communityCode}
-                  onChangeText={setCommunityCode}
-                  placeholder="Community code"
-                  style={styles.input}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={loading || !communityCode.trim()}
-                  onPress={() => void joinCommunity()}
-                  style={({ pressed }) => [
-                    styles.joinButton,
-                    pressed && styles.buttonPressed,
-                    (loading || !communityCode.trim()) && styles.buttonDisabled,
-                  ]}>
-                  <Text style={styles.joinButtonText}>Join community</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setJoining(true)}
-                style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
-                <Text style={styles.joinButtonText}>Join community</Text>
-              </Pressable>
-            )}
-
-            {creating ? (
-              <View style={{ width: '100%' }}>
-                <Text style={styles.label}>Community name</Text>
-                <TextInput
-                  value={newCommunityName}
-                  onChangeText={setNewCommunityName}
-                  placeholder="e.g. Study Group"
-                  style={styles.input}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={loading || !newCommunityName.trim()}
-                  onPress={() => void createNewCommunity()}
-                  style={({ pressed }) => [
-                    styles.joinButton,
-                    pressed && styles.buttonPressed,
-                    (loading || !newCommunityName.trim()) && styles.buttonDisabled,
-                  ]}>
-                  <Text style={styles.joinButtonText}>Create community</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setCreating(true)}
-                style={({ pressed }) => [styles.joinButton, pressed && styles.buttonPressed]}>
-                <Text style={styles.joinButtonText}>Create community</Text>
-              </Pressable>
-            )}
-          </>
-        )}
-
       </ScrollView>
     </SafeAreaView>
   );
