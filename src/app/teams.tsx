@@ -1,10 +1,20 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFocusEffect } from 'expo-router';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   BodyFontSize,
@@ -34,6 +44,7 @@ import {
 
 const LEADERBOARD_CUP_SIZE = 18;
 const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
+const SUGGESTION_SUCCESS_CLOSE_MS = 3000;
 const TEAM_REFRESH_MS = 30_000;
 
 // Max characters of a member's name shown under their mini cat before truncating.
@@ -69,6 +80,8 @@ export default function TeamsScreen() {
   const [themeLoading, setThemeLoading] = useState(true);
   const [questSuggestion, setQuestSuggestion] = useState('');
   const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null);
+  const [suggestionModalVisible, setSuggestionModalVisible] = useState(false);
+  const suggestionCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentTeam = teams[0] ?? null;
   const hasTeam = Boolean(currentTeam);
   const nextWeekStart = getNextWeekStartUtc();
@@ -97,6 +110,27 @@ export default function TeamsScreen() {
       </View>
     );
   };
+
+  const clearSuggestionCloseTimer = useCallback(() => {
+    if (suggestionCloseTimerRef.current) {
+      clearTimeout(suggestionCloseTimerRef.current);
+      suggestionCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const closeSuggestionModal = useCallback(() => {
+    clearSuggestionCloseTimer();
+    setSuggestionModalVisible(false);
+    setSuggestionMessage(null);
+  }, [clearSuggestionCloseTimer]);
+
+  const openSuggestionModal = useCallback(() => {
+    clearSuggestionCloseTimer();
+    setSuggestionMessage(null);
+    setSuggestionModalVisible(true);
+  }, [clearSuggestionCloseTimer]);
+
+  useEffect(() => clearSuggestionCloseTimer, [clearSuggestionCloseTimer]);
 
   useFocusEffect(
     useCallback(() => {
@@ -281,20 +315,22 @@ export default function TeamsScreen() {
       await submitTeamQuestSuggestion(currentTeam.teamId, nextWeekStart, description);
       setQuestSuggestion('');
       setSuggestionMessage('Quest suggestion submitted.');
+      clearSuggestionCloseTimer();
+      suggestionCloseTimerRef.current = setTimeout(() => {
+        setSuggestionModalVisible(false);
+        setSuggestionMessage(null);
+        suggestionCloseTimerRef.current = null;
+      }, SUGGESTION_SUCCESS_CLOSE_MS);
     } catch (err) {
       setSuggestionMessage(err instanceof Error ? err.message : 'Could not submit suggestion.');
     } finally {
       setSubmittingSuggestion(false);
     }
-  }, [currentTeam, nextWeekStart, nextWeekTheme, questSuggestion]);
+  }, [clearSuggestionCloseTimer, currentTeam, nextWeekStart, nextWeekTheme, questSuggestion]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <KeyboardAwareScrollView
-        bottomOffset={HavenSpacing.xl}
-        contentContainerStyle={styles.content}
-        extraKeyboardSpace={96}
-        keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.section}>Team</Text>
         <View style={styles.rule} />
 
@@ -372,36 +408,15 @@ export default function TeamsScreen() {
               </Text>
 
               {nextWeekTheme ? (
-                <>
-                  <Text style={styles.suggestionLabel}>Make a quest suggestion:</Text>
-                  <TextInput
-                    value={questSuggestion}
-                    onChangeText={(text) => {
-                      setQuestSuggestion(text);
-                      setSuggestionMessage(null);
-                    }}
-                    placeholder="Write your quest idea"
-                    multiline
-                    style={[styles.input, styles.suggestionInput]}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={submittingSuggestion || !questSuggestion.trim()}
-                    onPress={() => void submitSuggestion()}
-                    style={({ pressed }) => [
-                      styles.submitSuggestionButton,
-                      pressed && !submittingSuggestion && styles.buttonPressed,
-                      (submittingSuggestion || !questSuggestion.trim()) && styles.buttonDisabled,
-                    ]}>
-                    <Text style={styles.submitSuggestionButtonText}>
-                      {submittingSuggestion ? 'Submitting...' : 'Submit'}
-                    </Text>
-                  </Pressable>
-                </>
-              ) : null}
-
-              {suggestionMessage ? (
-                <Text style={styles.suggestionMessage}>{suggestionMessage}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openSuggestionModal}
+                  style={({ pressed }) => [
+                    styles.submitSuggestionButton,
+                    pressed && styles.buttonPressed,
+                  ]}>
+                  <Text style={styles.submitSuggestionButtonText}>Make a quest suggestion</Text>
+                </Pressable>
               ) : null}
             </View>
           </View>
@@ -484,7 +499,71 @@ export default function TeamsScreen() {
             <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave team'}</Text>
           </Pressable>
         ) : null}
-      </KeyboardAwareScrollView>
+      </ScrollView>
+
+      <Modal
+        visible={suggestionModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeSuggestionModal}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalScrim}>
+          <View style={styles.modalWrapper}>
+            <Pressable
+              accessibilityLabel="Close quest suggestion"
+              hitSlop={HavenSpacing.md}
+              onPress={closeSuggestionModal}
+              style={styles.modalCloseButton}>
+              <Text style={styles.modalCloseText}>X</Text>
+            </Pressable>
+
+            <View style={styles.suggestionModalCard}>
+              <ScrollView
+                contentContainerStyle={styles.suggestionModalContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}>
+                <Text style={styles.suggestionLabel}>Next week's theme will be:</Text>
+                <Text style={styles.themeText}>
+                  {themeLoading
+                    ? 'Loading...'
+                    : nextWeekTheme ?? "Next week's theme is not available yet"}
+                </Text>
+
+                <Text style={styles.suggestionLabel}>Make a quest suggestion:</Text>
+                <TextInput
+                  value={questSuggestion}
+                  onChangeText={(text) => {
+                    setQuestSuggestion(text);
+                    setSuggestionMessage(null);
+                    clearSuggestionCloseTimer();
+                  }}
+                  placeholder="Write your quest idea"
+                  multiline
+                  style={[styles.input, styles.suggestionInput]}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={submittingSuggestion || !questSuggestion.trim()}
+                  onPress={() => void submitSuggestion()}
+                  style={({ pressed }) => [
+                    styles.submitSuggestionButton,
+                    pressed && !submittingSuggestion && styles.buttonPressed,
+                    (submittingSuggestion || !questSuggestion.trim()) && styles.buttonDisabled,
+                  ]}>
+                  <Text style={styles.submitSuggestionButtonText}>
+                    {submittingSuggestion ? 'Submitting...' : 'Submit'}
+                  </Text>
+                </Pressable>
+
+                {suggestionMessage ? (
+                  <Text style={styles.suggestionMessage}>{suggestionMessage}</Text>
+                ) : null}
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -641,6 +720,48 @@ const styles = StyleSheet.create({
     paddingVertical: HavenSpacing.lg,
     paddingHorizontal: HavenSpacing.lg,
     boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.parchmentShadow}`,
+  },
+  modalScrim: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: HavenSpacing.xxl,
+    backgroundColor: HavenColors.overlayScrim,
+  },
+  modalWrapper: {
+    position: 'relative',
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '90%',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: -14,
+    right: -10,
+    zIndex: 1,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.gold,
+  },
+  modalCloseText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.gold,
+  },
+  suggestionModalCard: {
+    maxHeight: '100%',
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.frame,
+    borderColor: HavenColors.ink,
+    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
+  },
+  suggestionModalContent: {
+    gap: HavenSpacing.md,
+    padding: HavenSpacing.xl,
   },
   suggestionLabel: {
     fontFamily: HavenFonts.pixel,
