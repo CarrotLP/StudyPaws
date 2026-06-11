@@ -37,6 +37,8 @@ export function HallOfFameView({ currentCommunity, user, onBack }: HallOfFameVie
 
   return (
     <>
+    <Text style={styles.section}>Hall of Fame</Text>
+    <View style={styles.rule} />
     <FlatList
         data={submissions}
         keyExtractor={(item, index) => index.toString()}
