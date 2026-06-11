@@ -29,3 +29,16 @@ export async function getCommunityByCode(communityCode: string): Promise<string 
 
   return data?.community_uid ?? null;
 }
+
+export async function getCommunityMemberCount(communityId: string): Promise<number> {
+  const { count, error: communityError } = await supabase
+    .from('users_communities')
+    .select('*', { count: 'exact', head: true })
+    .eq('community', communityId);
+
+  if (communityError) {
+    throw communityError;
+  }
+
+  return count ?? 0;
+}

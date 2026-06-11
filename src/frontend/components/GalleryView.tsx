@@ -8,15 +8,17 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { getPublicImageUrl } from '@/lib/storage';
-import { getCommunityImagesOfWeek, Submission } from '@/services/communityQuestSubmission.services';
+import { getCommunityImagesOfWeek, getUserCommunityQuestLikes, likeCommunityQuest, Submission, unlikeCommunityQuest } from '@/services/communityQuestSubmission.services';
 import { type UserCommunity } from '@/services/userCommunities.services';
+import type { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type GalleryViewProps = {
   currentCommunity: UserCommunity;
-  theme: string
-  onBack: () => void
+  theme: string;
+  user: User | null;
+  onBack: () => void;
 };
 
 export function HeartButton({
@@ -35,7 +37,7 @@ export function HeartButton({
   );
 }
 
-export function GalleryView({ currentCommunity, theme, onBack }: GalleryViewProps) {
+export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryViewProps) {
   const now = new Date();
   const nowString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -43,12 +45,37 @@ export function GalleryView({ currentCommunity, theme, onBack }: GalleryViewProp
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
 
-  const toggleLike = (index: number) => {
-    setLikes(prev => {
+  const toggleLike = async (index: number) => {
+    if (!user) return;
+
+    const submission = submissions[index];
+    const submissionId = submission.submissionId;
+
+    const isLiked = likes[index];
+
+    // optimistic UI update
+    setLikes((prev) => {
       const copy = [...prev];
       copy[index] = !copy[index];
       return copy;
     });
+
+    try {
+      if (isLiked) {
+        await unlikeCommunityQuest(user.id, submissionId);
+      } else {
+        await likeCommunityQuest(user.id, submissionId);
+      }
+    } catch (err) {
+      // rollback if failure
+      setLikes((prev) => {
+        const copy = [...prev];
+        copy[index] = isLiked;
+        return copy;
+      });
+
+      console.error('Like toggle failed:', err);
+    }
   };
 
 
@@ -60,7 +87,12 @@ export function GalleryView({ currentCommunity, theme, onBack }: GalleryViewProp
       );
 
       setSubmissions(data);
-      setLikes(data.map(() => false)); // initialize likes AFTER fetch
+
+      const likedSubmissionIds = user ? await getUserCommunityQuestLikes(user.id) : [];
+      
+      setLikes(data.map((submission) =>
+        likedSubmissionIds.includes(submission.submissionId)
+      ));
     }    
     load();
   }, [currentCommunity.communityId]);
