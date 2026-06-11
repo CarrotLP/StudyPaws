@@ -1,4 +1,5 @@
 import { supabase } from '@/backend/lib/supabase';
+import type { ActivityStatus } from '@/backend/services/user.services';
 
 export type UserTeam = {
   teamId: string;
@@ -11,6 +12,7 @@ export type TeamUser = {
   userName: string;
   winsCount: number;
   character: string | null;
+  activityStatus: ActivityStatus;
 }
 
 export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
@@ -65,7 +67,7 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
 
   const { data: users, error: userError } = await supabase
     .from('users')
-    .select('user_uid, name, character')
+    .select('user_uid, name, character, activity_status')
     .in('user_uid', userIds);
 
   if (userError) {
@@ -78,6 +80,7 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
       userName: user.name,
       winsCount: winsByUserId.get(user.user_uid) ?? 0,
       character: user.character ?? null,
+      activityStatus: (user.activity_status as ActivityStatus | null) ?? 'not studying',
     }))
     .sort((a, b) => b.winsCount - a.winsCount || a.userName.localeCompare(b.userName));
 }

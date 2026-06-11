@@ -6,6 +6,7 @@ import type { MochiPersonality } from '@/services/mochiQuotes.services';
 import { useAuth } from './use-auth';
 
 type UseUserResult = {
+  name: string | null;
   petName: string | null;
   personality: MochiPersonality | null;
   character: string | null;
@@ -20,6 +21,7 @@ type UseUserResult = {
  */
 export function useUser(): UseUserResult {
   const { user } = useAuth();
+  const [name, setName] = useState<string | null>(null);
   const [petName, setPetName] = useState<string | null>(null);
   const [personality, setPersonality] = useState<MochiPersonality | null>(null);
   const [character, setCharacter] = useState<string | null>(null);
@@ -38,6 +40,7 @@ export function useUser(): UseUserResult {
   const refresh = useCallback(async () => {
     if (!user?.id) {
       if (isMounted.current) {
+        setName(null);
         setPetName(null);
         setPersonality(null);
         setCharacter(null);
@@ -51,6 +54,7 @@ export function useUser(): UseUserResult {
     try {
       const details = await getUserDetails(user.id);
       if (isMounted.current) {
+        setName(details?.name ?? null);
         setPetName(details?.pet_name ?? null);
         setPersonality(details?.personality ?? null);
         setCharacter(details?.character ?? null);
@@ -79,5 +83,5 @@ export function useUser(): UseUserResult {
     }, [refresh]),
   );
 
-  return { petName, personality, character, loading, error, refresh };
+  return { name, petName, personality, character, loading, error, refresh };
 }

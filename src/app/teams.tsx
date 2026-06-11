@@ -1,10 +1,20 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFocusEffect } from 'expo-router';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   BodyFontSize,
@@ -34,6 +44,8 @@ import {
 
 const LEADERBOARD_CUP_SIZE = 18;
 const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
+const SUGGESTION_SUCCESS_TOAST_MS = 3000;
+const TEAM_REFRESH_MS = 30_000;
 
 // Max characters of a member's name shown under their mini cat before truncating.
 const MAX_NAME_CHARS = 8;
@@ -68,6 +80,9 @@ export default function TeamsScreen() {
   const [themeLoading, setThemeLoading] = useState(true);
   const [questSuggestion, setQuestSuggestion] = useState('');
   const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null);
+  const [suggestionModalVisible, setSuggestionModalVisible] = useState(false);
+  const [suggestionSuccessToastVisible, setSuggestionSuccessToastVisible] = useState(false);
+  const suggestionToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentTeam = teams[0] ?? null;
   const hasTeam = Boolean(currentTeam);
   const nextWeekStart = getNextWeekStartUtc();
@@ -97,13 +112,34 @@ export default function TeamsScreen() {
     );
   };
 
+  const clearSuggestionToastTimer = useCallback(() => {
+    if (suggestionToastTimerRef.current) {
+      clearTimeout(suggestionToastTimerRef.current);
+      suggestionToastTimerRef.current = null;
+    }
+  }, []);
+
+  const closeSuggestionModal = useCallback(() => {
+    setSuggestionModalVisible(false);
+    setSuggestionMessage(null);
+  }, []);
+
+  const openSuggestionModal = useCallback(() => {
+    clearSuggestionToastTimer();
+    setSuggestionSuccessToastVisible(false);
+    setSuggestionMessage(null);
+    setSuggestionModalVisible(true);
+  }, [clearSuggestionToastTimer]);
+
+  useEffect(() => clearSuggestionToastTimer, [clearSuggestionToastTimer]);
+
   useFocusEffect(
     useCallback(() => {
       setJoining(false);
       setCreating(false);
       let active = true;
 
-      const loadTeams = async () => {
+      const loadTeams = async (showLoading = true) => {
         if (!user) {
           setTeams([]);
           setTeamMembers([]);
@@ -113,10 +149,12 @@ export default function TeamsScreen() {
           return;
         }
 
-        setLoading(true);
-        setThemeLoading(true);
+        if (showLoading) {
+          setLoading(true);
+          setThemeLoading(true);
+        }
         setError(null);
-        setSuggestionMessage(null);
+        if (showLoading) setSuggestionMessage(null);
 
         try {
           const [nextTeams, nextThemeResult] = await Promise.all([
@@ -143,9 +181,13 @@ export default function TeamsScreen() {
       };
 
       void loadTeams();
+      const refreshId = setInterval(() => {
+        void loadTeams(false);
+      }, TEAM_REFRESH_MS);
 
       return () => {
         active = false;
+        clearInterval(refreshId);
       };
     }, [nextWeekStart, user]),
   );
@@ -273,21 +315,24 @@ export default function TeamsScreen() {
     try {
       await submitTeamQuestSuggestion(currentTeam.teamId, nextWeekStart, description);
       setQuestSuggestion('');
-      setSuggestionMessage('Quest suggestion submitted.');
+      setSuggestionMessage(null);
+      setSuggestionModalVisible(false);
+      setSuggestionSuccessToastVisible(true);
+      clearSuggestionToastTimer();
+      suggestionToastTimerRef.current = setTimeout(() => {
+        setSuggestionSuccessToastVisible(false);
+        suggestionToastTimerRef.current = null;
+      }, SUGGESTION_SUCCESS_TOAST_MS);
     } catch (err) {
       setSuggestionMessage(err instanceof Error ? err.message : 'Could not submit suggestion.');
     } finally {
       setSubmittingSuggestion(false);
     }
-  }, [currentTeam, nextWeekStart, nextWeekTheme, questSuggestion]);
+  }, [clearSuggestionToastTimer, currentTeam, nextWeekStart, nextWeekTheme, questSuggestion]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <KeyboardAwareScrollView
-        bottomOffset={HavenSpacing.xl}
-        contentContainerStyle={styles.content}
-        extraKeyboardSpace={96}
-        keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.section}>Team</Text>
         <View style={styles.rule} />
 
@@ -343,7 +388,10 @@ export default function TeamsScreen() {
                   <View key={member.userId} style={styles.leaderboardRow}>
                     <View style={styles.memberNameColumn}>
                       {renderLeaderboardCup(index)}
-                      <Text style={styles.memberName}>{member.userName}</Text>
+                      <Text style={styles.memberName} numberOfLines={1}>
+                        {member.userName}
+                        <Text style={styles.memberStatus}> - {member.activityStatus}</Text>
+                      </Text>
                     </View>
                     <Text style={[styles.memberWins, styles.winsColumn]}>
                       {member.winsCount}
@@ -362,36 +410,15 @@ export default function TeamsScreen() {
               </Text>
 
               {nextWeekTheme ? (
-                <>
-                  <Text style={styles.suggestionLabel}>Make a quest suggestion:</Text>
-                  <TextInput
-                    value={questSuggestion}
-                    onChangeText={(text) => {
-                      setQuestSuggestion(text);
-                      setSuggestionMessage(null);
-                    }}
-                    placeholder="Write your quest idea"
-                    multiline
-                    style={[styles.input, styles.suggestionInput]}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={submittingSuggestion || !questSuggestion.trim()}
-                    onPress={() => void submitSuggestion()}
-                    style={({ pressed }) => [
-                      styles.submitSuggestionButton,
-                      pressed && !submittingSuggestion && styles.buttonPressed,
-                      (submittingSuggestion || !questSuggestion.trim()) && styles.buttonDisabled,
-                    ]}>
-                    <Text style={styles.submitSuggestionButtonText}>
-                      {submittingSuggestion ? 'Submitting...' : 'Submit'}
-                    </Text>
-                  </Pressable>
-                </>
-              ) : null}
-
-              {suggestionMessage ? (
-                <Text style={styles.suggestionMessage}>{suggestionMessage}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openSuggestionModal}
+                  style={({ pressed }) => [
+                    styles.submitSuggestionButton,
+                    pressed && styles.buttonPressed,
+                  ]}>
+                  <Text style={styles.submitSuggestionButtonText}>Make a quest suggestion</Text>
+                </Pressable>
               ) : null}
             </View>
           </View>
@@ -474,7 +501,78 @@ export default function TeamsScreen() {
             <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave team'}</Text>
           </Pressable>
         ) : null}
-      </KeyboardAwareScrollView>
+      </ScrollView>
+
+      <Modal
+        visible={suggestionModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeSuggestionModal}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalScrim}>
+          <View style={styles.modalWrapper}>
+            <Pressable
+              accessibilityLabel="Close quest suggestion"
+              hitSlop={HavenSpacing.md}
+              onPress={closeSuggestionModal}
+              style={styles.modalCloseButton}>
+              <Text style={styles.modalCloseText}>X</Text>
+            </Pressable>
+
+            <View style={styles.suggestionModalCard}>
+              <ScrollView
+                contentContainerStyle={styles.suggestionModalContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}>
+                <Text style={styles.suggestionLabel}>Next week's theme will be:</Text>
+                <Text style={styles.themeText}>
+                  {themeLoading
+                    ? 'Loading...'
+                    : nextWeekTheme ?? "Next week's theme is not available yet"}
+                </Text>
+
+                <Text style={styles.suggestionLabel}>Make a quest suggestion:</Text>
+                <TextInput
+                  value={questSuggestion}
+                  onChangeText={(text) => {
+                    setQuestSuggestion(text);
+                    setSuggestionMessage(null);
+                  }}
+                  placeholder="Write your quest idea"
+                  multiline
+                  style={[styles.input, styles.suggestionInput]}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={submittingSuggestion || !questSuggestion.trim()}
+                  onPress={() => void submitSuggestion()}
+                  style={({ pressed }) => [
+                    styles.submitSuggestionButton,
+                    pressed && !submittingSuggestion && styles.buttonPressed,
+                    (submittingSuggestion || !questSuggestion.trim()) && styles.buttonDisabled,
+                  ]}>
+                  <Text style={styles.submitSuggestionButtonText}>
+                    {submittingSuggestion ? 'Submitting...' : 'Submit'}
+                  </Text>
+                </Pressable>
+
+                {suggestionMessage ? (
+                  <Text style={styles.suggestionMessage}>{suggestionMessage}</Text>
+                ) : null}
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {suggestionSuccessToastVisible ? (
+        <View pointerEvents="none" style={styles.suggestionSuccessToastWrap}>
+          <View style={styles.suggestionSuccessToast}>
+            <Text style={styles.suggestionSuccessToastText}>Quest suggestion submitted</Text>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -591,6 +689,10 @@ const styles = StyleSheet.create({
     color: HavenColors.ink,
     textAlign: 'left',
   },
+  memberStatus: {
+    color: HavenColors.inkSoft,
+    fontSize: PixelFontSize.base,
+  },
   memberWins: {
     fontFamily: HavenFonts.body,
     fontSize: BodyFontSize.lg,
@@ -629,6 +731,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: HavenSpacing.lg,
     boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.parchmentShadow}`,
   },
+  modalScrim: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: HavenSpacing.xxl,
+    backgroundColor: HavenColors.overlayScrim,
+  },
+  modalWrapper: {
+    position: 'relative',
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '90%',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: -14,
+    right: -10,
+    zIndex: 1,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: HavenColors.ink,
+    borderWidth: Border.base,
+    borderColor: HavenColors.gold,
+  },
+  modalCloseText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.lg,
+    color: HavenColors.gold,
+  },
+  suggestionModalCard: {
+    maxHeight: '100%',
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.frame,
+    borderColor: HavenColors.ink,
+    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
+  },
+  suggestionModalContent: {
+    gap: HavenSpacing.md,
+    padding: HavenSpacing.xl,
+  },
   suggestionLabel: {
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
@@ -666,6 +810,29 @@ const styles = StyleSheet.create({
     fontSize: BodyFontSize.md,
     color: HavenColors.inkSoft,
     textAlign: 'left',
+  },
+  suggestionSuccessToastWrap: {
+    position: 'absolute',
+    left: HavenSpacing.xxl,
+    right: HavenSpacing.xxl,
+    bottom: HavenSpacing.xxl,
+    alignItems: 'center',
+    zIndex: 250,
+  },
+  suggestionSuccessToast: {
+    maxWidth: 360,
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.frame,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.lg,
+    paddingHorizontal: HavenSpacing.xl,
+    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
+  },
+  suggestionSuccessToastText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.leather,
+    textAlign: 'center',
   },
   winsColumn: {
     width: 120,

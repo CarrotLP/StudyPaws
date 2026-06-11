@@ -50,7 +50,11 @@ export default function SettingsScreen() {
   } = useDailyQuest();
 
   const { user } = useAuth();
-  const { personality: loadedPersonality, character: loadedCharacter } = useUser();
+  const {
+    name: loadedUserName,
+    personality: loadedPersonality,
+    character: loadedCharacter,
+  } = useUser();
 
   // Personality picker — initialised from the user's saved value. Falls back to
   // the default if it's unset or a value no longer offered, so a chip is always
@@ -128,7 +132,6 @@ export default function SettingsScreen() {
 
   const [teams, setTeams] = useState<UserTeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [teamMenuOpen, setTeamMenuOpen] = useState(false);
   const [localDeadlines, setLocalDeadlines] = useState<QuestDeadlines | null>(null);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingDeadlines, setLoadingDeadlines] = useState(false);
@@ -202,49 +205,26 @@ export default function SettingsScreen() {
         <Text style={styles.section}>settings</Text>
         <View style={styles.rule} />
 
-        {/* Team selector */}
+        {/* User and team info */}
         <View style={styles.deadlineCard}>
-          <Text style={styles.deadlineLabel}>Team</Text>
-          {loadingTeams ? (
-            <Text style={styles.message}>Loading teams...</Text>
-          ) : teams.length === 0 ? (
-            <Text style={styles.message}>No teams available.</Text>
-          ) : (
-            <View>
-              <Pressable
-                onPress={() => setTeamMenuOpen((s) => !s)}
-                style={styles.teamSelectorButton}>
-                <Text style={styles.teamSelectorText}>
-                  {teams.find((t) => t.teamId === selectedTeamId)?.teamName ?? 'Select a team'}
-                </Text>
-                <Text style={styles.teamSelectorText}>▼</Text>
-              </Pressable>
-              {teamMenuOpen && (
-                <View style={styles.teamDropdown}>
-                  {teams.map((t) => (
-                    <Pressable
-                      key={t.teamId}
-                      onPress={async () => {
-                        setSelectedTeamId(t.teamId);
-                        setTeamMenuOpen(false);
-                        setLoadingDeadlines(true);
-                        try {
-                          const d = await getQuestDeadlines(t.teamId);
-                          setLocalDeadlines(d);
-                        } catch (err) {
-                          setSettingsError(err instanceof Error ? err.message : 'Failed to load deadlines');
-                        } finally {
-                          setLoadingDeadlines(false);
-                        }
-                      }}
-                      style={styles.teamDropdownItem}>
-                      <Text style={styles.teamName}>{t.teamName}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Username:</Text>
+            <Text style={styles.infoValue}>
+              {loadedUserName ?? (user?.user_metadata?.name as string | undefined) ?? 'Unknown user'}
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Team:</Text>
+            {loadingTeams ? (
+              <Text style={styles.infoValue}>Loading teams...</Text>
+            ) : teams.length === 0 ? (
+              <Text style={styles.infoValue}>No teams available.</Text>
+            ) : (
+              <Text style={styles.infoValue}>
+                {teams.find((t) => t.teamId === selectedTeamId)?.teamName ?? teams[0].teamName}
+              </Text>
+            )}
+          </View>
         </View>
 
         {/* Deadlines for selected team */}
@@ -571,38 +551,25 @@ const styles = StyleSheet.create({
     color: HavenColors.gold,
     textAlign: 'center',
   },
-  teamSelectorButton: {
+  infoRow: {
     width: '100%',
     flexDirection: 'row',
-    gap: 8,
-    paddingVertical: HavenSpacing.md,
-    paddingHorizontal: HavenSpacing.lg,
-    backgroundColor: HavenColors.cellFill,
-    borderWidth: Border.base,
-    borderColor: HavenColors.inkSoft,
-    marginTop: HavenSpacing.sm,
+    alignItems: 'baseline',
+    gap: HavenSpacing.sm,
   },
-  teamSelectorText: {
+  infoLabel: {
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.lg,
     color: HavenColors.ink,
-    textAlign: 'center',
+    textAlign: 'left',
+    flexShrink: 0,
   },
-  teamDropdown: {
-    marginTop: HavenSpacing.sm,
-    width: '100%',
-    backgroundColor: HavenColors.cellFill,
-    borderWidth: Border.base,
-    borderColor: HavenColors.inkSoft,
-  },
-  teamDropdownItem: {
-    paddingVertical: HavenSpacing.md,
-    paddingHorizontal: HavenSpacing.lg,
-  },
-  teamName: {
+  infoValue: {
+    flex: 1,
     fontFamily: HavenFonts.body,
     fontSize: BodyFontSize.lg,
     color: HavenColors.ink,
+    textAlign: 'left',
   },
   message: {
     fontFamily: HavenFonts.body,
