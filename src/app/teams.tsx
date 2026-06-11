@@ -44,7 +44,7 @@ import {
 
 const LEADERBOARD_CUP_SIZE = 18;
 const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
-const SUGGESTION_SUCCESS_CLOSE_MS = 3000;
+const SUGGESTION_SUCCESS_TOAST_MS = 3000;
 const TEAM_REFRESH_MS = 30_000;
 
 // Max characters of a member's name shown under their mini cat before truncating.
@@ -81,7 +81,8 @@ export default function TeamsScreen() {
   const [questSuggestion, setQuestSuggestion] = useState('');
   const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null);
   const [suggestionModalVisible, setSuggestionModalVisible] = useState(false);
-  const suggestionCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [suggestionSuccessToastVisible, setSuggestionSuccessToastVisible] = useState(false);
+  const suggestionToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentTeam = teams[0] ?? null;
   const hasTeam = Boolean(currentTeam);
   const nextWeekStart = getNextWeekStartUtc();
@@ -111,26 +112,26 @@ export default function TeamsScreen() {
     );
   };
 
-  const clearSuggestionCloseTimer = useCallback(() => {
-    if (suggestionCloseTimerRef.current) {
-      clearTimeout(suggestionCloseTimerRef.current);
-      suggestionCloseTimerRef.current = null;
+  const clearSuggestionToastTimer = useCallback(() => {
+    if (suggestionToastTimerRef.current) {
+      clearTimeout(suggestionToastTimerRef.current);
+      suggestionToastTimerRef.current = null;
     }
   }, []);
 
   const closeSuggestionModal = useCallback(() => {
-    clearSuggestionCloseTimer();
     setSuggestionModalVisible(false);
     setSuggestionMessage(null);
-  }, [clearSuggestionCloseTimer]);
+  }, []);
 
   const openSuggestionModal = useCallback(() => {
-    clearSuggestionCloseTimer();
+    clearSuggestionToastTimer();
+    setSuggestionSuccessToastVisible(false);
     setSuggestionMessage(null);
     setSuggestionModalVisible(true);
-  }, [clearSuggestionCloseTimer]);
+  }, [clearSuggestionToastTimer]);
 
-  useEffect(() => clearSuggestionCloseTimer, [clearSuggestionCloseTimer]);
+  useEffect(() => clearSuggestionToastTimer, [clearSuggestionToastTimer]);
 
   useFocusEffect(
     useCallback(() => {
@@ -314,19 +315,20 @@ export default function TeamsScreen() {
     try {
       await submitTeamQuestSuggestion(currentTeam.teamId, nextWeekStart, description);
       setQuestSuggestion('');
-      setSuggestionMessage('Quest suggestion submitted.');
-      clearSuggestionCloseTimer();
-      suggestionCloseTimerRef.current = setTimeout(() => {
-        setSuggestionModalVisible(false);
-        setSuggestionMessage(null);
-        suggestionCloseTimerRef.current = null;
-      }, SUGGESTION_SUCCESS_CLOSE_MS);
+      setSuggestionMessage(null);
+      setSuggestionModalVisible(false);
+      setSuggestionSuccessToastVisible(true);
+      clearSuggestionToastTimer();
+      suggestionToastTimerRef.current = setTimeout(() => {
+        setSuggestionSuccessToastVisible(false);
+        suggestionToastTimerRef.current = null;
+      }, SUGGESTION_SUCCESS_TOAST_MS);
     } catch (err) {
       setSuggestionMessage(err instanceof Error ? err.message : 'Could not submit suggestion.');
     } finally {
       setSubmittingSuggestion(false);
     }
-  }, [clearSuggestionCloseTimer, currentTeam, nextWeekStart, nextWeekTheme, questSuggestion]);
+  }, [clearSuggestionToastTimer, currentTeam, nextWeekStart, nextWeekTheme, questSuggestion]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -386,7 +388,7 @@ export default function TeamsScreen() {
                   <View key={member.userId} style={styles.leaderboardRow}>
                     <View style={styles.memberNameColumn}>
                       {renderLeaderboardCup(index)}
-                      <Text style={styles.memberName}>
+                      <Text style={styles.memberName} numberOfLines={1}>
                         {member.userName}
                         <Text style={styles.memberStatus}> - {member.activityStatus}</Text>
                       </Text>
@@ -536,7 +538,6 @@ export default function TeamsScreen() {
                   onChangeText={(text) => {
                     setQuestSuggestion(text);
                     setSuggestionMessage(null);
-                    clearSuggestionCloseTimer();
                   }}
                   placeholder="Write your quest idea"
                   multiline
@@ -564,6 +565,14 @@ export default function TeamsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {suggestionSuccessToastVisible ? (
+        <View pointerEvents="none" style={styles.suggestionSuccessToastWrap}>
+          <View style={styles.suggestionSuccessToast}>
+            <Text style={styles.suggestionSuccessToastText}>Quest suggestion submitted</Text>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -682,6 +691,7 @@ const styles = StyleSheet.create({
   },
   memberStatus: {
     color: HavenColors.inkSoft,
+    fontSize: PixelFontSize.base,
   },
   memberWins: {
     fontFamily: HavenFonts.body,
@@ -800,6 +810,29 @@ const styles = StyleSheet.create({
     fontSize: BodyFontSize.md,
     color: HavenColors.inkSoft,
     textAlign: 'left',
+  },
+  suggestionSuccessToastWrap: {
+    position: 'absolute',
+    left: HavenSpacing.xxl,
+    right: HavenSpacing.xxl,
+    bottom: HavenSpacing.xxl,
+    alignItems: 'center',
+    zIndex: 250,
+  },
+  suggestionSuccessToast: {
+    maxWidth: 360,
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.frame,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.lg,
+    paddingHorizontal: HavenSpacing.xl,
+    boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
+  },
+  suggestionSuccessToastText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.leather,
+    textAlign: 'center',
   },
   winsColumn: {
     width: 120,

@@ -553,6 +553,8 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     width: '100%',
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: HavenSpacing.sm,
   },
   infoLabel: {
@@ -560,8 +562,10 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.lg,
     color: HavenColors.ink,
     textAlign: 'left',
+    flexShrink: 0,
   },
   infoValue: {
+    flex: 1,
     fontFamily: HavenFonts.body,
     fontSize: BodyFontSize.lg,
     color: HavenColors.ink,
