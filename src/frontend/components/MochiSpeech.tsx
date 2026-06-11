@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -21,11 +21,10 @@ const IDLE_LINE = 'Time to study!';
 // How often a fresh study quote pops up (cosmetic only — not a source of truth
 // for time, so a plain interval is fine here).
 const REPEAT_MS = 25000;
+// A part of a multi-`|` quote auto-advances to the next part after this long.
+const AUTO_PART_MS = 3500;
 
 // Typewriter / single-line dialogue tuning.
-const TYPE_MS = 25; // delay between each character appearing
-const LINE_PAUSE_MS = 550; // pause after a line is fully typed before the next one
-const HOLD_MS = 2500; // how long the final line lingers before auto-closing
 
 // Author manual line breaks by putting this delimiter in the quote text, e.g.
 //   "Focus, hooman.|This is no time|to be kitten around."
@@ -52,25 +51,31 @@ export function MochiSpeech({
   mode,
   personality,
   tapSignal,
-  onSpeakingChange,
 }: {
   mode: Mode;
   // Which personality's study quotes to show. Omit for all (until a selector exists).
   personality?: MochiPersonality;
-  // Increment this (e.g. on every cat tap) to make Mochi blurt a random quote.
+  // Increment this (e.g. on every cat tap) to advance / summon a quote.
   tapSignal?: number;
-  // Reports whether a quote is currently showing/typing (so the cat can be made
-  // untappable while it runs).
-  onSpeakingChange?: (speaking: boolean) => void;
 }) {
   const [text, setText] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<string[]>([]);
+  // Which part of the current (possibly multi-`|`) quote is showing.
+  const [partIndex, setPartIndex] = useState(0);
 
-  // Typewriter state: the quote split into single lines, plus which line and how
-  // many of its characters are currently revealed.
-  const [lines, setLines] = useState<string[]>([]);
-  const [lineIndex, setLineIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
+  // The current quote split into parts on `|` (each part is its own bubble).
+  const parts = text ? toLines(text) : [];
+  const isLastPart = partIndex >= parts.length - 1;
+
+  // Latest values readable inside the tap handler (which only depends on tapSignal).
+  const partIndexRef = useRef(partIndex);
+  const partsRef = useRef<string[]>(parts);
+  const quotesRef = useRef<string[]>(quotes);
+  const textRef = useRef<string | null>(text);
+  partIndexRef.current = partIndex;
+  partsRef.current = parts;
+  quotesRef.current = quotes;
+  textRef.current = text;
 
   // Load the study quotes once (re-loads if the chosen personality changes).
   useEffect(() => {
@@ -91,9 +96,7 @@ export function MochiSpeech({
     else if (mode !== 'study') setText(null);
   }, [mode]);
 
-  // Study: periodically pop a random quote. Depending on `tapSignal` means a cat
-  // tap re-runs this effect, restarting the interval — so the next AUTOMATIC
-  // quote is a full REPEAT_MS after the tap (the timer is reset on tap).
+  // Study: periodically pop a random quote.
   useEffect(() => {
     if (mode !== 'study') return;
     const pick = () => {
@@ -104,61 +107,51 @@ export function MochiSpeech({
     return () => clearInterval(interval);
   }, [mode, quotes, tapSignal]);
 
-  // Tapping the cat blurts a random quote (works in any phase).
+  // Each new quote starts at its first part.
   useEffect(() => {
-    if (!tapSignal) return; // ignore the initial 0/undefined
-    const pool = quotes.length > 0 ? quotes : ['Meow! 🐾'];
-    setText(pool[Math.floor(Math.random() * pool.length)]);
-  }, [tapSignal]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Tell the parent whether a quote is currently up (so the cat can ignore taps
-  // while one is running).
-  useEffect(() => {
-    onSpeakingChange?.(text !== null);
-  }, [text, onSpeakingChange]);
-
-  // Whenever the quote changes, split it into single lines and restart at the top.
-  useEffect(() => {
-    if (!text) {
-      setLines([]);
-      setLineIndex(0);
-      setCharIndex(0);
-      return;
-    }
-    setLines(toLines(text));
-    setLineIndex(0);
-    setCharIndex(0);
+    setPartIndex(0);
   }, [text]);
 
-  // Typewriter driver: reveal the current line one char at a time, pause, then
-  // advance to the next line; after the last line, hold briefly and close.
+  // Cat tap: advance to the next part, or — on the last part / when nothing is
+  // showing — summon a NEW random quote. (Spam is buffered by the caller.)
   useEffect(() => {
-    if (lines.length === 0) return;
-    const line = lines[lineIndex] ?? '';
+    if (!tapSignal) return; // ignore initial 0/undefined
+    const curParts = partsRef.current;
+    if (partIndexRef.current < curParts.length - 1) {
+      setPartIndex((i) => i + 1);
+      return;
+    }
+    const pool = quotesRef.current.length > 0 ? quotesRef.current : ['Meow! 🐾'];
+    let next = pool[Math.floor(Math.random() * pool.length)];
+    if (pool.length > 1) {
+      while (next === textRef.current) next = pool[Math.floor(Math.random() * pool.length)];
+    }
+    setText(next);
+  }, [tapSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (charIndex < line.length) {
-      const t = setTimeout(() => setCharIndex((c) => c + 1), TYPE_MS);
-      return () => clearTimeout(t);
-    }
-    if (lineIndex < lines.length - 1) {
-      const t = setTimeout(() => {
-        setLineIndex((i) => i + 1);
-        setCharIndex(0);
-      }, LINE_PAUSE_MS);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setText(null), HOLD_MS);
+  // Every part ticks on the same timer: non-last parts advance to the next, and
+  // the last part auto-closes the quote (so the whole thing dismisses on its own
+  // with consistent timing).
+  useEffect(() => {
+    if (!text) return;
+    const t = setTimeout(() => {
+      if (isLastPart) setText(null);
+      else setPartIndex((i) => i + 1);
+    }, AUTO_PART_MS);
     return () => clearTimeout(t);
-  }, [lines, lineIndex, charIndex]);
+  }, [text, partIndex, isLastPart]);
 
-  if (!text || lines.length === 0) return null;
+  if (!text) return null;
 
-  const displayed = (lines[lineIndex] ?? '').slice(0, charIndex);
+  const displayed = parts[partIndex] ?? '';
+
+  // Pressing the bubble closes the quote.
+  const onPressBubble = () => setText(null);
 
   return (
     <Pressable
-      accessibilityLabel="Dismiss Mochi"
-      onPress={() => setText(null)}
+      accessibilityLabel="Close"
+      onPress={onPressBubble}
       style={styles.wrap}>
       <View style={styles.bubbleColumn}>
         <View style={styles.bubble}>
