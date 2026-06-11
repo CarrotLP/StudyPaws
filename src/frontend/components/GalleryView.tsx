@@ -100,6 +100,8 @@ export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryVi
 
   return (
     <>
+    <Text style={styles.section}>Gallery</Text>
+    <View style={styles.rule} />
     <View style={styles.communityList}>    
       <View style={styles.communityCard}>
         <Text style={styles.communityName}>{theme}</Text>
