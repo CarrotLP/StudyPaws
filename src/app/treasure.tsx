@@ -145,7 +145,7 @@ export default function TreasureScreen() {
                   <View style={styles.pool}>
                     {chest.pool.map((item) => (
                       <View key={item.name} style={styles.poolItem}>
-                        <Image source={{ uri: item.image }} style={{ width: 40, height: 40 }} />
+                        <Image source={{ uri: item.image }} style={{ width: 34, height: 34 }} resizeMode="contain" />
                       </View>
                     ))}
                   </View>

@@ -20,6 +20,7 @@ export const LAYER_ORDER = [
   'body',
   'front_accessory',
   'front_body',
+  'eyewear', // drawn last → sits on top of everything (glasses, etc.)
 ] as const;
 
 export type MochiLayerCategory = (typeof LAYER_ORDER)[number];

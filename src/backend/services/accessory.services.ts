@@ -4,7 +4,10 @@ export type UserAccessory = {
   accessory: string;
   chosen: boolean;
   image: string;
-  category: string; // the component `layer` — used for one-per-category equip rules
+  // ALL layers this accessory occupies (an accessory can span several, e.g. a
+  // vest covers both back_accessory and front_accessory). Used so equipping it
+  // unwears anything that overlaps ANY of these layers.
+  categories: string[];
 };
 
 export async function getUserAccessories(userUid: string): Promise<UserAccessory[]> {
@@ -34,17 +37,24 @@ export async function getUserAccessories(userUid: string): Promise<UserAccessory
   return (data || []).map((item: any) => {
     const accessoryData = item.accessories;
     const components = accessoryData?.accessories_components || [];
+    const compArray = Array.isArray(components) ? components : [components];
 
-    // Get the first component's image + layer (its category)
-    const firstComp = Array.isArray(components) ? components[0] : components;
-    const image = firstComp?.components?.image || '';
-    const category = firstComp?.components?.layer || '';
+    // First component's image is used as the grid thumbnail.
+    const image = compArray[0]?.components?.image || '';
+    // Every distinct layer this accessory occupies.
+    const categories = Array.from(
+      new Set(
+        compArray
+          .map((c: any) => c?.components?.layer)
+          .filter((layer: any): layer is string => !!layer),
+      ),
+    ) as string[];
 
     return {
       accessory: item.accessory,
       chosen: item.chosen,
       image,
-      category,
+      categories,
     };
   });
 }

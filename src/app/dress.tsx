@@ -53,12 +53,17 @@ export default function DressScreen() {
     const equipping = !item.chosen;
     try {
       // Mutual exclusion: when putting something on, take off anything already
-      // worn in the SAME category (only one item per category at a time).
-      if (equipping && item.category) {
-        const sameCategoryWorn = accessories.filter(
-          (a) => a.chosen && a.category === item.category && a.accessory !== item.accessory,
+      // worn that shares AT LEAST ONE layer with it. (Accessories can span
+      // multiple layers — e.g. a vest covers both back_ and front_accessory —
+      // so a single-layer item that overlaps either must come off.)
+      if (equipping && item.categories.length > 0) {
+        const overlappingWorn = accessories.filter(
+          (a) =>
+            a.chosen &&
+            a.accessory !== item.accessory &&
+            a.categories.some((layer) => item.categories.includes(layer)),
         );
-        for (const worn of sameCategoryWorn) {
+        for (const worn of overlappingWorn) {
           await toggleAccessory(user.id, worn.accessory, false);
         }
       }
