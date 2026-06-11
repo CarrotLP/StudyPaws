@@ -33,13 +33,15 @@ export async function uploadSubmissionToCommunity(
   const date = new Date(questDate);
   const weekStart = findWeekStart(date)
   const photoUriSliced = photoUri.split('/').slice(-2).join('/');
-  const { error: submissionError } = await supabase.from('community_quest_submissions').insert({
-    community: communityId,
-    user: userId,
-    week_start: weekStart,
-    image_path: photoUriSliced,
-    quest_date: questDate
-  })
+  const { error: submissionError } = await supabase
+    .from('community_quest_submissions')
+    .insert({
+      community: communityId,
+      user: userId,
+      week_start: weekStart,
+      image_path: photoUriSliced,
+      quest_date: questDate
+    })
 
   if (submissionError) {
     console.log(submissionError.message);
@@ -47,6 +49,32 @@ export async function uploadSubmissionToCommunity(
   }
 
   Alert.alert('Upload successful!')
+}
+
+export async function removeSubmissionFromCommunity(userId: string, questDate: string): Promise<void> {
+  const { data: sub, error: error1 } = await supabase
+    .from('community_quest_submissions')
+    .select('submission_uid')
+    .eq('user', userId)
+    .eq('quest_date', questDate)
+    .single();
+
+  if (error1) {console.log(error1);throw error1};
+
+  const { error: error2 } = await supabase
+    .from('community_quest_likes')
+    .delete()
+    .eq('submission', sub.submission_uid);
+
+  if (error2) {console.log(error2);throw error2};
+
+  const { error: error3 } = await supabase
+    .from('community_quest_submissions')
+    .delete()
+    .eq('user', userId)
+    .eq('quest_date', questDate);
+
+  if (error3) {console.log(error3);throw error3};
 }
 
 export async function getCommunitySubmissionOfDate(userId: string, questDate: string): Promise<String> {

@@ -19,7 +19,7 @@ import { isWithinWindow, minutesToTime, questWindowsFromDeadlines } from '@/cons
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
-import { getCommunitySubmissionOfDate, uploadSubmissionToCommunity } from '@/services/communityQuestSubmission.services';
+import { getCommunitySubmissionOfDate, removeSubmissionFromCommunity, uploadSubmissionToCommunity } from '@/services/communityQuestSubmission.services';
 import { getOwnQuestSubmission } from '@/services/questSubmission.services';
 import { getCommunitiesForUser } from '@/services/userCommunities.services';
 import { getTeamGallery, submitVote, type GallerySubmission } from '@/services/vote.services';
@@ -138,6 +138,15 @@ export default function DailyQuestScreen() {
     }
   };
 
+  const removeFromCommunity = async () => {
+    try {
+      await removeSubmissionFromCommunity(user!.id, quest!.questDate);
+      setCommunityUploaded(false);
+    } catch (error) {
+      Alert.alert('Remove failed', error instanceof Error ? error.message : 'Please try again.');
+    }
+  }
+
   const saveRatings = async () => {
     // Action guard: re-check the clock at submit time (no server enforcement).
     if (!isWithinWindow(windows.voting) || !team || !quest) {
@@ -223,23 +232,22 @@ export default function DailyQuestScreen() {
           ) : null}
 
           <Pressable
-            disabled={communityUploaded || !hasCommunity}
+            disabled={!hasCommunity}
             style={({ pressed }) => [
               styles.btn,
-              pressed && !communityUploaded && hasCommunity && styles.btnPressed,
-              (communityUploaded || !hasCommunity) && styles.btnDisabled,
+              pressed && hasCommunity && styles.btnPressed,
+              !hasCommunity && styles.btnDisabled,
             ]}
-            onPress={uploadToCommunity}>
-            <Text style={[styles.btnText, (communityUploaded || !hasCommunity) && styles.btnTextDisabled]}>
-              Upload to Community
+            onPress={communityUploaded ? removeFromCommunity : uploadToCommunity}>
+            <Text style={[styles.btnText, !hasCommunity && styles.btnTextDisabled]}>
+              {communityUploaded ? 'Remove from Community' : 'Upload to Community'}
             </Text>
           </Pressable>
-          {communityUploaded && (
+          {communityUploaded ? (
             <Text style={styles.gatedHint}>Photo uploaded</Text>
-          )}
-          {!communityUploaded && !hasCommunity && (
+          ) : !hasCommunity ? (
             <Text style={styles.gatedHint}>Join a community to upload</Text>
-          )}
+          ) : null}
         </View>
       </ScrollView>
 

@@ -8,6 +8,7 @@ import { useAuth } from './use-auth';
 type UseUserResult = {
   petName: string | null;
   personality: MochiPersonality | null;
+  character: string | null;
   loading: boolean;
   error: Error | null;
   refresh: () => Promise<void>;
@@ -21,6 +22,7 @@ export function useUser(): UseUserResult {
   const { user } = useAuth();
   const [petName, setPetName] = useState<string | null>(null);
   const [personality, setPersonality] = useState<MochiPersonality | null>(null);
+  const [character, setCharacter] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -38,6 +40,7 @@ export function useUser(): UseUserResult {
       if (isMounted.current) {
         setPetName(null);
         setPersonality(null);
+        setCharacter(null);
       }
       return;
     }
@@ -50,6 +53,7 @@ export function useUser(): UseUserResult {
       if (isMounted.current) {
         setPetName(details?.pet_name ?? null);
         setPersonality(details?.personality ?? null);
+        setCharacter(details?.character ?? null);
       }
     } catch (err) {
       if (isMounted.current) {
@@ -75,5 +79,5 @@ export function useUser(): UseUserResult {
     }, [refresh]),
   );
 
-  return { petName, personality, loading, error, refresh };
+  return { petName, personality, character, loading, error, refresh };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -45,6 +45,14 @@ export default function HomeScreen() {
     }, [refreshPoints])
   );
   const [catTaps, setCatTaps] = useState(0);
+  // 1.5s buffer between cat taps so the quote can't be spammed.
+  const lastCatTapRef = useRef(0);
+  const onTapCat = () => {
+    const now = Date.now();
+    if (now - lastCatTapRef.current < 1500) return;
+    lastCatTapRef.current = now;
+    setCatTaps((c) => c + 1);
+  };
   const { petName, personality } = useUser();
   const { deadlines, hasSubmittedToday } = useDailyQuest();
   const {
@@ -83,7 +91,7 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <Pressable onPress={() => setCatTaps((c) => c + 1)}>
+          <Pressable onPress={onTapCat}>
             <Mochi key={refreshKey} scale={2} walkSignal={catTaps} />
           </Pressable>
           <View style={styles.floorShadow} />

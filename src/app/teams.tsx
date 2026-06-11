@@ -31,8 +31,13 @@ import {
   submitTeamQuestSuggestion,
 } from '@/services/weeklyTheme.services';
 
+
 const LEADERBOARD_CUP_SIZE = 18;
 const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
+
+// Max characters of a member's name shown under their mini cat before truncating.
+const MAX_NAME_CHARS = 8;
+
 
 function getNextWeekStartUtc(): string {
   const today = new Date();
@@ -313,6 +318,11 @@ export default function TeamsScreen() {
                 member.character ? (
                   <View key={member.userId} style={styles.miniCat}>
                     <Mochi characterName={member.character} userId={member.userId} scale={0.5} />
+                    <Text style={styles.miniCatName} numberOfLines={1}>
+                      {member.userName.length > MAX_NAME_CHARS
+                        ? `${member.userName.slice(0, MAX_NAME_CHARS)}...`
+                        : member.userName}
+                    </Text>
                   </View>
                 ) : null,
               )}
@@ -529,6 +539,14 @@ const styles = StyleSheet.create({
     // Negative margin overlaps the cats so they look like they're standing
     // shoulder-to-shoulder rather than spaced apart.
     marginHorizontal: -12,
+    alignItems: 'center',
+  },
+  miniCatName: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.sm,
+    color: HavenColors.ink,
+    textAlign: 'center',
+    maxWidth: 70,
   },
   detailBlock: {
     width: '100%',

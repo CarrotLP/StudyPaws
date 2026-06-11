@@ -1,5 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -21,7 +30,8 @@ import {
   saveQuestDeadlines,
   type QuestDeadlines,
 } from '@/services/questSettings.services';
-import { updateUserPersonality } from '@/services/user.services';
+import { updateUserCharacter, updateUserPersonality } from '@/services/user.services';
+import { getPetPreviews, type PetPreview } from '@/services/petPreview.services';
 import {
   getTeamsForUser,
   type UserTeam,
@@ -40,7 +50,7 @@ export default function SettingsScreen() {
   } = useDailyQuest();
 
   const { user } = useAuth();
-  const { personality: loadedPersonality } = useUser();
+  const { personality: loadedPersonality, character: loadedCharacter } = useUser();
 
   // Personality picker — initialised from the user's saved value. Falls back to
   // the default if it's unset or a value no longer offered, so a chip is always
@@ -65,6 +75,54 @@ export default function SettingsScreen() {
     } catch (err) {
       setPersonality(prev); // revert on failure
       setSettingsError(err instanceof Error ? err.message : 'Failed to update personality');
+    }
+  };
+
+  // ── Cat-colour (character) picker ──
+  const [petOptions, setPetOptions] = useState<PetPreview[]>([]);
+  const [loadingPets, setLoadingPets] = useState(true);
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  const [catCarouselWidth, setCatCarouselWidth] = useState(0);
+  const catScrollRef = useRef<ScrollView | null>(null);
+  const didInitialCatScroll = useRef(false);
+
+  useEffect(() => {
+    let mounted = true;
+    getPetPreviews()
+      .then((options) => mounted && setPetOptions(options))
+      .catch(() => mounted && setPetOptions([]))
+      .finally(() => mounted && setLoadingPets(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Initialise selection from the saved character.
+  useEffect(() => {
+    if (loadedCharacter) setSelectedCharacter(loadedCharacter);
+  }, [loadedCharacter]);
+
+  // Scroll the carousel to the current cat once (when width + options + selection ready).
+  useEffect(() => {
+    if (didInitialCatScroll.current || catCarouselWidth === 0 || petOptions.length === 0) return;
+    const index = petOptions.findIndex((o) => o.name === selectedCharacter);
+    if (index >= 0) {
+      catScrollRef.current?.scrollTo({ x: index * catCarouselWidth, animated: false });
+      didInitialCatScroll.current = true;
+    }
+  }, [catCarouselWidth, petOptions, selectedCharacter]);
+
+  const onPickCharacter = async (next: string) => {
+    if (!user || next === selectedCharacter) return;
+    const prev = selectedCharacter;
+    setSelectedCharacter(next); // optimistic
+    setSettingsError(null);
+    try {
+      const name = (user.user_metadata?.name as string) ?? '';
+      await updateUserCharacter(user.id, next, name);
+    } catch (err) {
+      setSelectedCharacter(prev); // revert on failure
+      setSettingsError(err instanceof Error ? err.message : 'Failed to update cat');
     }
   };
 
@@ -144,31 +202,6 @@ export default function SettingsScreen() {
         <Text style={styles.section}>settings</Text>
         <View style={styles.rule} />
 
-        {/* Cat personality */}
-        <View style={styles.deadlineCard}>
-          <Text style={styles.deadlineLabel}>Cat personality</Text>
-          <View style={styles.personalityRow}>
-            {MOCHI_PERSONALITIES.map((p) => {
-              const selected = p === personality;
-              return (
-                <Pressable
-                  key={p}
-                  onPress={() => onPickPersonality(p)}
-                  style={[styles.personalityChip, selected && styles.personalityChipSelected]}>
-                  <Text
-                    style={[
-                      styles.personalityChipText,
-                      selected && styles.personalityChipTextSelected,
-                    ]}>
-                    {p}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          {settingsError ? <Text style={styles.message}>{settingsError}</Text> : null}
-        </View>
-
         {/* Team selector */}
         <View style={styles.deadlineCard}>
           <Text style={styles.deadlineLabel}>Team</Text>
@@ -239,6 +272,70 @@ export default function SettingsScreen() {
             })
           }
         />
+        {/* Cat personality */}
+        <View style={styles.deadlineCard}>
+          <Text style={styles.deadlineLabel}>Cat personality</Text>
+          <View style={styles.personalityRow}>
+            {MOCHI_PERSONALITIES.map((p) => {
+              const selected = p === personality;
+              return (
+                <Pressable
+                  key={p}
+                  onPress={() => onPickPersonality(p)}
+                  style={[styles.personalityChip, selected && styles.personalityChipSelected]}>
+                  <Text
+                    style={[
+                      styles.personalityChipText,
+                      selected && styles.personalityChipTextSelected,
+                    ]}>
+                    {p}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {settingsError ? <Text style={styles.message}>{settingsError}</Text> : null}
+        </View>
+
+        {/* Cat colour picker — swipe to change your cat; saves on selection. */}
+        <View style={styles.deadlineCard}>
+          <Text style={styles.deadlineLabel}>Cat colour</Text>
+          {loadingPets ? (
+            <ActivityIndicator color={HavenColors.leather} />
+          ) : petOptions.length === 0 ? (
+            <Text style={styles.message}>No cats available right now.</Text>
+          ) : (
+            <View style={styles.catCarousel}>
+              <ScrollView
+                ref={catScrollRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onLayout={(e) => setCatCarouselWidth(e.nativeEvent.layout.width)}
+                onMomentumScrollEnd={(e) => {
+                  if (catCarouselWidth === 0) return;
+                  const index = Math.round(e.nativeEvent.contentOffset.x / catCarouselWidth);
+                  const option = petOptions[index];
+                  if (option) void onPickCharacter(option.name);
+                }}>
+                {petOptions.map((option) => (
+                  <View key={option.name} style={[styles.catPage, { width: catCarouselWidth }]}>
+                    <Image source={{ uri: option.imageUrl }} style={styles.catImage} resizeMode="contain" />
+                  </View>
+                ))}
+              </ScrollView>
+              <View style={styles.catDots}>
+                {petOptions.map((option) => (
+                  <View
+                    key={option.name}
+                    style={[styles.catDot, option.name === selectedCharacter && styles.catDotActive]}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
         <Pressable style={styles.logoutButton} onPress={() => void signOut()}>
           <Text style={styles.logoutButtonText}>logout</Text>
         </Pressable>
@@ -351,6 +448,38 @@ const styles = StyleSheet.create({
     backgroundColor: HavenColors.cellFill,
     borderWidth: Border.base,
     borderColor: HavenColors.inkSoft,
+  },
+  catCarousel: {
+    width: '100%',
+    backgroundColor: HavenColors.parchment,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+  },
+  catPage: {
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: HavenSpacing.lg,
+  },
+  catImage: {
+    width: '100%',
+    height: '100%',
+  },
+  catDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: HavenSpacing.sm,
+    paddingVertical: HavenSpacing.md,
+  },
+  catDot: {
+    width: 8,
+    height: 8,
+    backgroundColor: HavenColors.inkSoft,
+    opacity: 0.4,
+  },
+  catDotActive: {
+    backgroundColor: HavenColors.gold,
+    opacity: 1,
   },
   personalityRow: {
     flexDirection: 'row',
