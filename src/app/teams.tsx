@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFocusEffect } from 'expo-router';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   BodyFontSize,
@@ -248,7 +249,11 @@ export default function TeamsScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView
+        bottomOffset={HavenSpacing.xl}
+        contentContainerStyle={styles.content}
+        extraKeyboardSpace={96}
+        keyboardShouldPersistTaps="handled">
         <Text style={styles.section}>Team</Text>
         <View style={styles.rule} />
 
@@ -424,7 +429,7 @@ export default function TeamsScreen() {
             <Text style={styles.leaveButtonText}>{leaving ? 'Leaving...' : 'Leave team'}</Text>
           </Pressable>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
