@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -29,6 +30,9 @@ import {
   getThemeForWeek,
   submitTeamQuestSuggestion,
 } from '@/services/weeklyTheme.services';
+
+const LEADERBOARD_CUP_SIZE = 18;
+const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
 
 function getNextWeekStartUtc(): string {
   const today = new Date();
@@ -62,6 +66,31 @@ export default function TeamsScreen() {
   const currentTeam = teams[0] ?? null;
   const hasTeam = Boolean(currentTeam);
   const nextWeekStart = getNextWeekStartUtc();
+
+  const renderLeaderboardCup = (rankIndex: number) => {
+    const cupColor = LEADERBOARD_CUP_COLORS[rankIndex];
+
+    return (
+      <View style={styles.leaderboardCupSlot}>
+        {cupColor ? (
+          <>
+            <MaterialCommunityIcons
+              name="trophy"
+              size={LEADERBOARD_CUP_SIZE + 4}
+              color={HavenColors.ink}
+              style={styles.leaderboardCupOutline}
+            />
+            <MaterialCommunityIcons
+              name="trophy"
+              size={LEADERBOARD_CUP_SIZE}
+              color={cupColor}
+              style={styles.leaderboardCup}
+            />
+          </>
+        ) : null}
+      </View>
+    );
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -292,14 +321,20 @@ export default function TeamsScreen() {
             <View style={styles.detailBlock}>
               <View style={styles.leaderboardTable}>
                 <View style={[styles.leaderboardRow, styles.leaderboardHeaderRow]}>
-                  <Text style={styles.leaderboardHeaderText}>team members</Text>
+                  <View style={styles.memberNameColumn}>
+                    <View style={styles.leaderboardCupSlot} />
+                    <Text style={styles.leaderboardHeaderText}>team members</Text>
+                  </View>
                   <Text style={[styles.leaderboardHeaderText, styles.winsColumn]}>
                     number of wins
                   </Text>
                 </View>
-                {teamMembers.map((member) => (
+                {teamMembers.map((member, index) => (
                   <View key={member.userId} style={styles.leaderboardRow}>
-                    <Text style={styles.memberName}>{member.userName}</Text>
+                    <View style={styles.memberNameColumn}>
+                      {renderLeaderboardCup(index)}
+                      <Text style={styles.memberName}>{member.userName}</Text>
+                    </View>
                     <Text style={[styles.memberWins, styles.winsColumn]}>
                       {member.winsCount}
                     </Text>
@@ -511,6 +546,25 @@ const styles = StyleSheet.create({
     fontSize: BodyFontSize.lg,
     color: HavenColors.ink,
     textAlign: 'left',
+  },
+  memberNameColumn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: HavenSpacing.sm,
+  },
+  leaderboardCupSlot: {
+    width: LEADERBOARD_CUP_SIZE + 6,
+    height: LEADERBOARD_CUP_SIZE + 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  leaderboardCupOutline: {
+    position: 'absolute',
+  },
+  leaderboardCup: {
+    position: 'absolute',
   },
   memberName: {
     flex: 1,
