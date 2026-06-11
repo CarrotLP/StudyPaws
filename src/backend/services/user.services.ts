@@ -1,5 +1,6 @@
 import { supabase } from '@/backend/lib/supabase';
 
+import { ensureCharacter } from '@/services/character.services';
 import type { MochiPersonality } from '@/services/mochiQuotes.services';
 
 export type UserDetails = {
@@ -8,6 +9,7 @@ export type UserDetails = {
   points: number;
   user_uid: string;
   personality: MochiPersonality | null;
+  character: string | null;
 };
 
 /**
@@ -18,7 +20,7 @@ export type UserDetails = {
 export async function getUserDetails(userUid: string): Promise<UserDetails | null> {
   const { data, error } = await supabase
     .from('users')
-    .select('name, pet_name, points, user_uid, personality')
+    .select('name, pet_name, points, user_uid, personality, character')
     .eq('user_uid', userUid)
     .maybeSingle();
 
@@ -37,7 +39,28 @@ export async function getUserDetails(userUid: string): Promise<UserDetails | nul
     points: data.points,
     user_uid: data.user_uid,
     personality: (data.personality as MochiPersonality) ?? null,
+    character: data.character ?? null,
   };
+}
+
+/**
+ * Updates the user's chosen cat (character). Ensures the character row exists
+ * first so the renderer can find its body parts, then sets users.character.
+ */
+export async function updateUserCharacter(
+  userUid: string,
+  character: string,
+  name: string,
+): Promise<void> {
+  await ensureCharacter(character);
+  const { data, error } = await supabase
+    .from('users')
+    .upsert({ user_uid: userUid, name, character }, { onConflict: 'user_uid' })
+    .select('user_uid');
+  if (error) throw new Error(`${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+  if (!data || data.length === 0) {
+    throw new Error('No row written — check the users insert/update RLS policy.');
+  }
 }
 
 export async function updateUserPoints(userUid: string, points: number): Promise<void> {
