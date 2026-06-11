@@ -45,6 +45,7 @@ export default function HomeScreen() {
     }, [refreshPoints])
   );
   const [catTaps, setCatTaps] = useState(0);
+  const [catSpeaking, setCatSpeaking] = useState(false);
   const { petName, personality } = useUser();
   const { deadlines, hasSubmittedToday } = useDailyQuest();
   const {
@@ -83,13 +84,14 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
-          <Pressable onPress={() => setCatTaps((c) => c + 1)}>
+          <Pressable disabled={catSpeaking} onPress={() => setCatTaps((c) => c + 1)}>
             <Mochi key={refreshKey} scale={2} walkSignal={catTaps} />
           </Pressable>
           <View style={styles.floorShadow} />
           <MochiSpeech
             tapSignal={catTaps}
             personality={personality ?? undefined}
+            onSpeakingChange={setCatSpeaking}
             mode={
               phase === 'studying'
                 ? 'study'

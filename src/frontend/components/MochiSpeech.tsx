@@ -52,12 +52,16 @@ export function MochiSpeech({
   mode,
   personality,
   tapSignal,
+  onSpeakingChange,
 }: {
   mode: Mode;
   // Which personality's study quotes to show. Omit for all (until a selector exists).
   personality?: MochiPersonality;
   // Increment this (e.g. on every cat tap) to make Mochi blurt a random quote.
   tapSignal?: number;
+  // Reports whether a quote is currently showing/typing (so the cat can be made
+  // untappable while it runs).
+  onSpeakingChange?: (speaking: boolean) => void;
 }) {
   const [text, setText] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<string[]>([]);
@@ -107,6 +111,12 @@ export function MochiSpeech({
     setText(pool[Math.floor(Math.random() * pool.length)]);
   }, [tapSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Tell the parent whether a quote is currently up (so the cat can ignore taps
+  // while one is running).
+  useEffect(() => {
+    onSpeakingChange?.(text !== null);
+  }, [text, onSpeakingChange]);
+
   // Whenever the quote changes, split it into single lines and restart at the top.
   useEffect(() => {
     if (!text) {
@@ -150,11 +160,11 @@ export function MochiSpeech({
       accessibilityLabel="Dismiss Mochi"
       onPress={() => setText(null)}
       style={styles.wrap}>
-      <View style={styles.bubble}>
-        <Text style={styles.text}>{displayed}</Text>
+      <View style={styles.bubbleColumn}>
+        <View style={styles.bubble}>
+          <Text style={styles.text}>{displayed}</Text>
+        </View>
       </View>
-      {/* little pointer tail under the bubble */}
-      <View style={styles.tail} />
     </Pressable>
   );
 }
@@ -165,17 +175,22 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    alignItems: 'center',
-    // Keep the (centered) bubble clear of the top-left menu button (44px + inset)
-    // by reserving horizontal space on both sides.
-    paddingHorizontal: 64,
+    // Left-anchor past the top-left menu button (44px + inset) and let the
+    // bubble grow into the open space on the right.
+    alignItems: 'flex-start',
+    paddingLeft: 64,
+    paddingRight: HavenSpacing.md,
     zIndex: 50,
+  },
+  // Keeps the tail centered under the bubble while the column itself is left-anchored.
+  bubbleColumn: {
+    alignItems: 'center',
   },
   bubble: {
     // Hug the content (no fixed width) and cap with maxWidth so the FULL line
     // always shows — never truncated to "...". Lines are pre-chunked short
     // enough (MAX_LINE_CHARS) to stay on one line within this width.
-    maxWidth: 330,
+    maxWidth: 400,
     paddingVertical: HavenSpacing.sm,
     paddingHorizontal: HavenSpacing.md,
     backgroundColor: HavenColors.parchment,
@@ -188,15 +203,5 @@ const styles = StyleSheet.create({
     fontSize: BodyFontSize.md,
     color: HavenColors.ink,
     textAlign: 'center',
-  },
-  tail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 10,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: HavenColors.ink,
   },
 });
