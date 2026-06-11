@@ -91,7 +91,7 @@ export default function TeamsScreen() {
           if (!active) return;
           setTeams(nextTeams);
           setTeamMembers(nextTeamMembers);
-          setNextWeekTheme(nextThemeResult[0] ?? null);
+          setNextWeekTheme(nextThemeResult ?? null);
         } catch (loadError) {
           if (!active) return;
           setTeams([]);

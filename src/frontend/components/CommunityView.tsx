@@ -10,6 +10,8 @@ import {
   PixelFontSize,
   ShadowOffset,
 } from '@/constants/havenTheme';
+import { getCommunityMemberCount } from '@/services/community.services';
+import { useEffect, useState } from 'react';
 
 type CommunityViewProps = {
   currentCommunity: UserCommunity;
@@ -21,6 +23,15 @@ type CommunityViewProps = {
 };
 
 export function CommunityView({ currentCommunity, loading, leaving, confirmLeaveCommunity, onOpenGallery, onOpenHallOfFame }: CommunityViewProps) {
+  const [memberCount, setMemberCount] = useState(0);
+  useEffect(() => {
+      if (!currentCommunity) return;
+  
+      getCommunityMemberCount(currentCommunity.communityId)
+        .then(setMemberCount)
+        .catch(console.error);
+    }, [currentCommunity?.communityId]);
+  
   return (
     <>
     <View style={styles.communityList}>    
@@ -33,29 +44,35 @@ export function CommunityView({ currentCommunity, loading, leaving, confirmLeave
     
             {currentCommunity ? (
               <View style={styles.communityDetails}>
-                <View style={styles.detailBlock}>
-                  <Text style={styles.detailLabel}>community code:</Text>
-                  <Text style={styles.detailValue}>{currentCommunity.communityCode}</Text>
+                <View style={{justifyContent: 'space-between'}}>
+                  <View style={[styles.detailBlock]}>
+                    <Text style={styles.detailLabel}>Community code:</Text>
+                    <Text style={styles.detailLabel}>No. of Members:</Text>
+                  </View>
+                  <View style={[styles.detailBlock]}>
+                    <Text style={styles.detailValue}>{currentCommunity.communityCode}</Text>
+                    <Text style={styles.detailValue}>{memberCount}</Text>
+                  </View>
                 </View>
     
-                <View style={styles.detailBlock}>
+                <View style={styles.detailButton}>
                     <Pressable
                       accessibilityRole="button"
                       onPress={onOpenGallery}
                       style={({ pressed }) => [
-                        styles.joinButton,
+                        styles.communityCard,
                         pressed && styles.buttonPressed,
                         ]}>
-                      <Text style={styles.joinButtonText}>Gallery</Text>
+                      <Text style={styles.joinButtonText}>Visit Gallery</Text>
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
                       onPress={onOpenHallOfFame}
                       style={({ pressed }) => [
-                        styles.joinButton,
+                        styles.communityCard,
                         pressed && styles.buttonPressed,
                       ]}>
-                      <Text style={styles.joinButtonText}>Hall of Fame</Text>
+                      <Text style={styles.joinButtonText}>Visit Hall of Fame</Text>
                     </Pressable>
                 </View>
               </View>
@@ -128,9 +145,14 @@ const styles = StyleSheet.create({
     gap: HavenSpacing.lg,
   },
   detailBlock: {
-    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between'
+  },
+  detailButton: {
     alignItems: 'flex-start',
     gap: HavenSpacing.sm,
+    justifyContent: 'space-between'
   },
   detailLabel: {
     fontFamily: HavenFonts.pixel,
