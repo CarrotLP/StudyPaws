@@ -10,6 +10,7 @@ export type TeamUser = {
   userId: string;
   userName: string;
   winsCount: number;
+  character: string | null;
 }
 
 export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
@@ -64,7 +65,7 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
 
   const { data: users, error: userError } = await supabase
     .from('users')
-    .select('user_uid, name')
+    .select('user_uid, name, character')
     .in('user_uid', userIds);
 
   if (userError) {
@@ -76,6 +77,7 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
       userId: user.user_uid,
       userName: user.name,
       winsCount: winsByUserId.get(user.user_uid) ?? 0,
+      character: user.character ?? null,
     }))
     .sort((a, b) => b.winsCount - a.winsCount || a.userName.localeCompare(b.userName));
 }

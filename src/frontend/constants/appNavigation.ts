@@ -10,7 +10,7 @@ export const APP_MENU_ITEMS: AppMenuItem[] = [
   { id: 'daily_quest', href: '/daily_quest', label: 'Daily quest', title: 'Daily quest' },
   { id: 'teams', href: '/teams', label: 'Team', title: 'Team' },
   { id: 'community', href: '/community', label: 'Community', title: 'Community' },
-  { id: 'dress', href: '/dress', label: 'Dress mochi', title: 'Dress mochi' },
+  { id: 'dress', href: '/dress', label: 'Dress Your Pet', title: 'Dress Your Pet' },
   { id: 'treasure', href: '/treasure', label: 'Treasure chest', title: 'Treasure chest' },
   { id: 'settings', href: '/settings', label: 'Settings', title: 'Settings' },
 ];

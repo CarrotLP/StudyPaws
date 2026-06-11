@@ -76,7 +76,7 @@ export default function DressScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.section}>dress mochi</Text>
+        <Text style={styles.section}>Dress Your Pet</Text>
         <View style={styles.rule} />
 
         <View style={styles.catStage}>

@@ -13,6 +13,7 @@ import {
   PixelFontSize,
   ShadowOffset,
 } from '@/constants/havenTheme';
+import { Mochi } from '@/components/mochi';
 import { useAuth } from '@/hooks/use-auth';
 import { createTeam, getTeamByTeamCode } from '@/services/team.services';
 import {
@@ -272,6 +273,17 @@ export default function TeamsScreen() {
               <Text style={styles.detailValue}>{currentTeam.teamCode}</Text>
             </View>
 
+            {/* Mini cats of every team member, squeezed together. */}
+            <View style={styles.miniCatsRow}>
+              {teamMembers.map((member) =>
+                member.character ? (
+                  <View key={member.userId} style={styles.miniCat}>
+                    <Mochi characterName={member.character} userId={member.userId} scale={0.5} />
+                  </View>
+                ) : null,
+              )}
+            </View>
+
             <View style={styles.detailBlock}>
               <View style={styles.leaderboardTable}>
                 <View style={[styles.leaderboardRow, styles.leaderboardHeaderRow]}>
@@ -466,6 +478,17 @@ const styles = StyleSheet.create({
   teamDetails: {
     width: '100%',
     gap: HavenSpacing.lg,
+  },
+  miniCatsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  miniCat: {
+    // Negative margin overlaps the cats so they look like they're standing
+    // shoulder-to-shoulder rather than spaced apart.
+    marginHorizontal: -12,
   },
   detailBlock: {
     width: '100%',

@@ -68,6 +68,12 @@ interface MochiProps {
   walkSignal?: number;
   // Walk continuously (until unmounted), independent of taps.
   animate?: boolean;
+  // Render a specific character (by `characters.name`) instead of the logged-in
+  // user's. Used to show teammates' cats.
+  characterName?: string;
+  // Whose worn accessories to draw. Defaults to the logged-in user; pass a
+  // teammate's id to show their outfit on their cat.
+  userId?: string;
 }
 
 export function Mochi({
@@ -76,6 +82,8 @@ export function Mochi({
   silhouette = false,
   walkSignal,
   animate = false,
+  characterName,
+  userId,
 }: MochiProps) {
   // How long the cat walks after a tap.
   const WALK_MS = 2500;
@@ -171,7 +179,8 @@ export function Mochi({
   };
 
   const fetchMochiData = useCallback(async () => {
-    if (!user) return;
+    // Need either a target character name, or a signed-in user to look one up.
+    if (!characterName && !user) return;
 
     try {
       const getImageSize = (uri: string): Promise<{ width: number; height: number } | null> => {
@@ -180,10 +189,15 @@ export function Mochi({
         });
       };
 
-      const { data: userData } = await supabase.from('users').select('character').eq('user_uid', user.id).maybeSingle();
-      if (!userData?.character) return;
+      // Which character to render: an explicit one (teammate) or the user's own.
+      let targetCharacter = characterName ?? null;
+      if (!targetCharacter && user) {
+        const { data: userData } = await supabase.from('users').select('character').eq('user_uid', user.id).maybeSingle();
+        targetCharacter = userData?.character ?? null;
+      }
+      if (!targetCharacter) return;
 
-      const { data: charData } = await supabase.from('characters').select('*').eq('name', userData.character).maybeSingle();
+      const { data: charData } = await supabase.from('characters').select('*').eq('name', targetCharacter).maybeSingle();
       if (!charData) return;
 
       const bodyPromises = Object.entries(MOCHI_BODY).map(async ([key, config]): Promise<MochiAsset | null> => {
@@ -206,8 +220,13 @@ export function Mochi({
       const bodyResults = await Promise.all(bodyPromises);
       const resolvedBodyLayers = bodyResults.filter((l): l is MochiAsset => l !== null);
 
-      const { data: userAccessories } = await supabase.from('users_accessories').select('accessory').eq('user', user.id).eq('chosen', true);
+      // Draw the worn accessories of the target user (a teammate if `userId` is
+      // given, otherwise the logged-in user).
+      const accessoryUserId = userId ?? user?.id ?? null;
       const accessoryLayers: MochiAsset[] = [];
+      const { data: userAccessories } = accessoryUserId
+        ? await supabase.from('users_accessories').select('accessory').eq('user', accessoryUserId).eq('chosen', true)
+        : { data: null };
       if (userAccessories && userAccessories.length > 0) {
         const accessoryNames = userAccessories.map((ua) => ua.accessory);
         const { data: components } = await supabase.from('accessories_components').select('components').in('accessory_name', accessoryNames);
@@ -232,7 +251,7 @@ export function Mochi({
     } catch (err) {
       console.error('Error fetching Mochi data:', err);
     }
-  }, [user]);
+  }, [user, characterName, userId]);
 
   useFocusEffect(
     useCallback(() => {
