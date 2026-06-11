@@ -29,6 +29,9 @@ import {
   submitTeamQuestSuggestion,
 } from '@/services/weeklyTheme.services';
 
+// Max characters of a member's name shown under their mini cat before truncating.
+const MAX_NAME_CHARS = 8;
+
 function getNextWeekStartUtc(): string {
   const today = new Date();
   const utcDay = today.getUTCDay();
@@ -279,6 +282,11 @@ export default function TeamsScreen() {
                 member.character ? (
                   <View key={member.userId} style={styles.miniCat}>
                     <Mochi characterName={member.character} userId={member.userId} scale={0.5} />
+                    <Text style={styles.miniCatName} numberOfLines={1}>
+                      {member.userName.length > MAX_NAME_CHARS
+                        ? `${member.userName.slice(0, MAX_NAME_CHARS)}...`
+                        : member.userName}
+                    </Text>
                   </View>
                 ) : null,
               )}
@@ -489,6 +497,14 @@ const styles = StyleSheet.create({
     // Negative margin overlaps the cats so they look like they're standing
     // shoulder-to-shoulder rather than spaced apart.
     marginHorizontal: -12,
+    alignItems: 'center',
+  },
+  miniCatName: {
+    fontFamily: HavenFonts.body,
+    fontSize: BodyFontSize.sm,
+    color: HavenColors.ink,
+    textAlign: 'center',
+    maxWidth: 70,
   },
   detailBlock: {
     width: '100%',
