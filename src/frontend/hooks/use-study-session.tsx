@@ -188,11 +188,6 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
 
   const setActivityStatus = useCallback(
     (status: ActivityStatus) => {
-      Alert.alert(
-        'Activity status update',
-        `setActivityStatus("${status}") was called.\n\nCurrent user: ${user?.id ?? 'none'}`,
-      );
-
       if (!user?.id) {
         Alert.alert('Activity status update failed', 'No signed-in user was available.');
         return;
