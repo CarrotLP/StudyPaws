@@ -58,14 +58,19 @@ export async function updateUserActivityStatus(
   userUid: string,
   activityStatus: ActivityStatus,
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('users')
     .update({ activity_status: activityStatus })
-    .eq('user_uid', userUid);
+    .eq('user_uid', userUid)
+    .select('user_uid');
 
   if (error) {
     console.error('Error updating activity status:', error);
     throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No row written - check the users update RLS policy or current user id.');
   }
 }
 
