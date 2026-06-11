@@ -34,6 +34,7 @@ import {
 
 const LEADERBOARD_CUP_SIZE = 18;
 const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
+const TEAM_REFRESH_MS = 30_000;
 
 // Max characters of a member's name shown under their mini cat before truncating.
 const MAX_NAME_CHARS = 8;
@@ -103,7 +104,7 @@ export default function TeamsScreen() {
       setCreating(false);
       let active = true;
 
-      const loadTeams = async () => {
+      const loadTeams = async (showLoading = true) => {
         if (!user) {
           setTeams([]);
           setTeamMembers([]);
@@ -113,10 +114,12 @@ export default function TeamsScreen() {
           return;
         }
 
-        setLoading(true);
-        setThemeLoading(true);
+        if (showLoading) {
+          setLoading(true);
+          setThemeLoading(true);
+        }
         setError(null);
-        setSuggestionMessage(null);
+        if (showLoading) setSuggestionMessage(null);
 
         try {
           const [nextTeams, nextThemeResult] = await Promise.all([
@@ -143,9 +146,13 @@ export default function TeamsScreen() {
       };
 
       void loadTeams();
+      const refreshId = setInterval(() => {
+        void loadTeams(false);
+      }, TEAM_REFRESH_MS);
 
       return () => {
         active = false;
+        clearInterval(refreshId);
       };
     }, [nextWeekStart, user]),
   );
@@ -343,7 +350,10 @@ export default function TeamsScreen() {
                   <View key={member.userId} style={styles.leaderboardRow}>
                     <View style={styles.memberNameColumn}>
                       {renderLeaderboardCup(index)}
-                      <Text style={styles.memberName}>{member.userName}</Text>
+                      <Text style={styles.memberName}>
+                        {member.userName}
+                        <Text style={styles.memberStatus}> - {member.activityStatus}</Text>
+                      </Text>
                     </View>
                     <Text style={[styles.memberWins, styles.winsColumn]}>
                       {member.winsCount}
@@ -590,6 +600,9 @@ const styles = StyleSheet.create({
     fontSize: BodyFontSize.lg,
     color: HavenColors.ink,
     textAlign: 'left',
+  },
+  memberStatus: {
+    color: HavenColors.inkSoft,
   },
   memberWins: {
     fontFamily: HavenFonts.body,
