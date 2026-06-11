@@ -18,6 +18,12 @@ export type CommunityWinner = {
   theme: string
 }
 
+type WeeklySubmissionRow = {
+  user_id: string;
+  image_path: string;
+  submission_uid: string;
+};
+
 export async function uploadSubmissionToCommunity(
   userId: string,
   communityId: string,
@@ -63,18 +69,25 @@ export async function getCommunitySubmissionOfDate(userId: string, questDate: st
 
 export async function getCommunityImagesOfWeek(quest_date: string, communityId: string): Promise<Submission[]> {
   const weekStart = findWeekStart(new Date(quest_date))
-  const { data: memberships, error: membershipError } = await supabase
-    .from('community_quest_submissions')
-    .select('user, image_path, submission_uid')
-    .eq('community', communityId)
-    .eq('week_start', weekStart);
 
-  if (membershipError) {
-    throw membershipError;
-  }
+  const { data, error } = await supabase.rpc(
+    'get_weekly_submissions_random',
+    {
+      p_community: communityId,
+      p_week_start: weekStart
+    }
+  );
 
-  return memberships.map((membership) => ({
-    userId: membership.user,
+  if (error) throw error;
+
+  const memberships = data as {
+    user_id: string;
+    image_path: string;
+    submission_uid: string;
+  }[];
+
+  return (memberships ?? []).map((membership) => ({
+    userId: membership.user_id,
     photoUri: membership.image_path,
     submissionId: membership.submission_uid
   }));
