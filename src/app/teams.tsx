@@ -426,15 +426,20 @@ export default function TeamsScreen() {
               </Text>
 
               {nextWeekTheme ? (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={openSuggestionModal}
-                  style={({ pressed }) => [
-                    styles.submitSuggestionButton,
-                    pressed && styles.buttonPressed,
-                  ]}>
-                  <Text style={styles.submitSuggestionButtonText}>Make a quest suggestion</Text>
-                </Pressable>
+                <>
+                  <Text style={styles.suggestionHelpText}>
+                    Suggest a photo quest for your team that fits the theme.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={openSuggestionModal}
+                    style={({ pressed }) => [
+                      styles.submitSuggestionButton,
+                      pressed && styles.buttonPressed,
+                    ]}>
+                    <Text style={styles.submitSuggestionButtonText}>Make a quest suggestion</Text>
+                  </Pressable>
+                </>
               ) : null}
             </View>
           </View>
@@ -806,6 +811,12 @@ const styles = StyleSheet.create({
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
     color: RibbonColors.calendar,
+    textAlign: 'left',
+  },
+  suggestionHelpText: {
+    fontFamily: HavenFonts.body,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.inkSoft,
     textAlign: 'left',
   },
   themeText: {

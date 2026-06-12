@@ -213,8 +213,13 @@ export default function DailyQuestScreen() {
 
         {weeklyTheme && (
           <View style={styles.weeklyThemeBlock}>
-            <Text style={styles.weeklyThemeLabel}>The weekly theme is:</Text>
-            <Text style={styles.weeklyThemeText}>{weeklyTheme}</Text>
+            <View style={styles.weeklyThemeRow}>
+              <Text style={styles.weeklyThemeLabel}>The weekly theme is:</Text>
+              <Text style={styles.weeklyThemeText}>{weeklyTheme}</Text>
+            </View>
+            <Text style={styles.weeklyThemeHelpText}>
+              Daily quests follow this theme all week.
+            </Text>
           </View>
         )}
 
@@ -470,16 +475,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: HavenSpacing.xs,
   },
+  weeklyThemeRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    gap: HavenSpacing.sm,
+    flexWrap: 'wrap',
+  },
   weeklyThemeLabel: {
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
     color: HavenColors.ink,
     textAlign: 'center',
+    flexShrink: 0,
   },
   weeklyThemeText: {
     fontFamily: HavenFonts.body,
     fontSize: BodyFontSize.lg,
     color: RibbonColors.calendar,
+    textAlign: 'center',
+  },
+  weeklyThemeHelpText: {
+    fontFamily: HavenFonts.body,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.inkSoft,
     textAlign: 'center',
   },
 
