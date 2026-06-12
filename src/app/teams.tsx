@@ -23,6 +23,7 @@ import {
   HavenFonts,
   HavenSpacing,
   PixelFontSize,
+  RibbonColors,
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { Mochi } from '@/components/mochi';
@@ -44,6 +45,7 @@ import {
 
 const LEADERBOARD_CUP_SIZE = 18;
 const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
+const QUEST_SUGGESTION_PREFIX = 'Take a picture of';
 const SUGGESTION_SUCCESS_TOAST_MS = 3000;
 const TEAM_REFRESH_MS = 30_000;
 
@@ -62,6 +64,14 @@ function getNextWeekStartUtc(): string {
   ));
 
   return nextMonday.toISOString().slice(0, 10);
+}
+
+function formatQuestSuggestion(description: string): string {
+  if (description.toLowerCase().startsWith(QUEST_SUGGESTION_PREFIX.toLowerCase())) {
+    return description;
+  }
+
+  return `${QUEST_SUGGESTION_PREFIX} ${description}`;
 }
 
 export default function TeamsScreen() {
@@ -313,7 +323,11 @@ export default function TeamsScreen() {
     setSubmittingSuggestion(true);
     setSuggestionMessage(null);
     try {
-      await submitTeamQuestSuggestion(currentTeam.teamId, nextWeekStart, description);
+      await submitTeamQuestSuggestion(
+        currentTeam.teamId,
+        nextWeekStart,
+        formatQuestSuggestion(description),
+      );
       setQuestSuggestion('');
       setSuggestionMessage(null);
       setSuggestionModalVisible(false);
@@ -353,8 +367,10 @@ export default function TeamsScreen() {
         {currentTeam ? (
           <View style={styles.teamDetails}>
             <View style={styles.detailBlock}>
-              <Text style={styles.detailLabel}>team code:</Text>
-              <Text style={styles.detailValue}>{currentTeam.teamCode}</Text>
+              <View style={styles.teamCodeRow}>
+                <Text style={styles.detailLabel}>team code:</Text>
+                <Text style={styles.detailValue}>{currentTeam.teamCode}</Text>
+              </View>
             </View>
 
             {/* Mini cats of every team member, squeezed together. */}
@@ -533,13 +549,14 @@ export default function TeamsScreen() {
                 </Text>
 
                 <Text style={styles.suggestionLabel}>Make a quest suggestion:</Text>
+                <Text style={styles.suggestionPrefixText}>Take a picture of...</Text>
                 <TextInput
                   value={questSuggestion}
                   onChangeText={(text) => {
                     setQuestSuggestion(text);
                     setSuggestionMessage(null);
                   }}
-                  placeholder="Write your quest idea"
+                  placeholder="... write your quest idea"
                   multiline
                   style={[styles.input, styles.suggestionInput]}
                 />
@@ -632,6 +649,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-end',
     justifyContent: 'center',
+    marginBottom: HavenSpacing.md,
   },
   miniCat: {
     // Negative margin overlaps the cats so they look like they're standing
@@ -649,6 +667,11 @@ const styles = StyleSheet.create({
   detailBlock: {
     width: '100%',
     alignItems: 'flex-start',
+    gap: HavenSpacing.sm,
+  },
+  teamCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: HavenSpacing.sm,
   },
   detailLabel: {
@@ -777,6 +800,12 @@ const styles = StyleSheet.create({
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
     color: HavenColors.ink,
+    textAlign: 'left',
+  },
+  suggestionPrefixText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: RibbonColors.calendar,
     textAlign: 'left',
   },
   themeText: {
