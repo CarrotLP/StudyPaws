@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import {
   BodyFontSize,
@@ -75,6 +75,7 @@ function formatQuestSuggestion(description: string): string {
 }
 
 export default function TeamsScreen() {
+  const params = useLocalSearchParams<{ suggest?: string | string[] }>();
   const { user } = useAuth();
   const [teams, setTeams] = useState<UserTeam[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamUser[]>([]);
@@ -93,9 +94,11 @@ export default function TeamsScreen() {
   const [suggestionModalVisible, setSuggestionModalVisible] = useState(false);
   const [suggestionSuccessToastVisible, setSuggestionSuccessToastVisible] = useState(false);
   const suggestionToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handledSuggestionParamRef = useRef<string | null>(null);
   const currentTeam = teams[0] ?? null;
   const hasTeam = Boolean(currentTeam);
   const nextWeekStart = getNextWeekStartUtc();
+  const suggestParam = Array.isArray(params.suggest) ? params.suggest[0] : params.suggest;
 
   const renderLeaderboardCup = (rankIndex: number) => {
     const cupColor = LEADERBOARD_CUP_COLORS[rankIndex];
@@ -142,6 +145,14 @@ export default function TeamsScreen() {
   }, [clearSuggestionToastTimer]);
 
   useEffect(() => clearSuggestionToastTimer, [clearSuggestionToastTimer]);
+
+  useEffect(() => {
+    if (!suggestParam || !currentTeam || !nextWeekTheme) return;
+    if (handledSuggestionParamRef.current === suggestParam) return;
+
+    handledSuggestionParamRef.current = suggestParam;
+    openSuggestionModal();
+  }, [currentTeam, nextWeekTheme, openSuggestionModal, suggestParam]);
 
   useFocusEffect(
     useCallback(() => {

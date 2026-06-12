@@ -3,7 +3,7 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontAwesome } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import {
   BodyFontSize,
@@ -205,6 +205,13 @@ export default function DailyQuestScreen() {
     }
   };
 
+  const openQuestSuggestion = () => {
+    router.push({
+      pathname: '/teams',
+      params: { suggest: String(Date.now()) },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -220,6 +227,17 @@ export default function DailyQuestScreen() {
             <Text style={styles.weeklyThemeHelpText}>
               Daily quests follow this theme all week.
             </Text>
+            {team ? (
+              <Text style={styles.weeklyThemeCtaText} numberOfLines={1}>
+                Have an idea for next week?{' '}
+                <Text
+                  accessibilityRole="link"
+                  onPress={openQuestSuggestion}
+                  style={styles.weeklyThemeCtaLink}>
+                  Suggest a quest
+                </Text>
+              </Text>
+            ) : null}
           </View>
         )}
 
@@ -500,6 +518,17 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.base,
     color: HavenColors.inkSoft,
     textAlign: 'center',
+  },
+  weeklyThemeCtaText: {
+    fontFamily: HavenFonts.body,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
+  },
+  weeklyThemeCtaLink: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: RibbonColors.calendar,
   },
 
   // ── Submission panel ──────────────────────────────────────────────────────
