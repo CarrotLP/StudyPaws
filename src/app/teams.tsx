@@ -367,8 +367,10 @@ export default function TeamsScreen() {
         {currentTeam ? (
           <View style={styles.teamDetails}>
             <View style={styles.detailBlock}>
-              <Text style={styles.detailLabel}>team code:</Text>
-              <Text style={styles.detailValue}>{currentTeam.teamCode}</Text>
+              <View style={styles.teamCodeRow}>
+                <Text style={styles.detailLabel}>team code:</Text>
+                <Text style={styles.detailValue}>{currentTeam.teamCode}</Text>
+              </View>
             </View>
 
             {/* Mini cats of every team member, squeezed together. */}
@@ -647,6 +649,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-end',
     justifyContent: 'center',
+    marginBottom: HavenSpacing.md,
   },
   miniCat: {
     // Negative margin overlaps the cats so they look like they're standing
@@ -664,6 +667,11 @@ const styles = StyleSheet.create({
   detailBlock: {
     width: '100%',
     alignItems: 'flex-start',
+    gap: HavenSpacing.sm,
+  },
+  teamCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: HavenSpacing.sm,
   },
   detailLabel: {
