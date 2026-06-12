@@ -228,15 +228,20 @@ export default function DailyQuestScreen() {
               Daily quests follow this theme all week.
             </Text>
             {team ? (
-              <Text style={styles.weeklyThemeCtaText} numberOfLines={1}>
-                Have an idea for next week?{' '}
-                <Text
-                  accessibilityRole="link"
-                  onPress={openQuestSuggestion}
-                  style={styles.weeklyThemeCtaLink}>
-                  Suggest a quest
+              <View style={styles.weeklyThemeCtaRow}>
+                <Text style={styles.weeklyThemeCtaText} numberOfLines={1}>
+                  Have an idea for next week?
                 </Text>
-              </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openQuestSuggestion}
+                  style={({ pressed }) => [
+                    styles.weeklyThemeCtaButton,
+                    pressed && styles.weeklyThemeCtaButtonPressed,
+                  ]}>
+                  <Text style={styles.weeklyThemeCtaButtonText}>Suggest a quest</Text>
+                </Pressable>
+              </View>
             ) : null}
           </View>
         )}
@@ -525,10 +530,27 @@ const styles = StyleSheet.create({
     color: HavenColors.inkSoft,
     textAlign: 'center',
   },
-  weeklyThemeCtaLink: {
+  weeklyThemeCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: HavenSpacing.sm,
+    flexWrap: 'wrap',
+  },
+  weeklyThemeCtaButton: {
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    paddingVertical: HavenSpacing.xs,
+    paddingHorizontal: HavenSpacing.md,
+  },
+  weeklyThemeCtaButtonPressed: {
+    transform: [{ translateX: ShadowOffset.one }, { translateY: ShadowOffset.one }],
+  },
+  weeklyThemeCtaButtonText: {
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
-    color: RibbonColors.calendar,
+    color: HavenColors.inkSoft,
+    textAlign: 'center',
   },
 
   // ── Submission panel ──────────────────────────────────────────────────────
