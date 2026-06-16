@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import {
   BodyFontSize,
@@ -138,6 +138,16 @@ export default function TeamsScreen() {
       await queryClient.invalidateQueries({ queryKey: QK.teamMembers(updated[0].teamId) });
     }
   }, [user, queryClient]);
+
+  // Refetch the member list (and thus their live activity-status tags) every
+  // time this page is focused, so the statuses are never shown stale.
+  useFocusEffect(
+    useCallback(() => {
+      if (currentTeam?.teamId) {
+        void queryClient.invalidateQueries({ queryKey: QK.teamMembers(currentTeam.teamId) });
+      }
+    }, [currentTeam?.teamId, queryClient]),
+  );
 
   const renderLeaderboardCup = (rankIndex: number) => {
     const cupColor = LEADERBOARD_CUP_COLORS[rankIndex];
