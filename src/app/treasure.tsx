@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ import { useEconomy } from '@/hooks/use-economy';
 import { useAccessories } from '@/hooks/use-accessories';
 import { useAuth } from '@/hooks/use-auth';
 import { getChests, type ChestReward } from '@/backend/services/chest.services';
+import { QK } from '@/hooks/queries';
 import { removeAccessoryFromUser } from '@/backend/services/accessory.services';
 
 type Chest = {
@@ -44,23 +46,22 @@ export default function TreasureScreen() {
   const { owned, addOwned, refreshOwned } = useAccessories();
 
   const [opening, setOpening] = useState<Opening | null>(null);
-  const [chestList, setChestList] = useState<Chest[]>([]);
   const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
+
+  const { data: rawChests = [] } = useQuery({
+    queryKey: QK.chests(),
+    queryFn: getChests,
+  });
+  const chestList: Chest[] = rawChests.map((c) => ({
+    name: c.name,
+    cost: c.price,
+    color: ChestColors.small,
+    pool: c.pool,
+  }));
 
   const stageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    getChests().then(data => {
-      const mapped = data.map(c => ({
-        name: c.name,
-        cost: c.price,
-        color: ChestColors.small,
-        pool: c.pool
-      }));
-      setChestList(mapped);
-    });
-  }, []);
 
   useEffect(() => {
     return () => {

@@ -92,7 +92,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.catStage}>
           <Pressable onPress={onTapCat}>
-            <Mochi key={refreshKey} scale={2} walkSignal={catTaps} />
+            <Mochi scale={2} walkSignal={catTaps} />
           </Pressable>
           <View style={styles.floorShadow} />
           <MochiSpeech

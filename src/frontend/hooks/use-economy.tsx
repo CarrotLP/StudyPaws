@@ -1,59 +1,38 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getUserDetails, addPointsToUser } from '@/backend/services/user.services';
+import { addPointsToUser, getUserDetails } from '@/backend/services/user.services';
+import { QK } from './queries';
 import { useAuth } from './use-auth';
 
-/**
- * Hook to manage user points directly from the database.
- * No Provider required.
- */
 export function useEconomy() {
   const { user } = useAuth();
-  const [points, setPoints] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const isMounted = useRef(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: QK.userDetails(user?.id ?? ''),
+    queryFn: () => getUserDetails(user!.id),
+    enabled: !!user?.id,
+  });
 
-  const refreshPoints = useCallback(async () => {
-    if (!user) {
-      if (isMounted.current) setPoints(0);
-      return;
-    }
-    try {
-      const details = await getUserDetails(user.id);
-      if (isMounted.current && details) {
-        setPoints(details.points);
-      }
-    } catch (err) {
-      console.error('Failed to fetch points:', err);
-    } finally {
-      if (isMounted.current) setLoading(false);
-    }
-  }, [user]);
+  const refreshPoints = async () => {
+    await queryClient.invalidateQueries({ queryKey: QK.userDetails(user?.id ?? '') });
+  };
 
-  useEffect(() => {
-    void refreshPoints();
-  }, [refreshPoints]);
+  const addPoints = async (delta: number): Promise<number> => {
+    if (!user) throw new Error('Not signed in');
+    const newTotal = await addPointsToUser(user.id, delta);
+    // Update the cache optimistically with the new total so the UI reflects it
+    // immediately without a round-trip.
+    queryClient.setQueryData(QK.userDetails(user.id), (old: Awaited<ReturnType<typeof getUserDetails>>) =>
+      old ? { ...old, points: newTotal } : old,
+    );
+    return newTotal;
+  };
 
-  const addPoints = useCallback(async (delta: number) => {
-    if (!user) return;
-    try {
-      const newTotal = await addPointsToUser(user.id, delta);
-      if (isMounted.current) {
-        setPoints(newTotal);
-      }
-      return newTotal;
-    } catch (err) {
-      console.error('Failed to update points in DB:', err);
-      throw err;
-    }
-  }, [user]);
-
-  return { points, addPoints, refreshPoints, loading };
+  return {
+    points: data?.points ?? 0,
+    addPoints,
+    refreshPoints,
+    loading: isLoading,
+  };
 }

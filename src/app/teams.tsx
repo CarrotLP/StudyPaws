@@ -1,3 +1,4 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -14,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 import {
   BodyFontSize,
@@ -28,6 +29,7 @@ import {
 } from '@/constants/havenTheme';
 import { Mochi } from '@/components/mochi';
 import { useAuth } from '@/hooks/use-auth';
+import { QK } from '@/hooks/queries';
 import { createTeam, getTeamByTeamCode } from '@/services/team.services';
 import {
   addUserToTeam,
@@ -47,7 +49,6 @@ const LEADERBOARD_CUP_SIZE = 18;
 const LEADERBOARD_CUP_COLORS = [HavenColors.gold, '#C9CDD3', '#B87333'] as const;
 const QUEST_SUGGESTION_PREFIX = 'Take a picture of';
 const SUGGESTION_SUCCESS_TOAST_MS = 3000;
-const TEAM_REFRESH_MS = 30_000;
 
 // Max characters of a member's name shown under their mini cat before truncating.
 const MAX_NAME_CHARS = 8;
@@ -77,9 +78,7 @@ function formatQuestSuggestion(description: string): string {
 export default function TeamsScreen() {
   const params = useLocalSearchParams<{ suggest?: string | string[] }>();
   const { user } = useAuth();
-  const [teams, setTeams] = useState<UserTeam[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -87,18 +86,44 @@ export default function TeamsScreen() {
   const [submittingSuggestion, setSubmittingSuggestion] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [teamCode, setTeamCode] = useState('');
-  const [nextWeekTheme, setNextWeekTheme] = useState<string | null>(null);
-  const [themeLoading, setThemeLoading] = useState(true);
   const [questSuggestion, setQuestSuggestion] = useState('');
   const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null);
   const [suggestionModalVisible, setSuggestionModalVisible] = useState(false);
   const [suggestionSuccessToastVisible, setSuggestionSuccessToastVisible] = useState(false);
   const suggestionToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handledSuggestionParamRef = useRef<string | null>(null);
-  const currentTeam = teams[0] ?? null;
-  const hasTeam = Boolean(currentTeam);
   const nextWeekStart = getNextWeekStartUtc();
   const suggestParam = Array.isArray(params.suggest) ? params.suggest[0] : params.suggest;
+
+  const { data: teams = [], isLoading: loading } = useQuery({
+    queryKey: QK.teams(user?.id ?? ''),
+    queryFn: () => getTeamsForUser(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const currentTeam = teams[0] ?? null;
+  const hasTeam = Boolean(currentTeam);
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: QK.teamMembers(currentTeam?.teamId ?? ''),
+    queryFn: () => getUsersForTeam(currentTeam!.teamId),
+    enabled: !!currentTeam?.teamId,
+  });
+
+  const { data: nextWeekTheme = null, isLoading: themeLoading } = useQuery({
+    queryKey: QK.weeklyTheme(nextWeekStart),
+    queryFn: () => getThemeForWeek(`${nextWeekStart}T12:00:00.000Z`),
+    enabled: true,
+  });
+
+  const invalidateTeams = useCallback(async () => {
+    if (!user) return;
+    await queryClient.invalidateQueries({ queryKey: QK.teams(user.id) });
+    const updated = queryClient.getQueryData<UserTeam[]>(QK.teams(user.id));
+    if (updated?.[0]) {
+      await queryClient.invalidateQueries({ queryKey: QK.teamMembers(updated[0].teamId) });
+    }
+  }, [user, queryClient]);
 
   const renderLeaderboardCup = (rankIndex: number) => {
     const cupColor = LEADERBOARD_CUP_COLORS[rankIndex];
@@ -154,64 +179,6 @@ export default function TeamsScreen() {
     openSuggestionModal();
   }, [currentTeam, nextWeekTheme, openSuggestionModal, suggestParam]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setJoining(false);
-      setCreating(false);
-      let active = true;
-
-      const loadTeams = async (showLoading = true) => {
-        if (!user) {
-          setTeams([]);
-          setTeamMembers([]);
-          setNextWeekTheme(null);
-          setThemeLoading(false);
-          setLoading(false);
-          return;
-        }
-
-        if (showLoading) {
-          setLoading(true);
-          setThemeLoading(true);
-        }
-        setError(null);
-        if (showLoading) setSuggestionMessage(null);
-
-        try {
-          const [nextTeams, nextThemeResult] = await Promise.all([
-            getTeamsForUser(user.id),
-            getThemeForWeek(`${nextWeekStart}T12:00:00.000Z`),
-          ]);
-          const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
-          if (!active) return;
-          setTeams(nextTeams);
-          setTeamMembers(nextTeamMembers);
-          setNextWeekTheme(nextThemeResult ?? null);
-        } catch (loadError) {
-          if (!active) return;
-          setTeams([]);
-          setTeamMembers([]);
-          setNextWeekTheme(null);
-          setError(loadError instanceof Error ? loadError.message : 'Could not load teams.');
-        } finally {
-          if (active) {
-            setLoading(false);
-            setThemeLoading(false);
-          }
-        }
-      };
-
-      void loadTeams();
-      const refreshId = setInterval(() => {
-        void loadTeams(false);
-      }, TEAM_REFRESH_MS);
-
-      return () => {
-        active = false;
-        clearInterval(refreshId);
-      };
-    }, [nextWeekStart, user]),
-  );
 
   const joinTeam = useCallback(async () => {
     if (!user) {
@@ -230,7 +197,7 @@ export default function TeamsScreen() {
       return;
     }
 
-    setLoading(true);
+
     setError(null);
     try {
       const teamUid = await getTeamByTeamCode(teamCode.trim());
@@ -239,16 +206,13 @@ export default function TeamsScreen() {
       }
 
       await addUserToTeam(user.id, teamUid);
-      const nextTeams = await getTeamsForUser(user.id);
-      const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
-      setTeams(nextTeams);
-      setTeamMembers(nextTeamMembers);
+      await invalidateTeams();
       setJoining(false);
       setTeamCode('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join team.');
     } finally {
-      setLoading(false);
+
     }
   }, [hasTeam, user, teamCode]);
 
@@ -269,21 +233,18 @@ export default function TeamsScreen() {
       return;
     }
 
-    setLoading(true);
+
     setError(null);
     try {
       const teamUid = await createTeam(newTeamName.trim());
       await addUserToTeam(user.id, teamUid);
-      const nextTeams = await getTeamsForUser(user.id);
-      const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
-      setTeams(nextTeams);
-      setTeamMembers(nextTeamMembers);
+      await invalidateTeams();
       setCreating(false);
       setNewTeamName('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create team.');
     } finally {
-      setLoading(false);
+
     }
   }, [hasTeam, user, newTeamName]);
 
@@ -291,19 +252,16 @@ export default function TeamsScreen() {
     if (!user || !currentTeam || leaving) return;
 
     setLeaving(true);
-    setLoading(true);
+
     setError(null);
     try {
       await removeUserFromTeam(user.id, currentTeam.teamId);
-      const nextTeams = await getTeamsForUser(user.id);
-      const nextTeamMembers = nextTeams[0] ? await getUsersForTeam(nextTeams[0].teamId) : [];
-      setTeams(nextTeams);
-      setTeamMembers(nextTeamMembers);
+      await invalidateTeams();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to leave team.');
     } finally {
       setLeaving(false);
-      setLoading(false);
+
     }
   }, [currentTeam, leaving, user]);
 
@@ -362,7 +320,7 @@ export default function TeamsScreen() {
         <View style={styles.rule} />
 
         <View style={styles.teamList}>
-          {loading ? <Text style={styles.message}>Loading teams...</Text> : null}
+          {loading && teams.length === 0 ? <Text style={styles.message}>Loading teams...</Text> : null}
           {error ? <Text style={styles.message}>{error}</Text> : null}
           {!loading && !error && teams.length === 0 ? (
             <Text style={styles.message}>You are not in any teams yet.</Text>

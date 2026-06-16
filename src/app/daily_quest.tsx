@@ -331,7 +331,7 @@ export default function DailyQuestScreen() {
         {/* Today's task is loaded from Supabase using the UTC quest date. */}
         <View style={styles.promptBlock}>
           <Text style={styles.promptSubject}>
-            {questLoading
+            {questLoading && !quest
               ? 'Loading today’s quest...'
               : quest?.description ?? error ?? 'No daily quest is available today.'}
           </Text>

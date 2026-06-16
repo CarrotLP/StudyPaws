@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -32,6 +33,7 @@ import {
 } from '@/services/questSettings.services';
 import { updateUserCharacter, updateUserPersonality } from '@/services/user.services';
 import { getPetPreviews, type PetPreview } from '@/services/petPreview.services';
+import { QK } from '@/hooks/queries';
 import {
   getTeamsForUser,
   type UserTeam,
@@ -82,23 +84,15 @@ export default function SettingsScreen() {
   };
 
   // ── Cat-colour (character) picker ──
-  const [petOptions, setPetOptions] = useState<PetPreview[]>([]);
-  const [loadingPets, setLoadingPets] = useState(true);
+  const { data: petOptions = [], isLoading: loadingPets } = useQuery({
+    queryKey: QK.petPreviews(),
+    queryFn: getPetPreviews,
+  });
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
   const [catCarouselWidth, setCatCarouselWidth] = useState(0);
   const catScrollRef = useRef<ScrollView | null>(null);
   const didInitialCatScroll = useRef(false);
 
-  useEffect(() => {
-    let mounted = true;
-    getPetPreviews()
-      .then((options) => mounted && setPetOptions(options))
-      .catch(() => mounted && setPetOptions([]))
-      .finally(() => mounted && setLoadingPets(false));
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   // Initialise selection from the saved character.
   useEffect(() => {

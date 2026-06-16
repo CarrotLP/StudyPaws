@@ -1,8 +1,7 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { useFocusEffect } from 'expo-router';
 
 import {
   BodyFontSize,
@@ -14,6 +13,7 @@ import {
   ShadowOffset,
 } from '@/constants/havenTheme';
 import { useAuth } from '@/hooks/use-auth';
+import { QK } from '@/hooks/queries';
 import { createCommunity, getCommunityByCode } from '@/services/community.services';
 import {
   addUserToCommunity,
@@ -32,76 +32,41 @@ import { getThemeForWeek } from '@/services/weeklyTheme.services';
 export default function CommunitiesScreen() {
   const [view, setView] = useState<'community' | 'gallery' | 'hallOfFame'>('community');
   const { user } = useAuth();
-  const [communities, setCommunities] = useState<UserCommunity[]>([]);
-  const [communityMembers, setCommunityMembers] = useState<CommunityUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [newCommunityName, setNewCommunityName] = useState('');
   const [communityCode, setCommunityCode] = useState('');
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: communities = [], isLoading: loading } = useQuery({
+    queryKey: QK.communities(user?.id ?? ''),
+    queryFn: () => getCommunitiesForUser(user!.id),
+    enabled: !!user?.id,
+  });
+
   const currentCommunity = communities[0] ?? null;
   const hasCommunity = Boolean(currentCommunity);
-  const [theme, setTheme] = useState('');
 
-  useFocusEffect(
-    useCallback(() => {
-      setJoining(false);
-      setCreating(false);
-      let active = true;
+  const { data: communityMembers = [] } = useQuery({
+    queryKey: ['community-members', currentCommunity?.communityId ?? ''],
+    queryFn: () => getUsersForCommunity(currentCommunity!.communityId),
+    enabled: !!currentCommunity?.communityId,
+  });
 
-      const loadCommunities = async () => {
-        if (!user) {
-          setCommunities([]);
-          setCommunityMembers([]);
-          setLoading(false);
-          return;
-        }
+  const { data: theme = '' } = useQuery({
+    queryKey: QK.weeklyTheme(today),
+    queryFn: () => getThemeForWeek(new Date().toISOString()),
+    select: (data) => data ?? '',
+  });
 
-        setLoading(true);
-        setError(null);
-
-        try {
-          const nextCommunities = await getCommunitiesForUser(user.id);
-          const nextCommunityMembers = nextCommunities[0] ? await getUsersForCommunity(nextCommunities[0].communityId) : [];
-          if (!active) return;
-          setCommunities(nextCommunities);
-          setCommunityMembers(nextCommunityMembers);
-        } catch (loadError) {
-          if (!active) return;
-          setCommunities([]);
-          setCommunityMembers([]);
-          setError(loadError instanceof Error ? loadError.message : 'Could not load communities.');
-        } finally {
-          if (active) {
-            setLoading(false);
-          }
-        }
-      };
-
-      void loadCommunities();
-
-      const loadTheme = async () => {
-        try {
-          const themeResult = await getThemeForWeek(
-                    new Date().toISOString()
-                  );
-          
-          if (!active) return;
-          setTheme(themeResult ?? '');
-        } catch (e) {
-          console.log('theme load error', e);
-        }
-      };
-
-      void loadTheme();
-
-      return () => {
-        active = false;
-      };
-    }, [user]),
-  );
+  const invalidateCommunities = useCallback(async () => {
+    if (!user) return;
+    await queryClient.invalidateQueries({ queryKey: QK.communities(user.id) });
+  }, [user, queryClient]);
 
   const joinCommunity = useCallback(async () => {
     if (!user) {
@@ -120,7 +85,7 @@ export default function CommunitiesScreen() {
       return;
     }
 
-    setLoading(true);
+
     setError(null);
     try {
       const communityUid = await getCommunityByCode(communityCode.trim());
@@ -129,16 +94,11 @@ export default function CommunitiesScreen() {
       }
 
       await addUserToCommunity(user.id, communityUid);
-      const nextCommunities = await getCommunitiesForUser(user.id);
-      const nextCommunityMembers = nextCommunities[0] ? await getUsersForCommunity(nextCommunities[0].communityId) : [];
-      setCommunities(nextCommunities);
-      setCommunityMembers(nextCommunityMembers);
+      await invalidateCommunities();
       setJoining(false);
       setCommunityCode('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join community.');
-    } finally {
-      setLoading(false);
     }
   }, [hasCommunity, user, communityCode]);
 
@@ -159,21 +119,16 @@ export default function CommunitiesScreen() {
       return;
     }
 
-    setLoading(true);
+
     setError(null);
     try {
       const communityUid = await createCommunity(newCommunityName.trim());
       await addUserToCommunity(user.id, communityUid);
-      const nextCommunities = await getCommunitiesForUser(user.id);
-      const nextCommunityMembers = nextCommunities[0] ? await getUsersForCommunity(nextCommunities[0].communityId) : [];
-      setCommunities(nextCommunities);
-      setCommunityMembers(nextCommunityMembers);
+      await invalidateCommunities();
       setCreating(false);
       setNewCommunityName('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create community.');
-    } finally {
-      setLoading(false);
     }
   }, [hasCommunity, user, newCommunityName]);
 
@@ -181,19 +136,15 @@ export default function CommunitiesScreen() {
     if (!user || !currentCommunity || leaving) return;
 
     setLeaving(true);
-    setLoading(true);
+
     setError(null);
     try {
       await removeUserFromCommunity(user.id, currentCommunity.communityId);
-      const nextCommunities = await getCommunitiesForUser(user.id);
-      const nextCommunityMembers = nextCommunities[0] ? await getUsersForCommunity(nextCommunities[0].communityId) : [];
-      setCommunities(nextCommunities);
-      setCommunityMembers(nextCommunityMembers);
+      await invalidateCommunities();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to leave community.');
     } finally {
       setLeaving(false);
-      setLoading(false);
     }
   }, [currentCommunity, leaving, user]);
 

@@ -1,3 +1,4 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, View } from 'react-native';
@@ -89,16 +90,8 @@ export function Mochi({
   // How long the cat walks after a tap.
   const WALK_MS = 2500;
   const { user } = useAuth();
-  const [layers, setLayers] = useState<MochiAsset[]>([]);
   const finalScale = scale * GLOBAL_MOCHI_SCALE;
-  const isMounted = useRef(false);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  const queryClient = useQueryClient();
 
   // Walk for WALK_MS whenever `walkSignal` changes (i.e. the cat is tapped).
   const [isWalking, setIsWalking] = useState(false);
@@ -106,9 +99,9 @@ export function Mochi({
   useEffect(() => {
     if (!walkSignal) return; // ignore initial 0/undefined
     if (walkTimer.current) clearTimeout(walkTimer.current);
-    if (isMounted.current) setIsWalking(true);
+    setIsWalking(true);
     walkTimer.current = setTimeout(() => {
-      if (isMounted.current) setIsWalking(false);
+      setIsWalking(false);
     }, WALK_MS);
   }, [walkSignal]);
   useEffect(() => () => {
@@ -179,50 +172,35 @@ export function Mochi({
     }
   };
 
-  const fetchMochiData = useCallback(async () => {
-    // Need either a target character name, or a signed-in user to look one up.
-    if (!characterName && !user) return;
+  const mochiQueryKey = ['mochi-layers', characterName ?? 'own', userId ?? user?.id ?? ''];
 
-    try {
-      const getImageSize = (uri: string): Promise<{ width: number; height: number } | null> => {
-        return new Promise((resolve) => {
-          Image.getSize(uri, (width, height) => resolve({ width, height }), () => resolve({ width: 512, height: 512 }));
+  const { data: layers = [] } = useQuery<MochiAsset[]>({
+    queryKey: mochiQueryKey,
+    enabled: !!(characterName || user),
+    queryFn: async (): Promise<MochiAsset[]> => {
+      const getImageSize = (uri: string): Promise<{ width: number; height: number } | null> =>
+        new Promise((resolve) => {
+          Image.getSize(uri, (w, h) => resolve({ width: w, height: h }), () => resolve({ width: 512, height: 512 }));
         });
-      };
 
-      // Which character to render: an explicit one (teammate) or the user's own.
       let targetCharacter = characterName ?? null;
       if (!targetCharacter && user) {
         const { data: userData } = await supabase.from('users').select('character').eq('user_uid', user.id).maybeSingle();
         targetCharacter = userData?.character ?? null;
       }
-      if (!targetCharacter) return;
+      if (!targetCharacter) return [];
 
       const { data: charData } = await supabase.from('characters').select('*').eq('name', targetCharacter).maybeSingle();
-      if (!charData) return;
+      if (!charData) return [];
 
       const bodyPromises = Object.entries(MOCHI_BODY).map(async ([key, config]): Promise<MochiAsset | null> => {
         const imageUrl = charData[key];
-        if (imageUrl) {
-          const size = await getImageSize(imageUrl);
-          return {
-            source: { uri: imageUrl },
-            category: config.category,
-            x: config.x,
-            y: config.y,
-            width: size?.width,
-            height: size?.height,
-            part: key,
-          };
-        }
-        return null;
+        if (!imageUrl) return null;
+        const size = await getImageSize(imageUrl);
+        return { source: { uri: imageUrl }, category: config.category, x: config.x, y: config.y, width: size?.width, height: size?.height, part: key };
       });
+      const resolvedBodyLayers = (await Promise.all(bodyPromises)).filter((l): l is MochiAsset => l !== null);
 
-      const bodyResults = await Promise.all(bodyPromises);
-      const resolvedBodyLayers = bodyResults.filter((l): l is MochiAsset => l !== null);
-
-      // Draw the worn accessories of the target user (a teammate if `userId` is
-      // given, otherwise the logged-in user).
       const accessoryUserId = userId ?? user?.id ?? null;
       const accessoryLayers: MochiAsset[] = [];
       const { data: userAccessories } = accessoryUserId
@@ -239,25 +217,21 @@ export function Mochi({
               const size = await getImageSize(c.image);
               return { source: { uri: c.image }, category: c.layer as MochiLayerCategory, x: Number(c.x) + shiftRight, y: Number(c.y) + shiftUp, width: size?.width, height: size?.height };
             });
-            const accResults = await Promise.all(accPromises);
-            const resolvedAcc = accResults.filter((l): l is MochiAsset => l !== null);
-            accessoryLayers.push(...resolvedAcc);
+            accessoryLayers.push(...(await Promise.all(accPromises)).filter((l): l is MochiAsset => l !== null));
           }
         }
       }
 
-      if (isMounted.current) {
-        setLayers([...resolvedBodyLayers, ...accessoryLayers]);
-      }
-    } catch (err) {
-      console.error('Error fetching Mochi data:', err);
-    }
-  }, [user, characterName, userId]);
+      return [...resolvedBodyLayers, ...accessoryLayers];
+    },
+  });
 
+  // On re-focus, trigger a background refetch only if data is stale.
   useFocusEffect(
     useCallback(() => {
-      void fetchMochiData();
-    }, [fetchMochiData]),
+      void queryClient.invalidateQueries({ queryKey: mochiQueryKey, refetchType: 'active' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [queryClient, characterName, userId, user?.id]),
   );
 
   const sortedLayers = [...layers].sort((a, b) => LAYER_ORDER.indexOf(a.category) - LAYER_ORDER.indexOf(b.category));

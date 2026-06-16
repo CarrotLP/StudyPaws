@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
 
 import { Mochi } from '@/components/mochi';
 import {
@@ -14,6 +14,7 @@ import {
     PixelFontSize,
     ShadowOffset,
 } from '@/constants/havenTheme';
+import { QK } from '@/frontend/hooks/queries';
 import { useAuth } from '@/frontend/hooks/use-auth';
 import { getUserAccessories, toggleAccessory, type UserAccessory } from '@/backend/services/accessory.services';
 
@@ -25,37 +26,18 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 export default function DressScreen() {
   const { user } = useAuth();
-  const [accessories, setAccessories] = useState<UserAccessory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const queryClient = useQueryClient();
 
-  const fetchAccessories = useCallback(async () => {
-    if (!user) return;
-    try {
-      const data = await getUserAccessories(user.id);
-      setAccessories(data);
-    } catch (err) {
-      console.error('Error fetching accessories:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const { data: accessories = [], isLoading: loading } = useQuery({
+    queryKey: QK.accessories(user?.id ?? ''),
+    queryFn: () => getUserAccessories(user!.id),
+    enabled: !!user?.id,
+  });
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchAccessories();
-      setRefreshKey(prev => prev + 1);
-    }, [fetchAccessories])
-  );
-
-  const onEquip = async (item: UserAccessory) => {
+  const onEquip = useCallback(async (item: UserAccessory) => {
     if (!user) return;
     const equipping = !item.chosen;
     try {
-      // Mutual exclusion: when putting something on, take off anything already
-      // worn that shares AT LEAST ONE layer with it. (Accessories can span
-      // multiple layers — e.g. a vest covers both back_ and front_accessory —
-      // so a single-layer item that overlaps either must come off.)
       if (equipping && item.categories.length > 0) {
         const overlappingWorn = accessories.filter(
           (a) =>
@@ -67,14 +49,14 @@ export default function DressScreen() {
           await toggleAccessory(user.id, worn.accessory, false);
         }
       }
-
       await toggleAccessory(user.id, item.accessory, equipping);
-      await fetchAccessories();
-      setRefreshKey(prev => prev + 1);
+      // Refresh both the accessories list and the Mochi layer cache.
+      await queryClient.invalidateQueries({ queryKey: QK.accessories(user.id) });
+      void queryClient.invalidateQueries({ queryKey: ['mochi-layers'] });
     } catch (err) {
       console.error('Error toggling accessory:', err);
     }
-  };
+  }, [user, accessories, queryClient]);
 
   const rows = chunk(accessories, 3);
 
@@ -85,7 +67,7 @@ export default function DressScreen() {
         <View style={styles.rule} />
 
         <View style={styles.catStage}>
-          <Mochi key={refreshKey} scale={2} />
+          <Mochi scale={2} />
           <View style={styles.floorShadow} />
         </View>
 
