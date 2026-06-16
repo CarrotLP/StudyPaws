@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, usePathname, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { type ComponentProps, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -23,6 +23,7 @@ import {
 } from '@/constants/havenTheme';
 
 const MENU_ICON_SIZE = 28;
+const MENU_ITEM_ICON_SIZE = 22;
 
 function routeIdFromPathname(pathname: string) {
   return pathname === '/' ? 'index' : pathname.replace(/^\//, '');
@@ -107,6 +108,11 @@ export function AppMenuOverlay() {
                   <Text style={[styles.menuItemText, active && styles.menuItemTextActive]}>
                     {item.label}
                   </Text>
+                  <MaterialCommunityIcons
+                    name={item.icon as ComponentProps<typeof MaterialCommunityIcons>['name']}
+                    size={MENU_ITEM_ICON_SIZE}
+                    color={active ? HavenColors.gold : HavenColors.inkSoft}
+                  />
                 </Pressable>
               );
             })}
@@ -168,9 +174,12 @@ const styles = StyleSheet.create({
   },
   menuItem: {
     minHeight: 48,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: HavenSpacing.sm,
     paddingVertical: HavenSpacing.md,
-    paddingHorizontal: HavenSpacing.sm,
+    paddingHorizontal: HavenSpacing.md,
     backgroundColor: HavenColors.cellFill,
     borderWidth: Border.base,
     borderColor: HavenColors.inkSoft,
@@ -183,10 +192,11 @@ const styles = StyleSheet.create({
     transform: [{ translateX: ShadowOffset.one }, { translateY: ShadowOffset.one }],
   },
   menuItemText: {
+    flex: 1,
     fontFamily: HavenFonts.pixel,
     fontSize: PixelFontSize.base,
     color: HavenColors.ink,
-    textAlign: 'center',
+    textAlign: 'left',
     lineHeight: PixelFontSize.base * 1.5,
   },
   menuItemTextActive: {
