@@ -19,6 +19,7 @@ import { isWithinWindow, minutesToTime, questWindowsFromDeadlines } from '@/cons
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
+import { supabase } from '@/backend/lib/supabase';
 import { getCommunitySubmissionOfDate, removeSubmissionFromCommunity, uploadSubmissionToCommunity } from '@/services/communityQuestSubmission.services';
 import { getOwnQuestSubmission } from '@/services/questSubmission.services';
 import { getCommunitiesForUser } from '@/services/userCommunities.services';
@@ -212,8 +213,89 @@ export default function DailyQuestScreen() {
     });
   };
 
+  const devRemoveSubmission = async () => {
+    if (!user || !quest) {
+      Alert.alert('Error', 'User or quest not loaded');
+      return;
+    }
+
+    try {
+      // 1. Remove from personal quest submissions
+      const { error: personalError } = await supabase
+        .from('quest_submissions')
+        .delete()
+        .eq('quest_date', quest.questDate)
+        .eq('user_id', user.id);
+
+      if (personalError) {
+        Alert.alert('Personal Delete Error', personalError.message);
+        return;
+      }
+
+      // 2. Remove from community (using existing service which handles likes)
+      try {
+        await removeSubmissionFromCommunity(user.id, quest.questDate);
+      } catch (communityErr: any) {
+        // If it's a "no row found" error, we can ignore it (submission might not have been in community)
+        if (communityErr?.code !== 'PGRST116' && communityErr?.details !== 'The result contains 0 rows') {
+          console.log('Non-critical community delete error:', communityErr);
+        }
+      }
+
+      Alert.alert('Success', 'Submissions removed');
+      void refresh();
+    } catch (error: any) {
+      Alert.alert('Catch Error', error?.message ?? 'Unknown error');
+    }
+  };
+
+  const devSetDeadline = async (offsetHours: number) => {
+    if (!team) {
+      Alert.alert('Error', 'Team not loaded');
+      return;
+    }
+    const now = new Date();
+    const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    let newDeadline = utcMinutes + offsetHours * 60;
+    newDeadline = Math.max(0, Math.min(1410, newDeadline));
+
+    const { error } = await supabase
+      .from('teams')
+      .update({ submission_deadline_minutes: newDeadline })
+      .eq('team_uid', team.teamId);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      Alert.alert('Success', `Deadline set to ${minutesToTime(newDeadline)} UTC`);
+      void refresh();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
+      {__DEV__ && (
+        <>
+          <Pressable
+            onPress={devRemoveSubmission}
+            style={[styles.devBtn, { bottom: 70, right: 16 }]}
+            accessibilityLabel="dev: remove submission">
+            <Text style={styles.devGlyph}>X</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => devSetDeadline(2)}
+            style={[styles.devBtn, { bottom: 70, right: 46 }]}
+            accessibilityLabel="dev: deadline +2h">
+            <Text style={styles.devGlyph}>+2</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => devSetDeadline(-2)}
+            style={[styles.devBtn, { bottom: 70, right: 76 }]}
+            accessibilityLabel="dev: deadline -2h">
+            <Text style={styles.devGlyph}>-2</Text>
+          </Pressable>
+        </>
+      )}
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.section}>daily quest</Text>
         <View style={styles.rule} />
@@ -721,5 +803,23 @@ const styles = StyleSheet.create({
   },
   starFill: {
     position: 'absolute',
+  },
+  devBtn: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#000000',
+    opacity: 0.65,
+    zIndex: 250,
+  },
+  devGlyph: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#000000',
   },
 });
