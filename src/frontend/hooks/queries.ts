@@ -12,8 +12,9 @@ import { getChests } from '@/backend/services/chest.services';
 import { getPetPreviews } from '@/backend/services/petPreview.services';
 import { getUserDetails } from '@/backend/services/user.services';
 import { getCommunitiesForUser } from '@/backend/services/userCommunities.services';
-import { getTeamsForUser, getUsersForTeam, type UserTeam } from '@/backend/services/userTeam.services';
+import { getTeamsForUser, getUsersForTeam, type TeamUser, type UserTeam } from '@/backend/services/userTeam.services';
 import { getThemeForWeek } from '@/backend/services/weeklyTheme.services';
+import { fetchMochiLayers } from '@/lib/fetch-mochi-layers';
 
 // ── Key factories ────────────────────────────────────────────────────────────
 
@@ -66,12 +67,26 @@ export async function prefetchAllForUser(queryClient: QueryClient, userId: strin
     }),
   ]);
 
-  // After teams are available, prefetch the first team's members.
+  // After teams are available, prefetch the first team's members and their cats.
   const teams = queryClient.getQueryData<UserTeam[]>(QK.teams(userId));
   if (teams?.[0]) {
-    void queryClient.prefetchQuery({
+    await queryClient.prefetchQuery({
       queryKey: QK.teamMembers(teams[0].teamId),
       queryFn: () => getUsersForTeam(teams[0].teamId),
     });
+
+    const members = queryClient.getQueryData<TeamUser[]>(QK.teamMembers(teams[0].teamId));
+    if (members && members.length > 0) {
+      await Promise.all(
+        members.map((m) =>
+          m.character
+            ? queryClient.prefetchQuery({
+                queryKey: QK.mochiLayers(m.character, m.userId),
+                queryFn: () => fetchMochiLayers(m.character, m.userId),
+              })
+            : Promise.resolve(),
+        ),
+      );
+    }
   }
 }
