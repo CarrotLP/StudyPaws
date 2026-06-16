@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontAwesome } from '@expo/vector-icons';
@@ -410,8 +410,9 @@ export default function DailyQuestScreen() {
               {gallerySubmissions.length === 0 ? (
                 <Text style={styles.gallerySubtitle}>No teammate submissions yet.</Text>
               ) : (
+                <>
                 <ScrollView style={styles.galleryStack} showsVerticalScrollIndicator={false}>
-                  {gallerySubmissions.map((submission) => (
+                  {gallerySubmissions.map((submission, index) => (
                     <View key={submission.userId} style={styles.galleryStackItem}>
                       <Image
                         source={{ uri: submission.imageUrl }}
@@ -419,9 +420,44 @@ export default function DailyQuestScreen() {
                         resizeMode="contain"
                         onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
                       />
+                      <View style={styles.starRow}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Pressable
+                            key={star}
+                            style={styles.star}
+                            onPress={() => {
+                              const next = [...ratings];
+                              next[index] = star;
+                              setRatings(next);
+                            }}>
+                            <FontAwesome
+                              name="star"
+                              size={STAR_SIZE}
+                              color={HavenColors.ink}
+                            />
+                            {ratings[index] >= star && (
+                              <FontAwesome
+                                name="star"
+                                size={STAR_FILL_SIZE}
+                                color={HavenColors.gold}
+                                style={styles.starFill}
+                              />
+                            )}
+                          </Pressable>
+                        ))}
+                      </View>
                     </View>
                   ))}
                 </ScrollView>
+                <Pressable
+                  style={[styles.saveBtn, (!allRated || submittingVotes) && styles.saveBtnDisabled]}
+                  disabled={!allRated || submittingVotes}
+                  onPress={saveRatings}>
+                  <Text style={styles.saveBtnText}>
+                    {submittingVotes ? 'saving…' : voted ? 'update ratings' : 'save ratings'}
+                  </Text>
+                </Pressable>
+                </>
               )}
             </View>
           </View>
@@ -632,6 +668,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     maxWidth: 420,
+    // Hug the card's content height, but never overflow the screen.
     maxHeight: '90%',
   },
   // Close button sits just above/right of the gallery card
@@ -660,7 +697,8 @@ const styles = StyleSheet.create({
     padding: HavenSpacing.lg,
     gap: HavenSpacing.md,
     boxShadow: `${ShadowOffset.four}px ${ShadowOffset.four}px 0px ${HavenColors.leatherShadow}`,
-    maxHeight: '100%',
+    // Size to content (image + stars + button); the wrapper's maxHeight caps it.
+    flexShrink: 1,
   },
   galleryHeader: {
     fontFamily: HavenFonts.pixel,
@@ -682,12 +720,15 @@ const styles = StyleSheet.create({
   },
   galleryStack: {
     width: '100%',
-    maxHeight: 460,
+    // A numeric maxHeight makes the ScrollView shrink-to-fit its content (one
+    // photo + stars) up to this cap, instead of collapsing to a strip. Multiple
+    // teammate submissions scroll within the cap.
+    maxHeight: Dimensions.get('window').height * 0.62,
   },
   galleryStackItem: {
     width: '100%',
-    aspectRatio: 1,
     marginBottom: HavenSpacing.md,
+    alignItems: 'center',
   },
   galleryCarousel: {
     width: '100%',
@@ -703,9 +744,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
   },
   galleryPhoto: {
-    // Large uniform display box; resizeMode="contain" keeps the whole submission visible.
     width: '100%',
-    height: '100%',
+    aspectRatio: 1,
     backgroundColor: HavenColors.cellInset,
     borderWidth: Border.base,
     borderColor: HavenColors.inkSoft,
@@ -760,6 +800,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: HavenSpacing.sm,
     paddingVertical: HavenSpacing.xs,
+    justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   galleryPosition: {
     alignItems: 'center',
@@ -803,6 +845,31 @@ const styles = StyleSheet.create({
   },
   starFill: {
     position: 'absolute',
+  },
+  saveBtn: {
+    marginTop: HavenSpacing.md,
+    alignSelf: 'center',
+    backgroundColor: HavenColors.leather,
+    borderWidth: Border.base,
+    borderColor: HavenColors.ink,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.xl,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.leatherShadow}`,
+  },
+  saveBtnDisabled: {
+    opacity: 0.4,
+  },
+  saveBtnText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.gold,
+  },
+  votedMsg: {
+    marginTop: HavenSpacing.md,
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.base,
+    color: HavenColors.leather,
+    textAlign: 'center',
   },
   devBtn: {
     position: 'absolute',

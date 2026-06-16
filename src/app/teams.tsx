@@ -75,6 +75,21 @@ function formatQuestSuggestion(description: string): string {
   return `${QUEST_SUGGESTION_PREFIX} ${description}`;
 }
 
+const STATUS_TAG: Record<string, { label: string; bg: string; text: string }> = {
+  'studying':    { label: 'studying', bg: '#2D6A4F', text: '#B7E4C7' },
+  'on a break':  { label: 'break',    bg: '#7B5800', text: '#FFE08A' },
+  'not studying': { label: 'offline', bg: '#3A3A3A', text: '#AAAAAA' },
+};
+
+function StatusTag({ status }: { status: string }) {
+  const tag = STATUS_TAG[status] ?? STATUS_TAG['not studying'];
+  return (
+    <View style={[styles.statusTag, { backgroundColor: tag.bg }]}>
+      <Text style={[styles.statusTagText, { color: tag.text }]}>{tag.label}</Text>
+    </View>
+  );
+}
+
 export default function TeamsScreen() {
   const params = useLocalSearchParams<{ suggest?: string | string[] }>();
   const { user } = useAuth();
@@ -375,8 +390,8 @@ export default function TeamsScreen() {
                       {renderLeaderboardCup(index)}
                       <Text style={styles.memberName} numberOfLines={1}>
                         {member.userName}
-                        <Text style={styles.memberStatus}> - {member.activityStatus}</Text>
                       </Text>
+                      <StatusTag status={member.activityStatus} />
                     </View>
                     <Text style={[styles.memberWins, styles.winsColumn]}>
                       {member.winsCount}
@@ -686,9 +701,15 @@ const styles = StyleSheet.create({
     color: HavenColors.ink,
     textAlign: 'left',
   },
-  memberStatus: {
-    color: HavenColors.inkSoft,
-    fontSize: PixelFontSize.base,
+  statusTag: {
+    borderRadius: 3,
+    paddingVertical: 2,
+    paddingHorizontal: HavenSpacing.xs,
+    flexShrink: 0,
+  },
+  statusTagText: {
+    fontFamily: HavenFonts.pixel,
+    fontSize: PixelFontSize.xs,
   },
   memberWins: {
     fontFamily: HavenFonts.body,
