@@ -543,6 +543,14 @@ export default function TeamsScreen() {
                   multiline
                   style={[styles.input, styles.suggestionInput]}
                 />
+                {__DEV__ && (
+                  <Pressable
+                    onPress={() => setQuestSuggestion('Take a photo of our next hang out spot')}
+                    style={styles.devBtn}
+                    accessibilityLabel="dev: fill suggestion">
+                    <Text style={styles.devGlyph}>✎</Text>
+                  </Pressable>
+                )}
                 <Pressable
                   accessibilityRole="button"
                   disabled={submittingSuggestion || !questSuggestion.trim()}
@@ -925,5 +933,25 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     transform: [{ translateX: ShadowOffset.one }, { translateY: ShadowOffset.one }],
+  },
+  devBtn: {
+    position: 'absolute',
+    top: 140,
+    right: 20,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#000000',
+    opacity: 0.65,
+    zIndex: 250,
+  },
+  devGlyph: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#000000',
   },
 });
