@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -52,6 +52,7 @@ export default function SettingsScreen() {
   } = useDailyQuest();
 
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const {
     name: loadedUserName,
     personality: loadedPersonality,
@@ -116,6 +117,13 @@ export default function SettingsScreen() {
     setSettingsError(null);
     try {
       await updateUserCharacter(user.id, next);
+      // Refresh the cached cat + user details now (while still on Settings) so
+      // the new colour is already loaded by the time other pages render.
+      await queryClient.invalidateQueries({ queryKey: QK.userDetails(user.id) });
+      await queryClient.invalidateQueries({ queryKey: ['mochi-layers'] });
+      // The team page keys each cat by the member's character (from the
+      // team-members list), so refetch that too or it re-renders the old colour.
+      await queryClient.invalidateQueries({ queryKey: ['team-members'] });
     } catch (err) {
       setSelectedCharacter(prev); // revert on failure
       setSettingsError(err instanceof Error ? err.message : 'Failed to update cat');
