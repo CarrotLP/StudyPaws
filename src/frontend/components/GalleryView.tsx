@@ -112,16 +112,20 @@ export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryVi
 
     <View style={styles.galleryStack}>
       {submissions.map((submission, index) => (
-        <Pressable
-          key={index}
-          onPress={() => setSelectedImage(getPublicImageUrl(submission.photoUri))}
-          style={styles.galleryStackItem}>
-          <Image
-            source={{ uri: getPublicImageUrl(submission.photoUri) }}
-            style={styles.galleryStackImage}
-            resizeMode="contain"
-          />
-        </Pressable>
+        <View key={index} style={styles.galleryStackItem}>
+          <Pressable
+            onPress={() => setSelectedImage(getPublicImageUrl(submission.photoUri))}
+            style={styles.galleryStackImageWrap}>
+            <Image
+              source={{ uri: getPublicImageUrl(submission.photoUri) }}
+              style={styles.galleryStackImage}
+              resizeMode="contain"
+            />
+          </Pressable>
+          <View style={styles.heartRow}>
+            <HeartButton liked={likes[index] ?? false} onPress={() => toggleLike(index)} />
+          </View>
+        </View>
       ))}
       <Modal visible={!!selectedImage} transparent>
         <Pressable
@@ -195,11 +199,20 @@ const styles = StyleSheet.create({
   },
   galleryStackItem: {
     width: '100%',
+  },
+  galleryStackImageWrap: {
+    width: '100%',
     aspectRatio: 1,
   },
   galleryStackImage: {
     width: '100%',
     height: '100%',
+  },
+  heartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: HavenSpacing.xs,
   },
   communityCard: {
     width: '100%',
