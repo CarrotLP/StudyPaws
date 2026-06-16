@@ -1,17 +1,17 @@
 import { supabase } from '@/backend/lib/supabase';
 import { findWeekStart } from '@/lib/storage';
 
-export async function getThemeForWeek(quest_date: string): Promise<string> {
+export async function getThemeForWeek(quest_date: string): Promise<string | null> {
   const weekStart = findWeekStart(new Date(quest_date));
   const { data, error } = await supabase
     .from('weekly_themes')
     .select('theme')
     .eq('week_start', weekStart)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
 
-  return data.theme;
+  return data?.theme ?? null;
 }
 
 export async function submitTeamQuestSuggestion(

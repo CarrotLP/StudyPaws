@@ -52,12 +52,12 @@ export async function getUserDetails(userUid: string): Promise<UserDetails | nul
 export async function updateUserCharacter(
   userUid: string,
   character: string,
-  name: string,
 ): Promise<void> {
   await ensureCharacter(character);
   const { data, error } = await supabase
     .from('users')
-    .upsert({ user_uid: userUid, name, character }, { onConflict: 'user_uid' })
+    .update({ character })
+    .eq('user_uid', userUid)
     .select('user_uid');
   if (error) throw new Error(`${error.message}${error.hint ? ` (${error.hint})` : ''}`);
   if (!data || data.length === 0) {
@@ -121,17 +121,16 @@ export async function addPointsToUser(userUid: string, delta: number): Promise<n
 }
 
 /**
- * Updates the user's chosen cat personality. Upserts so it also creates the
- * `users` row if one doesn't exist yet (`name` is required on insert).
+ * Updates the user's chosen cat personality.
  */
 export async function updateUserPersonality(
   userUid: string,
   personality: MochiPersonality,
-  name: string,
 ): Promise<void> {
   const { data, error } = await supabase
     .from('users')
-    .upsert({ user_uid: userUid, name, personality }, { onConflict: 'user_uid' })
+    .update({ personality })
+    .eq('user_uid', userUid)
     .select('user_uid');
   // Supabase returns a plain PostgrestError object (not an Error instance), so
   // wrap it so callers can read `.message`.

@@ -194,7 +194,7 @@ export async function getCommunityWinners(communityId: string): Promise<Communit
         user: userData.name,
         votes: row.votes,
         imagePath: photoUri,
-        theme,
+        theme: theme ?? 'Theme unavailable',
       };
     })
 );

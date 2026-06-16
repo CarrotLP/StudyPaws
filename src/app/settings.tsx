@@ -74,8 +74,7 @@ export default function SettingsScreen() {
     setPersonality(next); // optimistic
     setSettingsError(null);
     try {
-      const name = (user.user_metadata?.name as string) ?? '';
-      await updateUserPersonality(user.id, next, name);
+      await updateUserPersonality(user.id, next);
     } catch (err) {
       setPersonality(prev); // revert on failure
       setSettingsError(err instanceof Error ? err.message : 'Failed to update personality');
@@ -122,8 +121,7 @@ export default function SettingsScreen() {
     setSelectedCharacter(next); // optimistic
     setSettingsError(null);
     try {
-      const name = (user.user_metadata?.name as string) ?? '';
-      await updateUserCharacter(user.id, next, name);
+      await updateUserCharacter(user.id, next);
     } catch (err) {
       setSelectedCharacter(prev); // revert on failure
       setSettingsError(err instanceof Error ? err.message : 'Failed to update cat');

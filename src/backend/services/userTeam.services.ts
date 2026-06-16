@@ -15,6 +15,31 @@ export type TeamUser = {
   activityStatus: ActivityStatus;
 }
 
+type SupabaseErrorLike = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+function throwSupabaseError(context: string, error: unknown): never {
+  if (error && typeof error === 'object') {
+    const supabaseError = error as SupabaseErrorLike;
+    const parts = [
+      supabaseError.message,
+      supabaseError.code ? `code: ${supabaseError.code}` : null,
+      supabaseError.details ? `details: ${supabaseError.details}` : null,
+      supabaseError.hint ? `hint: ${supabaseError.hint}` : null,
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+      throw new Error(`${context}: ${parts.join(' | ')}`);
+    }
+  }
+
+  throw new Error(`${context}: ${String(error)}`);
+}
+
 export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
   const { data: memberships, error: membershipError } = await supabase
     .from('users_teams')
@@ -22,7 +47,7 @@ export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
     .eq('user', userId);
 
   if (membershipError) {
-    throw membershipError;
+    throwSupabaseError('Could not load team memberships', membershipError);
   }
 
   const teamIds = memberships.map((membership) => membership.team);
@@ -36,7 +61,7 @@ export async function getTeamsForUser(userId: string): Promise<UserTeam[]> {
     .in('team_uid', teamIds);
 
   if (teamError) {
-    throw teamError;
+    throwSupabaseError('Could not load teams', teamError);
   }
 
   return teams.map((team) => ({
@@ -53,7 +78,7 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
     .eq('team', teamId);
 
   if (membershipError) {
-    throw membershipError;
+    throwSupabaseError('Could not load team members', membershipError);
   }
 
   const userIds = memberships.map((membership) => membership.user);
@@ -71,7 +96,7 @@ export async function getUsersForTeam(teamId: string): Promise<TeamUser[]> {
     .in('user_uid', userIds);
 
   if (userError) {
-    throw userError;
+    throwSupabaseError('Could not load team member profiles', userError);
   }
 
   return users
@@ -91,7 +116,7 @@ export async function addUserToTeam(userId: string, teamId: string) {
     .insert({ user: userId, team: teamId });
 
   if (error) {
-    throw error;
+    throwSupabaseError('Could not join team', error);
   }
 
   return data;
@@ -105,7 +130,7 @@ export async function removeUserFromTeam(userId: string, teamId: string) {
     .eq('team', teamId);
 
   if (error) {
-    throw error;
+    throwSupabaseError('Could not leave team', error);
   }
 
   return { success: true };

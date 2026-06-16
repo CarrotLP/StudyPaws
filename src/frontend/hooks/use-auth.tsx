@@ -47,7 +47,7 @@ async function backfillCharacter(session: Session | null): Promise<void> {
   try {
     const { data: existing } = await supabase
       .from('users')
-      .select('character, personality')
+      .select('name, pet_name, character, personality')
       .eq('user_uid', session.user.id)
       .maybeSingle();
 
@@ -57,19 +57,31 @@ async function backfillCharacter(session: Session | null): Promise<void> {
 
     await ensureCharacter(character);
 
-    // Upsert (not update) so this also creates the public.users row if no DB
-    // trigger has made one yet. name/pet_name come from the sign-up metadata.
-    const { error: upsertError } = await supabase.from('users').upsert(
-      {
-        user_uid: session.user.id,
-        name: (meta.name as string) ?? '',
-        pet_name: (meta.pet_name as string) ?? null,
-        character,
-        ...(personality ? { personality } : {}),
-      },
-      { onConflict: 'user_uid' },
-    );
-    if (upsertError) throw upsertError;
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          character,
+          ...(personality ? { personality } : {}),
+        })
+        .eq('user_uid', session.user.id);
+      if (updateError) throw updateError;
+      return;
+    }
+
+    const metadataName = typeof meta.name === 'string' ? meta.name.trim() : '';
+    if (!metadataName) {
+      throw new Error('Cannot create users row during login because auth metadata has no name.');
+    }
+
+    const { error: insertError } = await supabase.from('users').insert({
+      user_uid: session.user.id,
+      name: metadataName,
+      pet_name: typeof meta.pet_name === 'string' ? meta.pet_name.trim() : null,
+      character,
+      ...(personality ? { personality } : {}),
+    });
+    if (insertError) throw insertError;
   } catch (backfillError) {
     console.warn('character backfill failed:', backfillError);
   }
