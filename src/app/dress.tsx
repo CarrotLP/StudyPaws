@@ -68,7 +68,6 @@ export default function DressScreen() {
 
         <View style={styles.catStage}>
           <Mochi scale={2} />
-          <View style={styles.floorShadow} />
         </View>
 
         {loading ? (
@@ -148,13 +147,6 @@ const styles = StyleSheet.create({
   catStage: {
     alignItems: 'center',
     paddingTop: HavenSpacing.base,
-  },
-  floorShadow: {
-    width: '70%',
-    height: HavenSpacing.base,
-    marginTop: -HavenSpacing.base,
-    borderRadius: HavenSpacing.base,
-    backgroundColor: HavenColors.floorShadow,
   },
 
   emptyMsg: {

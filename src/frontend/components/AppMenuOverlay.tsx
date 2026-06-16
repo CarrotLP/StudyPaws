@@ -35,17 +35,31 @@ export function AppMenuOverlay() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState(false);
+  // Keeps the overlay mounted while the close animation plays out.
+  const [mounted, setMounted] = useState(false);
   const slide = useRef(new Animated.Value(0)).current;
   const panelWidth = width / 2;
   const activeId = routeIdFromPathname(pathname);
 
   useEffect(() => {
-    Animated.timing(slide, {
-      toValue: open ? 1 : 0,
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+    if (open) {
+      setMounted(true);
+      Animated.timing(slide, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slide, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setMounted(false);
+      });
+    }
   }, [open, slide]);
 
   const translateX = slide.interpolate({
@@ -71,8 +85,9 @@ export function AppMenuOverlay() {
         </Pressable>
       )}
 
-      {open && (
+      {mounted && (
         <View style={styles.overlay}>
+          <Animated.View style={[styles.scrim, { opacity: slide }]} />
           <Pressable
             accessibilityLabel="Close menu"
             style={[styles.dismissArea, { left: panelWidth }]}
@@ -143,6 +158,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     zIndex: 299,
+  },
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: HavenColors.overlayScrim,
   },
   dismissArea: {

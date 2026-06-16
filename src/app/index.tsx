@@ -94,7 +94,6 @@ export default function HomeScreen() {
           <Pressable onPress={onTapCat}>
             <Mochi scale={2} walkSignal={catTaps} />
           </Pressable>
-          <View style={styles.floorShadow} />
           <MochiSpeech
             tapSignal={catTaps}
             personality={personality ?? undefined}
@@ -396,13 +395,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     gap: HavenSpacing.md,
-  },
-  floorShadow: {
-    width: '70%',
-    height: HavenSpacing.base,
-    marginTop: -HavenSpacing.base,
-    borderRadius: HavenSpacing.base,
-    backgroundColor: HavenColors.floorShadow,
   },
 
   petName: {
