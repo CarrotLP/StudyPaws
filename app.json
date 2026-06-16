@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Haven",
+    "name": "StudyPaws",
     "slug": "app_name",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -44,7 +44,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow Haven to use your camera to complete daily quests.",
+          "cameraPermission": "Allow StudyPaws to use your camera to complete daily quests.",
           "microphonePermission": false
         }
       ],

@@ -10,6 +10,7 @@ import {
 import { getPublicImageUrl } from '@/lib/storage';
 import { getCommunityImagesOfWeek, getUserCommunityQuestLikes, likeCommunityQuest, Submission, unlikeCommunityQuest } from '@/services/communityQuestSubmission.services';
 import { type UserCommunity } from '@/services/userCommunities.services';
+import { useDailyQuest } from '@/hooks/use-daily-quest';
 import type { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -38,6 +39,7 @@ export function HeartButton({
 }
 
 export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryViewProps) {
+  const { quest } = useDailyQuest();
   const now = new Date();
   const nowString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -104,30 +106,22 @@ export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryVi
     <View style={styles.rule} />
     <View style={styles.communityList}>    
       <View style={styles.communityCard}>
-        <Text style={styles.communityName}>{theme}</Text>
+        <Text style={styles.communityName}>{quest?.description ?? theme}</Text>
       </View>
     </View>
 
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: "3%" }}>
+    <View style={styles.galleryStack}>
       {submissions.map((submission, index) => (
-        <View key={index} style={{ width: "31%", marginBottom: 10 }}>
-          <Pressable 
-            onPress={() =>
-              setSelectedImage(getPublicImageUrl(submission.photoUri))
-            }>
-            <Image
-            key={index}
+        <Pressable
+          key={index}
+          onPress={() => setSelectedImage(getPublicImageUrl(submission.photoUri))}
+          style={styles.galleryStackItem}>
+          <Image
             source={{ uri: getPublicImageUrl(submission.photoUri) }}
-            style={{ width: "100%", height: 110 }}
-            />
-          </Pressable>
-          <View style={{ alignItems: "flex-end" }}>
-            <HeartButton
-              liked={likes[index]}
-              onPress={() => toggleLike(index)}
-            />
-          </View>
-        </View>
+            style={styles.galleryStackImage}
+            resizeMode="contain"
+          />
+        </Pressable>
       ))}
       <Modal visible={!!selectedImage} transparent>
         <Pressable
@@ -194,6 +188,18 @@ const styles = StyleSheet.create({
   },
   communityList: {
     gap: HavenSpacing.md,
+  },
+  galleryStack: {
+    width: '100%',
+    gap: HavenSpacing.md,
+  },
+  galleryStackItem: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  galleryStackImage: {
+    width: '100%',
+    height: '100%',
   },
   communityCard: {
     width: '100%',

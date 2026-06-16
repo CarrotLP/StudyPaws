@@ -218,31 +218,12 @@ export default function DailyQuestScreen() {
         <Text style={styles.section}>daily quest</Text>
         <View style={styles.rule} />
 
-        {weeklyTheme && (
+        {quest && (
           <View style={styles.weeklyThemeBlock}>
             <View style={styles.weeklyThemeRow}>
-              <Text style={styles.weeklyThemeLabel}>The weekly theme is:</Text>
-              <Text style={styles.weeklyThemeText}>{weeklyTheme}</Text>
+              <Text style={styles.weeklyThemeLabel}>Today's daily quest:</Text>
+              <Text style={styles.weeklyThemeText}>{quest.description}</Text>
             </View>
-            <Text style={styles.weeklyThemeHelpText}>
-              Daily quests follow this theme all week.
-            </Text>
-            {team ? (
-              <View style={styles.weeklyThemeCtaRow}>
-                <Text style={styles.weeklyThemeCtaText} numberOfLines={1}>
-                  Have an idea for next week?
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={openQuestSuggestion}
-                  style={({ pressed }) => [
-                    styles.weeklyThemeCtaButton,
-                    pressed && styles.weeklyThemeCtaButtonPressed,
-                  ]}>
-                  <Text style={styles.weeklyThemeCtaButtonText}>Suggest a quest</Text>
-                </Pressable>
-              </View>
-            ) : null}
           </View>
         )}
 
@@ -347,119 +328,18 @@ export default function DailyQuestScreen() {
               {gallerySubmissions.length === 0 ? (
                 <Text style={styles.gallerySubtitle}>No teammate submissions yet.</Text>
               ) : (
-                <View
-                  style={styles.galleryCarousel}
-                  onLayout={(event) => setGalleryPageWidth(event.nativeEvent.layout.width)}>
-                  <ScrollView
-                    horizontal
-                    pagingEnabled
-                    bounces={false}
-                    showsHorizontalScrollIndicator={false}
-                    onMomentumScrollEnd={(event) => {
-                      if (galleryPageWidth === 0) return;
-                      setGalleryPage(
-                        Math.round(event.nativeEvent.contentOffset.x / galleryPageWidth),
-                      );
-                    }}>
-                    {gallerySubmissions.map((submission, index) => (
-                      <View
-                        key={submission.userId}
-                        style={[styles.galleryItem, { width: galleryPageWidth }]}>
-                        <View style={styles.galleryPhotoWrap}>
-                          <Image
-                            source={{ uri: submission.imageUrl }}
-                            style={styles.galleryPhoto}
-                            resizeMode="contain"
-                            onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
-                          />
-                          {index > 0 && (
-                            <View pointerEvents="none" style={[styles.swipeArrow, styles.swipeArrowLeft]}>
-                              <View style={styles.swipeArrowLeftHead} />
-                            </View>
-                          )}
-                          {index < gallerySubmissions.length - 1 && (
-                            <View pointerEvents="none" style={[styles.swipeArrow, styles.swipeArrowRight]}>
-                              <View style={styles.swipeArrowRightHead} />
-                            </View>
-                          )}
-                          <View pointerEvents="none" style={styles.galleryCountStamp}>
-                            <Text style={styles.galleryCountStampText}>
-                              {index + 1}/{gallerySubmissions.length}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.starRow}>
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Pressable
-                              key={star}
-                              accessibilityLabel={`Rate ${star} out of 5 stars`}
-                              hitSlop={6}
-                              onPress={() =>
-                                setRatings((prev) => {
-                                  const updated = [...prev];
-                                  updated[index] = star;
-                                  return updated;
-                                })
-                              }>
-                              {/*
-                               * Layered star: a black 'star-o' outline is
-                               * ALWAYS rendered for contrast against the
-                               * parchment; a solid yellow 'star' is overlaid
-                               * only when selected. Avoids a native SVG dep.
-                               */}
-                              <View style={styles.star}>
-                                <FontAwesome name="star-o" size={STAR_SIZE} color="#000000" />
-                                {star <= (ratings[index] ?? 0) && (
-                                  <FontAwesome
-                                    name="star"
-                                    size={STAR_FILL_SIZE}
-                                    color="#FFD700"
-                                    style={styles.starFill}
-                                  />
-                                )}
-                              </View>
-                            </Pressable>
-                          ))}
-                        </View>
-                      </View>
-                    ))}
-                  </ScrollView>
-
-                  <View style={styles.galleryPosition}>
-                    <View style={styles.galleryDots}>
-                      {gallerySubmissions.map((submission, index) => (
-                        <View
-                          key={submission.userId}
-                          style={[
-                            styles.galleryDot,
-                            index === galleryPage && styles.galleryDotActive,
-                            ratings[index] > 0 && styles.galleryDotRated,
-                          ]}
-                        />
-                      ))}
+                <ScrollView style={styles.galleryStack} showsVerticalScrollIndicator={false}>
+                  {gallerySubmissions.map((submission) => (
+                    <View key={submission.userId} style={styles.galleryStackItem}>
+                      <Image
+                        source={{ uri: submission.imageUrl }}
+                        style={styles.galleryPhoto}
+                        resizeMode="contain"
+                        onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
+                      />
                     </View>
-                    <Text style={styles.gallerySwipeHint}>Swipe to view and rate submissions</Text>
-                    <Text style={styles.galleryRewardHint}>Winner receives 100 study points</Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Submit / Update — only when all photos are rated; no Close inside */}
-              {allRated && !voted && (
-                <Pressable
-                  disabled={submittingVotes}
-                  style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
-                  onPress={saveRatings}>
-                  <Text style={styles.btnText}>{submittingVotes ? 'Saving...' : 'Submit'}</Text>
-                </Pressable>
-              )}
-              {allRated && voted && (
-                <Pressable
-                  disabled={submittingVotes}
-                  style={({ pressed }) => [styles.btn, styles.btnWide, pressed && styles.btnPressed]}
-                  onPress={saveRatings}>
-                  <Text style={styles.btnText}>{submittingVotes ? 'Saving...' : 'Update'}</Text>
-                </Pressable>
+                  ))}
+                </ScrollView>
               )}
             </View>
           </View>
@@ -717,6 +597,15 @@ const styles = StyleSheet.create({
   galleryRule: {
     height: Border.thick,
     backgroundColor: HavenColors.ink,
+  },
+  galleryStack: {
+    width: '100%',
+    maxHeight: 460,
+  },
+  galleryStackItem: {
+    width: '100%',
+    aspectRatio: 1,
+    marginBottom: HavenSpacing.md,
   },
   galleryCarousel: {
     width: '100%',
