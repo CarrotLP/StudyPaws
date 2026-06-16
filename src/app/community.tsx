@@ -18,10 +18,7 @@ import { createCommunity, getCommunityByCode } from '@/services/community.servic
 import {
   addUserToCommunity,
   getCommunitiesForUser,
-  getUsersForCommunity,
   removeUserFromCommunity,
-  type CommunityUser,
-  type UserCommunity,
 } from '@/services/userCommunities.services';
 
 import { CommunityView } from '@/components/CommunityView';
@@ -50,12 +47,6 @@ export default function CommunitiesScreen() {
 
   const currentCommunity = communities[0] ?? null;
   const hasCommunity = Boolean(currentCommunity);
-
-  const { data: communityMembers = [] } = useQuery({
-    queryKey: ['community-members', currentCommunity?.communityId ?? ''],
-    queryFn: () => getUsersForCommunity(currentCommunity!.communityId),
-    enabled: !!currentCommunity?.communityId,
-  });
 
   const { data: theme = '' } = useQuery({
     queryKey: QK.weeklyTheme(today),

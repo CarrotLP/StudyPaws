@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,7 +42,8 @@ type Opening = { chest: Chest; stage: ChestStage; reward: ChestReward };
 
 export default function TreasureScreen() {
   const { user } = useAuth();
-  const { points, addPoints, refreshPoints } = useEconomy();
+  const queryClient = useQueryClient();
+  const { points, addPoints } = useEconomy();
   const { owned, addOwned, refreshOwned } = useAccessories();
 
   const [opening, setOpening] = useState<Opening | null>(null);
@@ -99,6 +100,9 @@ export default function TreasureScreen() {
     const { reward } = opening;
     if (!owned.includes(reward.name)) {
       await addOwned(reward.name);
+      // Dress reads its accessory list from React Query; refresh it so the
+      // newly-won item shows up there (tabs stay mounted, so no auto-refetch).
+      if (user) void queryClient.invalidateQueries({ queryKey: QK.accessories(user.id) });
       showToast(`Obtained · ${reward.name}`);
     } else {
       await addPoints(DUPLICATE_REFUND);
@@ -112,6 +116,8 @@ export default function TreasureScreen() {
     try {
       await removeAccessoryFromUser(user.id, 'crown');
       await refreshOwned();
+      void queryClient.invalidateQueries({ queryKey: QK.accessories(user.id) });
+      void queryClient.invalidateQueries({ queryKey: ['mochi-layers'] });
       showToast('Crown removed from database');
     } catch (err) {
       console.error('Failed to remove crown:', err);

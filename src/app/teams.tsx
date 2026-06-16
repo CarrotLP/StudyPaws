@@ -36,7 +36,6 @@ import {
   getTeamsForUser,
   getUsersForTeam,
   removeUserFromTeam,
-  type TeamUser,
   type UserTeam,
 } from '@/services/userTeam.services';
 import {
@@ -226,8 +225,6 @@ export default function TeamsScreen() {
       setTeamCode('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join team.');
-    } finally {
-
     }
   }, [hasTeam, user, teamCode]);
 
@@ -258,8 +255,6 @@ export default function TeamsScreen() {
       setNewTeamName('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create team.');
-    } finally {
-
     }
   }, [hasTeam, user, newTeamName]);
 
@@ -276,7 +271,6 @@ export default function TeamsScreen() {
       setError(err instanceof Error ? err.message : 'Failed to leave team.');
     } finally {
       setLeaving(false);
-
     }
   }, [currentTeam, leaving, user]);
 
