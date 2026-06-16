@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontAwesome } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
+
+import { Toast } from '@/components/Toast';
 
 import {
   BodyFontSize,
@@ -49,6 +51,14 @@ export default function DailyQuestScreen() {
   const [hasCommunity, setHasCommunity] = useState(false);
   const [weeklyTheme, setWeeklyTheme] = useState<string | null>(null);
   const [weeklyThemeLoading, setWeeklyThemeLoading] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast({ msg, key: Date.now() });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -164,6 +174,7 @@ export default function DailyQuestScreen() {
         photoUri
       );
       setCommunityUploaded(true);
+      showToast('Photo uploaded');
     } catch (error) {
       Alert.alert(
         'Upload failed',
@@ -274,6 +285,7 @@ export default function DailyQuestScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
+      {toast && <Toast key={toast.key} message={toast.msg} />}
       {__DEV__ && (
         <>
           <Pressable
@@ -328,14 +340,17 @@ export default function DailyQuestScreen() {
           )}
         </View>
 
-        {/* Today's task is loaded from Supabase using the UTC quest date. */}
-        <View style={styles.promptBlock}>
-          <Text style={styles.promptSubject}>
-            {questLoading && !quest
-              ? 'Loading today’s quest...'
-              : quest?.description ?? error ?? 'No daily quest is available today.'}
-          </Text>
-        </View>
+        {/* Shown only when there's no quest yet — the quest description itself
+            is already displayed in the boxed block above. */}
+        {!quest && (
+          <View style={styles.promptBlock}>
+            <Text style={styles.promptSubject}>
+              {questLoading
+                ? 'Loading today’s quest...'
+                : error ?? 'No daily quest is available today.'}
+            </Text>
+          </View>
+        )}
 
         {/* ── View Team Gallery button (a) — always visible; deactivated outside
               the voting window so users know the option exists. ── */}
@@ -374,9 +389,7 @@ export default function DailyQuestScreen() {
               {communityUploaded ? 'Remove from Community' : 'Upload to Community'}
             </Text>
           </Pressable>
-          {communityUploaded ? (
-            <Text style={styles.gatedHint}>Photo uploaded</Text>
-          ) : !hasCommunity ? (
+          {!communityUploaded && !hasCommunity ? (
             <Text style={styles.gatedHint}>Join a community to upload</Text>
           ) : null}
         </View>
@@ -495,6 +508,12 @@ const styles = StyleSheet.create({
   weeklyThemeBlock: {
     alignItems: 'center',
     gap: HavenSpacing.xs,
+    backgroundColor: HavenColors.cellFill,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
+    paddingVertical: HavenSpacing.md,
+    paddingHorizontal: HavenSpacing.lg,
+    boxShadow: `${ShadowOffset.two}px ${ShadowOffset.two}px 0px ${HavenColors.parchmentShadow}`,
   },
   weeklyThemeRow: {
     flexDirection: 'row',

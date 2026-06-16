@@ -605,6 +605,7 @@ const styles = StyleSheet.create({
     fontSize: PixelFontSize.xl,
     color: HavenColors.leather,
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
     textAlign: 'center',
   },
   rule: {

@@ -94,7 +94,7 @@ export function ChestOpenOverlay({ visible, stage, chestColor, reward, onClaim }
               <Text style={styles.section}>obtained!</Text>
               {reward && (
                 <Animated.View style={[styles.revealItem, itemStyle]}>
-                  <Image source={{ uri: reward.image }} style={{ width: 120, height: 120 }} />
+                  <Image source={{ uri: reward.image }} style={{ width: 120, height: 120 }} resizeMode="contain" />
                 </Animated.View>
               )}
               <Text style={styles.itemName}>{rewardName}</Text>
