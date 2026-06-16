@@ -11,10 +11,11 @@ import {
   PixelFontSize,
   ShadowOffset,
 } from '@/constants/havenTheme';
-import { isWithinWindow, questWindowsFromDeadlines } from '@/constants/questWindows';
+import { isWithinWindow, minutesToTime, questWindowsFromDeadlines } from '@/constants/questWindows';
 import { Mochi } from '@/components/mochi';
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
+import { supabase } from '@/backend/lib/supabase';
 import { saveQuestSubmission } from '@/services/questSubmission.services';
 
 type DailyQuestOverlayProps = {
@@ -97,6 +98,33 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
       setPhotoUri(capturedUri);
       setPhotoError(false);
       await saveQuestSubmission(user.id, quest.questDate, capturedUri);
+
+      // Auto-update deadline if in dev mode
+      if (__DEV__) {
+        try {
+          const { data: teams } = await supabase
+            .from('users_teams')
+            .select('team')
+            .eq('user', user.id);
+
+          const teamId = teams?.[0]?.team;
+          if (teamId) {
+            const now = new Date();
+            const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+            const newDeadline = Math.max(0, Math.min(1410, utcMinutes - 120)); // 2 hours ago
+
+            await supabase
+              .from('teams')
+              .update({ submission_deadline_minutes: newDeadline })
+              .eq('team_uid', teamId);
+
+            console.log(`[DEV] Auto-set deadline to ${minutesToTime(newDeadline)} UTC`);
+          }
+        } catch (err) {
+          console.warn('[DEV] Failed to auto-update deadline:', err);
+        }
+      }
+
       markSubmittedToday();
       setCompleted(true);
     } catch (saveError) {
@@ -144,7 +172,6 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
                 </View>
               )}
             </View>
-            <Text style={styles.questNoun}>{quest?.description ?? 'Daily quest'}</Text>
             <Pressable
               accessibilityLabel="Done"
               onPress={onComplete}
