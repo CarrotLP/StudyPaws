@@ -325,14 +325,27 @@ export default function DailyQuestScreen() {
         <Text style={styles.section}>daily quest</Text>
         <View style={styles.rule} />
 
-        {quest && (
-          <View style={styles.weeklyThemeBlock}>
-            <View style={styles.weeklyThemeRow}>
-              <Text style={styles.weeklyThemeLabel}>Today's daily quest:</Text>
-              <Text style={styles.weeklyThemeText}>{quest.description}</Text>
-            </View>
+        {/* ── Weekly theme (from the DB) — daily quests follow it all week ── */}
+        <View style={styles.weeklyThemeBlock}>
+          <View style={styles.weeklyThemeRow}>
+            <Text style={styles.weeklyThemeLabel}>The weekly theme is:</Text>
+            <Text style={styles.weeklyThemeText}>
+              {weeklyThemeLoading ? '…' : weeklyTheme ?? 'Not set yet'}
+            </Text>
           </View>
-        )}
+          <Text style={styles.weeklyThemeHelpText}>
+            Daily quests follow this theme all week.
+          </Text>
+          <Text style={styles.weeklyThemeCtaText}>Have an idea for next week?</Text>
+          <Pressable
+            onPress={openQuestSuggestion}
+            style={({ pressed }) => [
+              styles.weeklyThemeCtaButton,
+              pressed && styles.weeklyThemeCtaButtonPressed,
+            ]}>
+            <Text style={styles.weeklyThemeCtaButtonText}>Suggest a quest</Text>
+          </Pressable>
+        </View>
 
         {/* ── Submission panel ── */}
         <Text style={styles.submissionLabel}>Your submission for today</Text>
@@ -353,17 +366,16 @@ export default function DailyQuestScreen() {
           )}
         </View>
 
-        {/* Shown only when there's no quest yet — the quest description itself
-            is already displayed in the boxed block above. */}
-        {!quest && (
-          <View style={styles.promptBlock}>
-            <Text style={styles.promptSubject}>
-              {questLoading
+        {/* ── Today's daily quest, below the submission photo ── */}
+        <View style={styles.promptBlock}>
+          <Text style={styles.promptSubject}>
+            {quest
+              ? quest.description
+              : questLoading
                 ? 'Loading today’s quest...'
                 : error ?? 'No daily quest is available today.'}
-            </Text>
-          </View>
-        )}
+          </Text>
+        </View>
 
         {/* ── View Team Gallery button (a) — always visible; deactivated outside
               the voting window so users know the option exists. ── */}
