@@ -10,7 +10,6 @@ import {
 import { getPublicImageUrl } from '@/lib/storage';
 import { getCommunityImagesOfWeek, getUserCommunityQuestLikes, likeCommunityQuest, Submission, unlikeCommunityQuest } from '@/services/communityQuestSubmission.services';
 import { type UserCommunity } from '@/services/userCommunities.services';
-import { useDailyQuest } from '@/hooks/use-daily-quest';
 import type { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -39,7 +38,6 @@ export function HeartButton({
 }
 
 export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryViewProps) {
-  const { quest } = useDailyQuest();
   const now = new Date();
   const nowString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -106,7 +104,7 @@ export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryVi
     <View style={styles.rule} />
     <View style={styles.communityList}>    
       <View style={styles.communityCard}>
-        <Text style={styles.communityName}>{quest?.description ?? theme}</Text>
+        <Text style={styles.communityName}>{theme || 'This week'}</Text>
       </View>
     </View>
 
@@ -119,7 +117,7 @@ export function GalleryView({ currentCommunity, theme, user, onBack }: GalleryVi
             <Image
               source={{ uri: getPublicImageUrl(submission.photoUri) }}
               style={styles.galleryStackImage}
-              resizeMode="contain"
+              resizeMode="cover"
             />
           </Pressable>
           <View style={styles.heartRow}>
@@ -196,14 +194,18 @@ const styles = StyleSheet.create({
   },
   galleryStack: {
     width: '100%',
-    gap: HavenSpacing.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: HavenSpacing.sm,
   },
   galleryStackItem: {
-    width: '100%',
+    width: '31%',
   },
   galleryStackImageWrap: {
     width: '100%',
     aspectRatio: 1,
+    borderWidth: Border.base,
+    borderColor: HavenColors.inkSoft,
   },
   galleryStackImage: {
     width: '100%',
@@ -213,7 +215,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: HavenSpacing.xs,
+    paddingTop: HavenSpacing.xxs,
   },
   communityCard: {
     width: '100%',

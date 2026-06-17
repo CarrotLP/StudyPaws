@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontAwesome } from '@expo/vector-icons';
@@ -53,6 +53,13 @@ export default function DailyQuestScreen() {
   const [weeklyThemeLoading, setWeeklyThemeLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const galleryScrollRef = useRef<ScrollView>(null);
+
+  const goToPage = (index: number) => {
+    const clamped = Math.max(0, Math.min(gallerySubmissions.length - 1, index));
+    galleryScrollRef.current?.scrollTo({ x: clamped * galleryPageWidth, animated: true });
+    setGalleryPage(clamped);
+  };
 
   const showToast = (msg: string) => {
     setToast({ msg, key: Date.now() });
@@ -449,44 +456,99 @@ export default function DailyQuestScreen() {
                 <Text style={styles.gallerySubtitle}>No teammate submissions yet.</Text>
               ) : (
                 <>
-                <ScrollView style={styles.galleryStack} showsVerticalScrollIndicator={false}>
-                  {gallerySubmissions.map((submission, index) => (
-                    <View key={submission.userId} style={styles.galleryStackItem}>
-                      <Image
-                        source={{ uri: submission.imageUrl }}
-                        style={styles.galleryPhoto}
-                        resizeMode="contain"
-                        onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
-                      />
-                      <View style={styles.starRow}>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Pressable
-                            key={star}
-                            style={styles.star}
-                            onPress={() => {
-                              const next = [...ratings];
-                              next[index] = star;
-                              setRatings(next);
-                            }}>
-                            <FontAwesome
-                              name="star"
-                              size={STAR_SIZE}
-                              color={HavenColors.ink}
-                            />
-                            {ratings[index] >= star && (
-                              <FontAwesome
-                                name="star"
-                                size={STAR_FILL_SIZE}
-                                color={HavenColors.gold}
-                                style={styles.starFill}
-                              />
-                            )}
-                          </Pressable>
-                        ))}
+                {/* Instagram-style horizontal pager: one submission per page. */}
+                <View
+                  style={styles.galleryCarousel}
+                  onLayout={(e) => setGalleryPageWidth(e.nativeEvent.layout.width)}>
+                  <ScrollView
+                    ref={galleryScrollRef}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(e) => {
+                      if (galleryPageWidth > 0) {
+                        setGalleryPage(
+                          Math.round(e.nativeEvent.contentOffset.x / galleryPageWidth),
+                        );
+                      }
+                    }}>
+                    {gallerySubmissions.map((submission) => (
+                      <View
+                        key={submission.userId}
+                        style={[styles.galleryItem, { width: galleryPageWidth }]}>
+                        <View style={styles.galleryPhotoWrap}>
+                          <Image
+                            source={{ uri: submission.imageUrl }}
+                            style={styles.galleryPhoto}
+                            resizeMode="contain"
+                            onError={(e) => console.log('IMAGE ERROR', e.nativeEvent.error)}
+                          />
+                        </View>
                       </View>
-                    </View>
+                    ))}
+                  </ScrollView>
+
+                  {/* Functional swipe arrows (hidden at the ends). */}
+                  {galleryPage > 0 && (
+                    <Pressable
+                      accessibilityLabel="Previous submission"
+                      hitSlop={12}
+                      style={[styles.swipeArrow, styles.swipeArrowLeft]}
+                      onPress={() => goToPage(galleryPage - 1)}>
+                      <View style={styles.swipeArrowLeftHead} />
+                    </Pressable>
+                  )}
+                  {galleryPage < gallerySubmissions.length - 1 && (
+                    <Pressable
+                      accessibilityLabel="Next submission"
+                      hitSlop={12}
+                      style={[styles.swipeArrow, styles.swipeArrowRight]}
+                      onPress={() => goToPage(galleryPage + 1)}>
+                      <View style={styles.swipeArrowRightHead} />
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Page dots — filled gold once a page has been rated. */}
+                {gallerySubmissions.length > 1 && (
+                  <View style={styles.galleryDots}>
+                    {gallerySubmissions.map((_, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.galleryDot,
+                          i === galleryPage && styles.galleryDotActive,
+                          ratings[i] > 0 && styles.galleryDotRated,
+                        ]}
+                      />
+                    ))}
+                  </View>
+                )}
+
+                {/* Stars for the CURRENT submission, at the bottom. */}
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Pressable
+                      key={star}
+                      style={styles.star}
+                      onPress={() => {
+                        const next = [...ratings];
+                        next[galleryPage] = star;
+                        setRatings(next);
+                      }}>
+                      <FontAwesome name="star" size={STAR_SIZE} color={HavenColors.ink} />
+                      {ratings[galleryPage] >= star && (
+                        <FontAwesome
+                          name="star"
+                          size={STAR_FILL_SIZE}
+                          color={HavenColors.gold}
+                          style={styles.starFill}
+                        />
+                      )}
+                    </Pressable>
                   ))}
-                </ScrollView>
+                </View>
+
                 <Pressable
                   style={[styles.saveBtn, (!allRated || submittingVotes) && styles.saveBtnDisabled]}
                   disabled={!allRated || submittingVotes}
@@ -762,18 +824,6 @@ const styles = StyleSheet.create({
     height: Border.thick,
     backgroundColor: HavenColors.ink,
   },
-  galleryStack: {
-    width: '100%',
-    // A numeric maxHeight makes the ScrollView shrink-to-fit its content (one
-    // photo + stars) up to this cap, instead of collapsing to a strip. Multiple
-    // teammate submissions scroll within the cap.
-    maxHeight: Dimensions.get('window').height * 0.62,
-  },
-  galleryStackItem: {
-    width: '100%',
-    marginBottom: HavenSpacing.md,
-    alignItems: 'center',
-  },
   galleryCarousel: {
     width: '100%',
     overflow: 'hidden',
@@ -854,6 +904,7 @@ const styles = StyleSheet.create({
   },
   galleryDots: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: HavenSpacing.xs,
   },
   galleryDot: {
