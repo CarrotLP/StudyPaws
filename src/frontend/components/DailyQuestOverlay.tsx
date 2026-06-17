@@ -114,9 +114,9 @@ export function DailyQuestOverlay({ visible, onCancel, onComplete }: DailyQuestO
             const newDeadline = Math.max(0, Math.min(1410, utcMinutes - 120)); // 2 hours ago
 
             await supabase
-              .from('teams')
+              .from('team_quest_settings')
               .update({ submission_deadline_minutes: newDeadline })
-              .eq('team_uid', teamId);
+              .eq('team', teamId);
 
             console.log(`[DEV] Auto-set deadline to ${minutesToTime(newDeadline)} UTC`);
           }

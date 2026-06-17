@@ -18,6 +18,10 @@ export function useWithinWindow(win: QuestWindow): boolean {
   const [open, setOpen] = useState(() => isWithinWindow(win));
 
   useEffect(() => {
+    // Recompute immediately whenever the window boundaries change (e.g. the
+    // deadlines just reloaded) so `open` is never left stale until the next
+    // tick, then keep re-checking on the interval.
+    setOpen(isWithinWindow(win));
     const id = setInterval(() => setOpen(isWithinWindow(win)), TICK_MS);
     return () => clearInterval(id);
   }, [win.start, win.end]);

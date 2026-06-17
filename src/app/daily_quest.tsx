@@ -17,7 +17,7 @@ import {
   RibbonColors,
   ShadowOffset,
 } from '@/constants/havenTheme';
-import { isWithinWindow, minutesToTime, questWindowsFromDeadlines } from '@/constants/questWindows';
+import { minutesToTime, questWindowsFromDeadlines } from '@/constants/questWindows';
 import { useAuth } from '@/hooks/use-auth';
 import { useDailyQuest } from '@/hooks/use-daily-quest';
 import { useWithinWindow } from '@/hooks/use-quest-window';
@@ -193,8 +193,10 @@ export default function DailyQuestScreen() {
   }
 
   const saveRatings = async () => {
-    // Action guard: re-check the clock at submit time (no server enforcement).
-    if (!isWithinWindow(windows.voting) || !team || !quest) {
+    // Guard with the SAME reactive `votingOpen` that gates the gallery render
+    // (the overlay only shows while votingOpen is true). Recomputing the window
+    // separately here could disagree with it if the deadlines changed mid-session.
+    if (!votingOpen || !team || !quest) {
       setShowGallery(false);
       Alert.alert('Voting is closed right now');
       return;
@@ -211,7 +213,18 @@ export default function DailyQuestScreen() {
       setVoted(true);
       Alert.alert('Votes saved');
     } catch (error) {
-      Alert.alert('Votes could not be saved', error instanceof Error ? error.message : 'Please try again.');
+      // Supabase RPC errors are plain { message, details, hint, code } objects,
+      // not Error instances — pull the message out so the real cause is shown.
+      // Use warn (not error) so it doesn't trigger the full-screen dev overlay;
+      // the failure is already surfaced to the user via the Alert below.
+      console.warn('submitVote failed:', error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : (error as { message?: string; details?: string })?.message ??
+            (error as { details?: string })?.details ??
+            'Please try again.';
+      Alert.alert('Votes could not be saved', message);
     } finally {
       setSubmittingVotes(false);
     }
@@ -271,9 +284,9 @@ export default function DailyQuestScreen() {
     newDeadline = Math.max(0, Math.min(1410, newDeadline));
 
     const { error } = await supabase
-      .from('teams')
+      .from('team_quest_settings')
       .update({ submission_deadline_minutes: newDeadline })
-      .eq('team_uid', team.teamId);
+      .eq('team', team.teamId);
 
     if (error) {
       Alert.alert('Error', error.message);
